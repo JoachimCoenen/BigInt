@@ -13,9 +13,6 @@
 
 namespace bigint {
 
-template<class D, class R=D>
-struct DivModResult { D d; R r; };
-
 class IBigIntLike { };
 
 template <typename T>
@@ -27,6 +24,11 @@ concept is_BigInt_like2 = std::is_base_of_v<IBigIntLike, T1> && std::is_base_of_
 template <typename T1, typename T2, typename T3>
 concept is_BigInt_like3 = std::is_base_of_v<IBigIntLike, T1> && std::is_base_of_v<IBigIntLike, T2> && std::is_base_of_v<IBigIntLike, T3>;
 
+}
+
+
+// forward declarations:
+namespace bigint {
 
 class BigInt;
 
@@ -59,6 +61,19 @@ from_string_base16(const std::string &input) -> BigInt;
 
 CONSTEXPR_AUTO
 from_string(const std::string &input) -> BigInt;
+
+}
+
+
+namespace bigint::_private {
+CONSTEXPR_VOID
+resizeBigInt(BigInt &a, std::size_t size);
+
+}
+
+
+// class BigInt:
+namespace bigint {
 
 class BigInt : public IBigIntLike
 {
@@ -146,7 +161,8 @@ private:
 		_data.resize(size, 0);
 	}
 
-	friend CONSTEXPR_VOID resizeBigInt(BigInt &a, std::size_t size);
+	friend CONSTEXPR_VOID
+	_private::resizeBigInt(BigInt &a, std::size_t size);
 
 public:
 	[[nodiscard]] auto
@@ -159,7 +175,11 @@ private:
 	//uint32_t _lshift = 0;
 };
 
+}
 
+
+// resize
+namespace bigint::_private {
 CONSTEXPR_VOID
 resizeBigInt(BigInt &a, std::size_t size) {
 	a.resize(size);
@@ -171,6 +191,12 @@ makeBigIntWithSize(std::size_t size) -> BigInt{
 	resizeBigInt(r, size); //OCTOPUS
 	return r;
 }
+
+}
+
+
+// rshifted & lshifted:
+namespace bigint::_private {
 
 template <typename T>
 struct BigIntBox_t {
@@ -276,6 +302,52 @@ rshifted(TLHS &a, uint64_t b) {
 	return BigIntRShifted<TLHS>(a, b);
 }
 
+}
+
+
+// bitwise shift operations:
+namespace bigint {
+
+template <typename TLHS>
+	requires is_BigInt_like1<TLHS>
+CONSTEXPR_AUTO
+lshiftBits(const TLHS &vec, uint64_t digits) -> BigInt {
+	BigInt result(std::vector<uint64_t>(digits / 64, 0));
+	digits %= 64;
+	result.append(vec[0] << digits);
+	for (uint64_t i = 1; i < vec.size(); ++i) {
+		const uint64_t lo = digits > 0 ? vec[i-1] >> (64-digits) : 0;
+		const uint64_t hi = vec[i] << digits;
+		result.append(lo | hi);
+	}
+	if (digits > 0) {
+		result.append(vec[vec.size()-1] >> (64-digits));
+	}
+	return result;
+}
+
+template <typename TLHS>
+	requires is_BigInt_like1<TLHS>
+CONSTEXPR_AUTO
+rshiftBits(const TLHS &vec, uint64_t digits) -> BigInt {
+	BigInt result;//(digits / 64, 0);
+	const uint64_t start = digits / 64;
+	digits %= 64;
+	for (uint64_t i = start; i < vec.size()-1; ++i) {
+		const uint64_t lo = vec[i] >> digits;
+		const uint64_t hi = vec[i+1] << (64-digits);
+		result.append(lo | hi);
+	}
+	result.append(vec.back() >> digits);
+	return result;
+}
+
+}
+
+
+// comparison operators:
+namespace bigint {
+
 template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
 CONSTEXPR_AUTO
@@ -312,6 +384,11 @@ operator>(const TLHS &a, const uint64_t &b) {
 	return a > BigInt(b);
 }
 
+}
+
+
+// addition:
+namespace bigint {
 
 template <typename TRES, typename TLHS, typename TRHS>
 	requires is_BigInt_like3<TRES, TLHS, TRHS>
@@ -333,7 +410,7 @@ template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
 CONSTEXPR_AUTO
 operator+(const TLHS &a, const TRHS &b) -> BigInt {
-	BigInt result = makeBigIntWithSize(std::max(a.size(), b.size()));
+	BigInt result = _private::makeBigIntWithSize(std::max(a.size(), b.size()));
 	add(result, a, b);
 	return result;
 }
@@ -342,11 +419,17 @@ template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
 CONSTEXPR_AUTO_DISCARD
 operator+=(TLHS &a, const TRHS &b) -> TLHS& {
-	resizeBigInt(a, std::max(a.size(), b.size()));
+	_private::resizeBigInt(a, std::max(a.size(), b.size()));
 	add(a, a, b);
 	return a;
 }
 
+
+}
+
+
+// subtraction:
+namespace bigint {
 
 template <typename TRES, typename TLHS, typename TRHS>
 	requires is_BigInt_like3<TRES, TLHS, TRHS>
@@ -368,7 +451,7 @@ template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
 CONSTEXPR_AUTO
 operator-(const TLHS &a, const TRHS &b) -> BigInt {
-	BigInt result = makeBigIntWithSize(std::max(a.size(), b.size()));
+	BigInt result = _private::makeBigIntWithSize(std::max(a.size(), b.size()));
 	sub(result, a, b);
 	result.cleanup();
 	return result;
@@ -382,6 +465,12 @@ operator-=(TLHS &a, const TRHS &b) -> TLHS& {
 	return a;
 }
 
+
+}
+
+
+// multiplication:
+namespace bigint {
 
 CONSTEXPR_AUTO
 mult(uint64_t a, uint64_t b) -> BigInt {
@@ -428,7 +517,7 @@ CONSTEXPR_VOID
 mult(TRES &result, const TLHS &a, const TRHS &b) {
 	for (auto i = 0ull; i < b.size(); i++) {
 		auto temp = a * b[i];
-		result += lshifted(temp, i);
+		result += _private::lshifted(temp, i);
 	}
 	LOGGING("multiplying: " << result.size());
 }
@@ -437,7 +526,7 @@ template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
 CONSTEXPR_AUTO
 operator*(const TLHS &a, uint64_t b) -> BigInt {
-	BigInt result = makeBigIntWithSize(a.size());
+	BigInt result = _private::makeBigIntWithSize(a.size());
 	mult(result, a, b);
 	return result;
 }
@@ -454,46 +543,20 @@ template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
 CONSTEXPR_AUTO
 operator*(const TLHS &a, const TRHS &b) -> BigInt {
-	BigInt result = makeBigIntWithSize(a.size() + b.size());
+	BigInt result = _private::makeBigIntWithSize(a.size() + b.size());
 	mult(result, a, b);
 	result.cleanup();
 	return result;
 }
 
-
-template <typename TLHS>
-	requires is_BigInt_like1<TLHS>
-CONSTEXPR_AUTO
-lshiftBits(const TLHS &vec, uint64_t digits) -> BigInt {
-	BigInt result(std::vector<uint64_t>(digits / 64, 0));
-	digits %= 64;
-	result.append(vec[0] << digits);
-	for (uint64_t i = 1; i < vec.size(); ++i) {
-		const uint64_t lo = digits > 0 ? vec[i-1] >> (64-digits) : 0;
-		const uint64_t hi = vec[i] << digits;
-		result.append(lo | hi);
-	}
-	if (digits > 0) {
-		result.append(vec[vec.size()-1] >> (64-digits));
-	}
-	return result;
 }
 
-template <typename TLHS>
-	requires is_BigInt_like1<TLHS>
-CONSTEXPR_AUTO
-rshiftBits(const TLHS &vec, uint64_t digits) -> BigInt {
-	BigInt result;//(digits / 64, 0);
-	const uint64_t start = digits / 64;
-	digits %= 64;
-	for (uint64_t i = start; i < vec.size()-1; ++i) {
-		const uint64_t lo = vec[i] >> digits;
-		const uint64_t hi = vec[i+1] << (64-digits);
-		result.append(lo | hi);
-	}
-	result.append(vec.back() >> digits);
-	return result;
-}
+
+// divmod:
+namespace bigint {
+
+template<class D, class R=D>
+struct DivModResult { D d; R r; };
 
 template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
@@ -501,7 +564,7 @@ CONSTEXPR_AUTO
 divmod(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
 	DivModResult<BigInt> r;
 	r.r = a;
-	resizeBigInt(r.d, a.size() - b.size() + 1);
+	_private::resizeBigInt(r.d, a.size() - b.size() + 1);
 
 	a.cleanup();
 	if (a.size() == 1 && a[0] == 0) {
@@ -521,10 +584,10 @@ divmod(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
 	while (a2IsSmaller || !(r.r < b)) {
 		--i;
 		auto p2 = lshiftBits(b, i%64);
-		a2IsSmaller = rshifted(r.r, i/64) < p2;
+		a2IsSmaller = _private::rshifted(r.r, i/64) < p2;
 		if (! a2IsSmaller) {
 			r.d[i/64] |= 1ull << i % 64;
-			auto rshift = rshifted(r.r, i/64);
+			auto rshift = _private::rshifted(r.r, i/64);
 			rshift -= p2;
 		}
 	}
@@ -546,9 +609,9 @@ template <typename TLHS>
 CONSTEXPR_AUTO
 divmod1(const TLHS &a, const uint32_t &b) -> DivModResult<BigInt, uint64_t> { // todo: validate: Isn't uint32_t sufficient for remainder return type?
 	BigInt d;
-	resizeBigInt(d, a.size());
+	_private::resizeBigInt(d, a.size());
 	BigInt y;
-	resizeBigInt(y, d.size());
+	_private::resizeBigInt(y, d.size());
 
 	uint64_t c_div = 0ull;
 
@@ -586,14 +649,18 @@ divmod1(const TLHS &a, const uint32_t &b) -> DivModResult<BigInt, uint64_t> { //
 	return { d, r[0] };
 }
 
-// Division:
+}
+
+
+// division:
+namespace bigint {
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
 CONSTEXPR_AUTO
 operator/(const TLHS &a, const uint32_t &b) -> BigInt {
 	BigInt result;
-	resizeBigInt(result, a.size());
+	_private::resizeBigInt(result, a.size());
 
 	uint64_t c_lo = 0ull;
 	for (auto i = a.size(); i-->0;) {
@@ -626,14 +693,18 @@ operator/(const TLHS &a, const TRHS &b) -> BigInt {
 	return divmod(a, b).d;
 }
 
+}
+
+
 // Modulo:
+namespace bigint {
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
 CONSTEXPR_AUTO
 operator%(const TLHS &a, const uint32_t &b) -> uint32_t {
 	BigInt y;
-	resizeBigInt(y, a.size());
+	_private::resizeBigInt(y, a.size());
 
 	uint64_t c_div = 0ull;
 
@@ -683,8 +754,10 @@ operator%(const TLHS &a, const TRHS &b) -> BigInt {
 	return divmod(a, b).r;
 }
 
+}
 
-namespace _private {
+
+namespace bigint::_private {
 struct base_conversion {
 	constexpr base_conversion(uint32_t base) noexcept
 		: base_power(floor(64 / log2(base))), //  = 19 for base 10;
@@ -747,6 +820,10 @@ from_string_generic(const std::string &input) -> BigInt {
 
 }
 
+
+// misc math:
+namespace bigint {
+
 CONSTEXPR_AUTO
 factorial(uint32_t n) -> BigInt {
 	BigInt result(1);
@@ -780,6 +857,12 @@ toDigitSum(const BigInt &v) -> uint64_t {
 	}
 	return sum;
 }
+
+}
+
+
+// to string & from string:
+namespace bigint {
 
 CONSTEXPR_AUTO
 to_string_base2(const BigInt &v) -> std::string {
