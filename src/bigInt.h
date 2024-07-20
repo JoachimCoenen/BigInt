@@ -30,76 +30,107 @@ concept is_BigInt_like3 = std::is_base_of_v<IBigIntLike, T1> && std::is_base_of_
 
 class BigInt;
 
-CONSTEXPR_AUTO to_string_base2(const BigInt &v) -> std::string;
-CONSTEXPR_AUTO to_string_base8(const BigInt &v) -> std::string;
-CONSTEXPR_AUTO to_string_base10(const BigInt &v) -> std::string;
-CONSTEXPR_AUTO to_string_base16(const BigInt &v) -> std::string;
-CONSTEXPR_AUTO to_string(const BigInt &v) -> std::string;
+CONSTEXPR_AUTO
+to_string_base2(const BigInt &v) -> std::string;
 
-CONSTEXPR_AUTO from_string_base2(const std::string &input) -> BigInt;
-CONSTEXPR_AUTO from_string_base8(const std::string &input) -> BigInt;
-CONSTEXPR_AUTO from_string_base10(const std::string &input) -> BigInt;
-CONSTEXPR_AUTO from_string_base16(const std::string &input) -> BigInt;
-CONSTEXPR_AUTO from_string(const std::string &input) -> BigInt;
+CONSTEXPR_AUTO
+to_string_base8(const BigInt &v) -> std::string;
+
+CONSTEXPR_AUTO
+to_string_base10(const BigInt &v) -> std::string;
+
+CONSTEXPR_AUTO
+to_string_base16(const BigInt &v) -> std::string;
+
+CONSTEXPR_AUTO
+to_string(const BigInt &v) -> std::string;
+
+CONSTEXPR_AUTO
+from_string_base2(const std::string &input) -> BigInt;
+
+CONSTEXPR_AUTO
+from_string_base8(const std::string &input) -> BigInt;
+
+CONSTEXPR_AUTO
+from_string_base10(const std::string &input) -> BigInt;
+
+CONSTEXPR_AUTO
+from_string_base16(const std::string &input) -> BigInt;
+
+CONSTEXPR_AUTO
+from_string(const std::string &input) -> BigInt;
 
 class BigInt : public IBigIntLike
 {
 
  public:
-	constexpr BigInt(): BigInt(0) {}
+	constexpr
+	BigInt(): BigInt(0) {}
 
-	explicit constexpr BigInt(uint64_t v)
+	explicit constexpr
+	BigInt(uint64_t v)
 		: _data({v})
 	{ }
 
-	explicit constexpr BigInt(const std::string &v)
+	explicit constexpr
+	BigInt(const std::string &v)
 		: BigInt(std::move(from_string(v))) {}
 
-	explicit constexpr BigInt(const std::vector<uint64_t> &v)
+	explicit constexpr
+	BigInt(const std::vector<uint64_t> &v)
 		: _data(v) {} // todo: maby make it non-public?
 
-	explicit constexpr BigInt(const std::vector<uint64_t> &&v)
+	explicit constexpr
+	BigInt(const std::vector<uint64_t> &&v)
 		: _data(std::move(v)) {} // todo: maby make it non-public?
 
-	constexpr ~BigInt() {}
+	constexpr
+	~BigInt() {}
 
-
-	constexpr BigInt(const BigInt &other) // copy constructor
+	constexpr
+	BigInt(const BigInt &other) // copy constructor
 		: _data(other._data) {
 		LOGGING("copying: " << _data.size());
 	}
 
-
-	CONSTEXPR_AUTO_DISCARD operator=(const BigInt &other) -> BigInt& { // copy assignment
+	CONSTEXPR_AUTO_DISCARD
+	operator=(const BigInt &other) -> BigInt& { // copy assignment
 		_data = other._data;
 		LOGGING("assigning: " << _data.size());
 		return *this;
 	}
 
-	// CONSTEXPR_AUTO_DISCARD operator=(const BigInt &&other) -> BigInt& { // move assignment
+	// CONSTEXPR_AUTO_DISCARD
+	// operator=(const BigInt &&other) -> BigInt& { // move assignment
 	// 	todo: move assignement
 	// }
 
-	CONSTEXPR_AUTO size() const -> std::size_t {
+	CONSTEXPR_AUTO
+	size() const -> std::size_t {
 		return _data.size();
 	}
 
-	CONSTEXPR_AUTO operator[](std::size_t index) const -> uint64_t {
+	CONSTEXPR_AUTO
+	operator[](std::size_t index) const -> uint64_t {
 		return (index >= size()) ? 0ull : _data.at(index);
 	}
 
-	CONSTEXPR_AUTO operator[](std::size_t index) -> uint64_t& {
+	CONSTEXPR_AUTO
+	operator[](std::size_t index) -> uint64_t& {
 		if (index >= _data.size()) {
 			throw std::string(" index out of bound!");
 		}
 		return _data.at(index);
 	}
 
-	CONSTEXPR_VOID append(uint64_t v) { _data.push_back(v); }
+	CONSTEXPR_VOID
+	append(uint64_t v) { _data.push_back(v); }
 
-	CONSTEXPR_VOID insertFront(uint64_t v) { _data.insert(_data.begin(), v); }
+	CONSTEXPR_VOID
+	insertFront(uint64_t v) { _data.insert(_data.begin(), v); }
 
-	CONSTEXPR_VOID cleanup() const { // todo: const???!
+	CONSTEXPR_VOID
+	cleanup() const { // todo: const???!
 		for (auto i = _data.size(); 0 <--i;) {
 			if (_data[i] == 0) {
 				_data.pop_back();
@@ -110,14 +141,16 @@ class BigInt : public IBigIntLike
 	}
 
 private:
-	CONSTEXPR_VOID resize(std::size_t size) {
+	CONSTEXPR_VOID
+	resize(std::size_t size) {
 		_data.resize(size, 0);
 	}
 
 	friend CONSTEXPR_VOID resizeBigInt(BigInt &a, std::size_t size);
 
 public:
-	[[nodiscard]] auto  __data_for_testing_only() const -> const std::vector<uint64_t>&{
+	[[nodiscard]] auto
+	__data_for_testing_only() const -> const std::vector<uint64_t>&{
 		return _data;
 	}
 
@@ -127,11 +160,13 @@ private:
 };
 
 
-CONSTEXPR_VOID resizeBigInt(BigInt &a, std::size_t size) {
+CONSTEXPR_VOID
+resizeBigInt(BigInt &a, std::size_t size) {
 	a.resize(size);
 }
 
-CONSTEXPR_AUTO makeBigIntWithSize(std::size_t size) -> BigInt{
+CONSTEXPR_AUTO
+makeBigIntWithSize(std::size_t size) -> BigInt{
 	auto r = BigInt();
 	resizeBigInt(r, size); //OCTOPUS
 	return r;
@@ -163,11 +198,13 @@ public:
 	constexpr BigIntLShifted(const BigIntBox<T> lhs, const uint64_t rhs) :
 		_lhs(lhs), _rhs(rhs) {}
 
-	CONSTEXPR_AUTO size() const -> std::size_t {
+	CONSTEXPR_AUTO
+	size() const -> std::size_t {
 		return lhs().size() + _rhs;
 	}
 
-	CONSTEXPR_AUTO operator[](std::size_t index) const -> uint64_t {
+	CONSTEXPR_AUTO
+	operator[](std::size_t index) const -> uint64_t {
 		return (index < _rhs) ? 0 : lhs()[index - _rhs];
 	}
 
@@ -179,8 +216,10 @@ private:
 	BigIntBox<T> _lhs;
 	uint64_t _rhs;
 
-	CONSTEXPR_AUTO lhs() const -> const T& { return _lhs; }
-	CONSTEXPR_AUTO lhs() -> T& { return _lhs; }
+	CONSTEXPR_AUTO
+	lhs() const -> const T& { return _lhs; }
+	CONSTEXPR_AUTO
+	lhs() -> T& { return _lhs; }
 };
 
 template <typename TLHS>
@@ -194,18 +233,21 @@ public:
 	constexpr BigIntRShifted(const BigIntBox<T> lhs, const uint64_t rhs) :
 		_lhs(lhs), _rhs(rhs) {}
 
-	CONSTEXPR_AUTO size() const -> std::size_t {
+	CONSTEXPR_AUTO
+	size() const -> std::size_t {
 		return lhs().size() - _rhs;
 	}
 
-	CONSTEXPR_AUTO operator[](std::size_t index) const -> uint64_t {
+	CONSTEXPR_AUTO
+	operator[](std::size_t index) const -> uint64_t {
 		if (index < 0) {
 			throw std::string(" index out of bound!");
 		}
 		return lhs()[index + _rhs];
 	}
 
-	CONSTEXPR_AUTO operator[](std::size_t index) -> uint64_t& {
+	CONSTEXPR_AUTO
+	operator[](std::size_t index) -> uint64_t& {
 		if (index < 0) {
 			throw std::string(" index out of bound!");
 		}
@@ -216,23 +258,28 @@ private:
 	BigIntBox<T> _lhs;
 	uint64_t _rhs;
 
-	CONSTEXPR_AUTO lhs() const -> const T& { return _lhs; }
-	CONSTEXPR_AUTO lhs() -> T& { return _lhs; }
+	CONSTEXPR_AUTO
+	lhs() const -> const T& { return _lhs; }
+	CONSTEXPR_AUTO
+	lhs() -> T& { return _lhs; }
 };
 
 template <typename TLHS>
-CONSTEXPR_AUTO rshifted(const TLHS &a, uint64_t b) {
+CONSTEXPR_AUTO
+rshifted(const TLHS &a, uint64_t b) {
 	return BigIntRShifted<const TLHS>(a, b);
 }
 
 template <typename TLHS>
-CONSTEXPR_AUTO rshifted(TLHS &a, uint64_t b) {
+CONSTEXPR_AUTO
+rshifted(TLHS &a, uint64_t b) {
 	return BigIntRShifted<TLHS>(a, b);
 }
 
 template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
-CONSTEXPR_AUTO operator<(const TLHS &a, const TRHS &b) {
+CONSTEXPR_AUTO
+operator<(const TLHS &a, const TRHS &b) {
 	std::size_t i;
 	for (i = std::max(a.size(), b.size()); i-->1 && a[i] == b[i];) {
 		// do nothin'
@@ -242,7 +289,8 @@ CONSTEXPR_AUTO operator<(const TLHS &a, const TRHS &b) {
 
 template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
-CONSTEXPR_AUTO operator>(const TLHS &a, const TRHS &b) {
+CONSTEXPR_AUTO
+operator>(const TLHS &a, const TRHS &b) {
 	std::size_t i;
 	for (i = std::max(a.size(), b.size()); i-->1 && a[i] == b[i];) {
 		// do nothin'
@@ -252,20 +300,23 @@ CONSTEXPR_AUTO operator>(const TLHS &a, const TRHS &b) {
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
-CONSTEXPR_AUTO operator<(const TLHS &a, const uint64_t &b) {
+CONSTEXPR_AUTO
+operator<(const TLHS &a, const uint64_t &b) {
 	return a < BigInt(b);
 }
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
-CONSTEXPR_AUTO operator>(const TLHS &a, const uint64_t &b) {
+CONSTEXPR_AUTO
+operator>(const TLHS &a, const uint64_t &b) {
 	return a > BigInt(b);
 }
 
 
 template <typename TRES, typename TLHS, typename TRHS>
 	requires is_BigInt_like3<TRES, TLHS, TRHS>
-CONSTEXPR_VOID add(TRES &result, TLHS &a, const TRHS &b) {
+CONSTEXPR_VOID
+add(TRES &result, TLHS &a, const TRHS &b) {
 	uint8_t c = 0; // carry
 	for (auto i = 0ull; i < result.size(); i++) {
 		const auto bc = b[i] + c;
@@ -280,7 +331,8 @@ CONSTEXPR_VOID add(TRES &result, TLHS &a, const TRHS &b) {
 
 template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
-CONSTEXPR_AUTO operator+(const TLHS &a, const TRHS &b) -> BigInt {
+CONSTEXPR_AUTO
+operator+(const TLHS &a, const TRHS &b) -> BigInt {
 	BigInt result = makeBigIntWithSize(std::max(a.size(), b.size()));
 	add(result, a, b);
 	return result;
@@ -288,7 +340,8 @@ CONSTEXPR_AUTO operator+(const TLHS &a, const TRHS &b) -> BigInt {
 
 template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
-CONSTEXPR_AUTO_DISCARD operator+=(TLHS &a, const TRHS &b) -> TLHS& {
+CONSTEXPR_AUTO_DISCARD
+operator+=(TLHS &a, const TRHS &b) -> TLHS& {
 	resizeBigInt(a, std::max(a.size(), b.size()));
 	add(a, a, b);
 	return a;
@@ -297,7 +350,8 @@ CONSTEXPR_AUTO_DISCARD operator+=(TLHS &a, const TRHS &b) -> TLHS& {
 
 template <typename TRES, typename TLHS, typename TRHS>
 	requires is_BigInt_like3<TRES, TLHS, TRHS>
-CONSTEXPR_VOID sub(TRES &result, TLHS &a, const TRHS &b) {
+CONSTEXPR_VOID
+sub(TRES &result, TLHS &a, const TRHS &b) {
 	uint8_t c = 0; // carry
 	for (auto i = 0ull; i < result.size(); i++) {
 		const auto bc = b[i] + c;
@@ -312,7 +366,8 @@ CONSTEXPR_VOID sub(TRES &result, TLHS &a, const TRHS &b) {
 
 template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
-CONSTEXPR_AUTO operator-(const TLHS &a, const TRHS &b) -> BigInt {
+CONSTEXPR_AUTO
+operator-(const TLHS &a, const TRHS &b) -> BigInt {
 	BigInt result = makeBigIntWithSize(std::max(a.size(), b.size()));
 	sub(result, a, b);
 	result.cleanup();
@@ -321,13 +376,15 @@ CONSTEXPR_AUTO operator-(const TLHS &a, const TRHS &b) -> BigInt {
 
 template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
-CONSTEXPR_AUTO_DISCARD operator-=(TLHS &a, const TRHS &b) -> TLHS& {
+CONSTEXPR_AUTO_DISCARD
+operator-=(TLHS &a, const TRHS &b) -> TLHS& {
 	sub(a, a, b);
 	return a;
 }
 
 
-CONSTEXPR_AUTO mult(uint64_t a, uint64_t b) -> BigInt {
+CONSTEXPR_AUTO
+mult(uint64_t a, uint64_t b) -> BigInt {
 	const auto a_0 = a & 0xFFFFFFFFull;
 	const auto a_1 = a >> 32;
 	const auto b_0 = b & 0xFFFFFFFFull;
@@ -351,7 +408,8 @@ CONSTEXPR_AUTO mult(uint64_t a, uint64_t b) -> BigInt {
 
 template <typename TRES, typename TLHS>
 	requires is_BigInt_like2<TRES, TLHS>
-CONSTEXPR_VOID mult(TRES &result, TLHS &a, uint64_t b) {
+CONSTEXPR_VOID
+mult(TRES &result, TLHS &a, uint64_t b) {
 	uint64_t c = 0; // carry
 	for (auto i = 0ull; i < a.size(); i++) {
 		const auto rc = mult(a[i], b);
@@ -366,7 +424,8 @@ CONSTEXPR_VOID mult(TRES &result, TLHS &a, uint64_t b) {
 
 template <typename TRES, typename TLHS, typename TRHS>
 	requires is_BigInt_like3<TRES, TLHS, TRHS>
-CONSTEXPR_VOID mult(TRES &result, const TLHS &a, const TRHS &b) {
+CONSTEXPR_VOID
+mult(TRES &result, const TLHS &a, const TRHS &b) {
 	for (auto i = 0ull; i < b.size(); i++) {
 		auto temp = a * b[i];
 		result += lshifted(temp, i);
@@ -376,7 +435,8 @@ CONSTEXPR_VOID mult(TRES &result, const TLHS &a, const TRHS &b) {
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
-CONSTEXPR_AUTO operator*(const TLHS &a, uint64_t b) -> BigInt {
+CONSTEXPR_AUTO
+operator*(const TLHS &a, uint64_t b) -> BigInt {
 	BigInt result = makeBigIntWithSize(a.size());
 	mult(result, a, b);
 	return result;
@@ -384,14 +444,16 @@ CONSTEXPR_AUTO operator*(const TLHS &a, uint64_t b) -> BigInt {
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
-CONSTEXPR_AUTO_DISCARD operator*=(TLHS &a, uint64_t b) -> BigInt& {
+CONSTEXPR_AUTO_DISCARD
+operator*=(TLHS &a, uint64_t b) -> BigInt& {
 	mult(a, a, b);
 	return a;
 }
 
 template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
-CONSTEXPR_AUTO operator*(const TLHS &a, const TRHS &b) -> BigInt {
+CONSTEXPR_AUTO
+operator*(const TLHS &a, const TRHS &b) -> BigInt {
 	BigInt result = makeBigIntWithSize(a.size() + b.size());
 	mult(result, a, b);
 	result.cleanup();
@@ -401,7 +463,8 @@ CONSTEXPR_AUTO operator*(const TLHS &a, const TRHS &b) -> BigInt {
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
-CONSTEXPR_AUTO lshiftBits(const TLHS &vec, uint64_t digits) -> BigInt {
+CONSTEXPR_AUTO
+lshiftBits(const TLHS &vec, uint64_t digits) -> BigInt {
 	BigInt result(std::vector<uint64_t>(digits / 64, 0));
 	digits %= 64;
 	result.append(vec[0] << digits);
@@ -418,7 +481,8 @@ CONSTEXPR_AUTO lshiftBits(const TLHS &vec, uint64_t digits) -> BigInt {
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
-CONSTEXPR_AUTO rshiftBits(const TLHS &vec, uint64_t digits) -> BigInt {
+CONSTEXPR_AUTO
+rshiftBits(const TLHS &vec, uint64_t digits) -> BigInt {
 	BigInt result;//(digits / 64, 0);
 	const uint64_t start = digits / 64;
 	digits %= 64;
@@ -433,7 +497,8 @@ CONSTEXPR_AUTO rshiftBits(const TLHS &vec, uint64_t digits) -> BigInt {
 
 template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
-CONSTEXPR_AUTO divmod(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
+CONSTEXPR_AUTO
+divmod(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
 	DivModResult<BigInt> r;
 	r.r = a;
 	resizeBigInt(r.d, a.size() - b.size() + 1);
@@ -470,14 +535,16 @@ CONSTEXPR_AUTO divmod(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
-CONSTEXPR_AUTO divmod(const TLHS &a, const uint64_t &b) -> DivModResult<BigInt, uint64_t> {
+CONSTEXPR_AUTO
+divmod(const TLHS &a, const uint64_t &b) -> DivModResult<BigInt, uint64_t> {
 	const auto res = divmod(a, BigInt(b));
 	return { res.d, res.r[0] };
 }
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
-CONSTEXPR_AUTO divmod1(const TLHS &a, const uint32_t &b) -> DivModResult<BigInt, uint64_t> { // todo: validate: Isn't uint32_t sufficient for remainder return type?
+CONSTEXPR_AUTO
+divmod1(const TLHS &a, const uint32_t &b) -> DivModResult<BigInt, uint64_t> { // todo: validate: Isn't uint32_t sufficient for remainder return type?
 	BigInt d;
 	resizeBigInt(d, a.size());
 	BigInt y;
@@ -523,7 +590,8 @@ CONSTEXPR_AUTO divmod1(const TLHS &a, const uint32_t &b) -> DivModResult<BigInt,
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
-CONSTEXPR_AUTO operator/(const TLHS &a, const uint32_t &b) -> BigInt {
+CONSTEXPR_AUTO
+operator/(const TLHS &a, const uint32_t &b) -> BigInt {
 	BigInt result;
 	resizeBigInt(result, a.size());
 
@@ -546,13 +614,15 @@ CONSTEXPR_AUTO operator/(const TLHS &a, const uint32_t &b) -> BigInt {
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
-CONSTEXPR_AUTO operator/(const TLHS &a, const uint64_t &b) -> BigInt {
+CONSTEXPR_AUTO
+operator/(const TLHS &a, const uint64_t &b) -> BigInt {
 	return divmod(a, b).d;
 }
 
 template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
-CONSTEXPR_AUTO operator/(const TLHS &a, const TRHS &b) -> BigInt {
+CONSTEXPR_AUTO
+operator/(const TLHS &a, const TRHS &b) -> BigInt {
 	return divmod(a, b).d;
 }
 
@@ -560,7 +630,8 @@ CONSTEXPR_AUTO operator/(const TLHS &a, const TRHS &b) -> BigInt {
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
-CONSTEXPR_AUTO operator%(const TLHS &a, const uint32_t &b) -> uint32_t {
+CONSTEXPR_AUTO
+operator%(const TLHS &a, const uint32_t &b) -> uint32_t {
 	BigInt y;
 	resizeBigInt(y, a.size());
 
@@ -600,13 +671,15 @@ CONSTEXPR_AUTO operator%(const TLHS &a, const uint32_t &b) -> uint32_t {
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
-CONSTEXPR_AUTO operator%(const TLHS &a, const uint64_t &b) -> uint64_t {
+CONSTEXPR_AUTO
+operator%(const TLHS &a, const uint64_t &b) -> uint64_t {
 	return divmod(a, b).r;
 }
 
 template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
-CONSTEXPR_AUTO operator%(const TLHS &a, const TRHS &b) -> BigInt {
+CONSTEXPR_AUTO
+operator%(const TLHS &a, const TRHS &b) -> BigInt {
 	return divmod(a, b).r;
 }
 
@@ -621,7 +694,8 @@ struct base_conversion {
 };
 
 template <int base = 10>
-inline std::string to_string_padded_generic(uint64_t n, uint64_t len){
+CONSTEXPR_AUTO
+to_string_padded_generic(uint64_t n, uint64_t len) -> std::string {
 	std::string result(len, '0');
 	for (uint64_t val = n; len-->0 && val != 0; val/=base)
 		result[len] = '0' + val%base;
@@ -629,7 +703,8 @@ inline std::string to_string_padded_generic(uint64_t n, uint64_t len){
 }
 
 template <int base>
-CONSTEXPR_AUTO to_string_generic(const BigInt &v) -> std::string {
+CONSTEXPR_AUTO
+to_string_generic(const BigInt &v) -> std::string {
 	const auto conv = base_conversion(base);
 
 	DivModResult<BigInt, uint64_t> tempDig = { v, 0ull };
@@ -653,7 +728,8 @@ CONSTEXPR_AUTO to_string_generic(const BigInt &v) -> std::string {
 }
 
 template <int base>
-CONSTEXPR_AUTO from_string_generic(const std::string &input) -> BigInt {
+CONSTEXPR_AUTO
+from_string_generic(const std::string &input) -> BigInt {
 	const auto conv = base_conversion(base);
 
 	BigInt result{0};
@@ -671,7 +747,8 @@ CONSTEXPR_AUTO from_string_generic(const std::string &input) -> BigInt {
 
 }
 
-CONSTEXPR_AUTO factorial(uint32_t n) -> BigInt {
+CONSTEXPR_AUTO
+factorial(uint32_t n) -> BigInt {
 	BigInt result(1);
 	for (uint32_t i = 1; i <= n; ++i) {
 		result *= i;
@@ -679,7 +756,8 @@ CONSTEXPR_AUTO factorial(uint32_t n) -> BigInt {
 	return result;
 }
 
-CONSTEXPR_AUTO toDigitSum(const BigInt &v) -> uint64_t {
+CONSTEXPR_AUTO
+toDigitSum(const BigInt &v) -> uint64_t {
 	// 4294967296 =>
 	// 1000000000
 	// 1111111110
@@ -703,44 +781,54 @@ CONSTEXPR_AUTO toDigitSum(const BigInt &v) -> uint64_t {
 	return sum;
 }
 
-CONSTEXPR_AUTO to_string_base2(const BigInt &v) -> std::string {
+CONSTEXPR_AUTO
+to_string_base2(const BigInt &v) -> std::string {
 	return _private::to_string_generic<2>(v);
 }
 
-CONSTEXPR_AUTO to_string_base8(const BigInt &v) -> std::string {
+CONSTEXPR_AUTO
+to_string_base8(const BigInt &v) -> std::string {
 	return _private::to_string_generic<8>(v);
 }
 
-CONSTEXPR_AUTO to_string_base10(const BigInt &v) -> std::string {
+CONSTEXPR_AUTO
+to_string_base10(const BigInt &v) -> std::string {
 	return _private::to_string_generic<10>(v);
 }
 
-CONSTEXPR_AUTO to_string_base16(const BigInt &v) -> std::string {
+CONSTEXPR_AUTO
+to_string_base16(const BigInt &v) -> std::string {
 	return _private::to_string_generic<16>(v);
 }
 
-CONSTEXPR_AUTO to_string(const BigInt &v) -> std::string {
+CONSTEXPR_AUTO
+to_string(const BigInt &v) -> std::string {
 	return to_string_base10(v);
 }
 
 
-CONSTEXPR_AUTO from_string_base2(const std::string &input) -> BigInt {
+CONSTEXPR_AUTO
+from_string_base2(const std::string &input) -> BigInt {
 	return _private::from_string_generic<2>(input);
 }
 
-CONSTEXPR_AUTO from_string_base8(const std::string &input) -> BigInt {
+CONSTEXPR_AUTO
+from_string_base8(const std::string &input) -> BigInt {
 	return _private::from_string_generic<8>(input);
 }
 
-CONSTEXPR_AUTO from_string_base10(const std::string &input) -> BigInt {
+CONSTEXPR_AUTO
+from_string_base10(const std::string &input) -> BigInt {
 	return _private::from_string_generic<10>(input);
 }
 
-CONSTEXPR_AUTO from_string_base16(const std::string &input) -> BigInt {
+CONSTEXPR_AUTO
+from_string_base16(const std::string &input) -> BigInt {
 	return _private::from_string_generic<16>(input);
 }
 
-CONSTEXPR_AUTO from_string(const std::string &input) -> BigInt {
+CONSTEXPR_AUTO
+from_string(const std::string &input) -> BigInt {
 	return from_string_base10(input);
 }
 
