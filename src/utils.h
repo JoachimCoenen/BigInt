@@ -5,6 +5,13 @@
 #include <stdexcept>
 #include <string_view>
 
+//      [[nodiscard]] constexpr auto
+#define CONSTEXPR_AUTO [[nodiscard]] constexpr auto
+//      constexpr auto
+#define CONSTEXPR_AUTO_DISCARD constexpr auto
+//      constexpr void
+#define CONSTEXPR_VOID constexpr void
+
 namespace utils {
 
 template <class T>

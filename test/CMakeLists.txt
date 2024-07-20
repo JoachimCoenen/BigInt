@@ -14,7 +14,6 @@ add_executable("Test_BigInt"
 )
 
 target_link_libraries(Test_BigInt
-	BigInt
 	GTest::gtest_main
 )
 
