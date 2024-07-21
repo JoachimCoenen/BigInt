@@ -407,8 +407,8 @@ add(TRES &result, TLHS &a, const uint64_t b) {
 	result[0] = a[0] + b;
 	uint8_t c = (result[0] < b) ? 1: 0; // carry
 
-	// propagate carry:
-	for (auto i = 1ull; c && i < result.size(); i++) {
+	// propagate carry and copy to result:
+	for (auto i = 1ull; i < result.size(); i++) {
 		result[i] = a[i] + c;
 		c = (result[i] < c) ? 1: 0;
 	}
@@ -524,6 +524,7 @@ CONSTEXPR_AUTO
 operator-(const TLHS &a, uint64_t b) -> BigInt {
 	BigInt result = _private::makeBigIntWithSize(a.size());
 	sub(result, a, b);
+	result.cleanup();
 	return result;
 }
 
@@ -583,7 +584,10 @@ mult(uint64_t a, uint64_t b) -> BigInt {
 	c += (r < (r_01 << 32)) ? 1 : 0;
 	r += r_10 << 32;
 	c += (r < (r_10 << 32)) ? 1 : 0;
-	return BigInt{std::vector<uint64_t>{r, c}};
+	if (c != 0)
+		return BigInt{std::vector<uint64_t>{r, c}};
+	else
+		return BigInt{std::vector<uint64_t>{r}};
 }
 
 template <typename TRES, typename TLHS>
@@ -617,6 +621,9 @@ template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
 CONSTEXPR_AUTO
 operator*(const TLHS &a, uint64_t b) -> BigInt {
+	if (b == 0) {
+		return BigInt{};
+	}
 	BigInt result = _private::makeBigIntWithSize(a.size());
 	mult(result, a, b);
 	return result;
@@ -643,6 +650,9 @@ template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
 CONSTEXPR_AUTO_DISCARD
 operator*=(TLHS &a, uint64_t b) -> BigInt& {
+	if (b == 0) {
+		a = BigInt{};
+	}
 	mult(a, a, b);
 	return a;
 }
@@ -800,6 +810,7 @@ operator/(const TLHS &a, const uint32_t &b) -> BigInt {
 	BigInt result;
 	_private::resizeBigInt(result, a.size());
 	div(result, a, b);
+	result.cleanup();
 	return result;
 }
 
@@ -823,6 +834,7 @@ template <typename TLHS>
 CONSTEXPR_AUTO
 operator/=(TLHS &a, const uint32_t &b) -> BigInt& {
 	div(a, a, b);
+	a.cleanup();
 	return a;
 }
 
