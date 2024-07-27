@@ -47,19 +47,19 @@ CONSTEXPR_AUTO
 to_string(const BigInt &v) -> std::string;
 
 CONSTEXPR_AUTO
-from_string_base2(const std::string &input) -> BigInt;
+from_string_base2(const std::string_view input) -> BigInt;
 
 CONSTEXPR_AUTO
-from_string_base8(const std::string &input) -> BigInt;
+from_string_base8(const std::string_view input) -> BigInt;
 
 CONSTEXPR_AUTO
-from_string_base10(const std::string &input) -> BigInt;
+from_string_base10(const std::string_view input) -> BigInt;
 
 CONSTEXPR_AUTO
-from_string_base16(const std::string &input) -> BigInt;
+from_string_base16(const std::string_view input) -> BigInt;
 
 CONSTEXPR_AUTO
-from_string(const std::string &input) -> BigInt;
+from_string(const std::string_view input) -> BigInt;
 
 }
 
@@ -87,8 +87,8 @@ class BigInt : public IBigIntLike
 	{ }
 
 	explicit constexpr
-	BigInt(const std::string &v)
-		: BigInt(std::move(from_string(v))) {}
+	BigInt(const std::string_view v)
+		: BigInt(from_string(v)) {}
 
 	explicit constexpr
 	BigInt(const std::vector<uint64_t> &v)
@@ -984,7 +984,7 @@ to_string_generic(const BigInt &v) -> std::string {
 
 template <int base>
 CONSTEXPR_AUTO
-from_string_generic(const std::string &input) -> BigInt {
+from_string_generic(const std::string_view input) -> BigInt {
 	constexpr auto conv = base_conversion(base);
 
 	BigInt result{0};
@@ -1073,27 +1073,27 @@ to_string(const BigInt &v) -> std::string {
 
 
 CONSTEXPR_AUTO
-from_string_base2(const std::string &input) -> BigInt {
+from_string_base2(const std::string_view input) -> BigInt {
 	return _private::from_string_generic<2>(input);
 }
 
 CONSTEXPR_AUTO
-from_string_base8(const std::string &input) -> BigInt {
+from_string_base8(const std::string_view input) -> BigInt {
 	return _private::from_string_generic<8>(input);
 }
 
 CONSTEXPR_AUTO
-from_string_base10(const std::string &input) -> BigInt {
+from_string_base10(const std::string_view input) -> BigInt {
 	return _private::from_string_generic<10>(input);
 }
 
 CONSTEXPR_AUTO
-from_string_base16(const std::string &input) -> BigInt {
+from_string_base16(const std::string_view input) -> BigInt {
 	return _private::from_string_generic<16>(input);
 }
 
 CONSTEXPR_AUTO
-from_string(const std::string &input) -> BigInt {
+from_string(const std::string_view input) -> BigInt {
 	return from_string_base10(input);
 }
 

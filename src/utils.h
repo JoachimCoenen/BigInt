@@ -16,7 +16,7 @@
 namespace utils {
 
 template <class T>
-void __from_chars_throws(const std::string_view &input, T &result, int base) {
+void __from_chars_throws(const std::string_view input, T &result, int base) {
 	const char* first = input.data();
 	const char* last = input.data() + input.size();
 
@@ -33,14 +33,14 @@ void __from_chars_throws(const std::string_view &input, T &result, int base) {
 
 
 inline unsigned long
-stoul(const std::string_view& input, int base = 10) {
+stoul(const std::string_view input, int base = 10) {
 	unsigned long result;
 	__from_chars_throws(input, result, base);
 	return result;
 }
 
 inline unsigned long long
-stoull(const std::string_view& input, int base = 10) {
+stoull(const std::string_view input, int base = 10) {
 	unsigned long long result;
 	__from_chars_throws(input, result, base);
 	return result;
