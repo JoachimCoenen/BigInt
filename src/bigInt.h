@@ -4,7 +4,6 @@
 #include "utils.h"
 
 #include <cstdint>
-#include <math.h>
 #include <vector>
 #include <string>
 #include <type_traits>
@@ -691,9 +690,9 @@ divmod(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
 	}
 
 	const auto aHi = a[a.size()-1];
-	const auto ad  = a.size()*64 - (aHi==0 ? 64 : __builtin_clzll(aHi));
+	const auto ad  = a.size()*64 - (aHi==0 ? 64 : utils::clzll(aHi));
 	const auto b2Hi = b[b.size()-1];
-	const auto b2d = b.size()*64 - __builtin_clzll(b2Hi);
+	const auto b2d = b.size()*64 - utils::clzll(b2Hi);
 	const auto adbd2 = int64_t(ad - b2d);
 	//uint64_t min = std::max(0ll, adbd2 - 1);
 	const uint64_t max = std::max(0ll, adbd2 + 1ll);//%64; //std::numeric_limits<uint64_t>::max();
@@ -866,7 +865,7 @@ template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
 CONSTEXPR_AUTO
 operator%(const TLHS &a, const uint32_t &b) -> uint32_t {
-	return divmod1<TLHS, true>(a, b).r;
+	return (uint32_t) divmod1<TLHS, true>(a, b).r; // we can trunccate safely because the divisor only also is uint32_t.
 }
 
 template <typename TLHS>
@@ -896,10 +895,55 @@ operator%=(const TLHS &a, const TRHS &b) -> BigInt& {
 
 
 namespace bigint::_private {
+
+constexpr uint32_t calculate_base_power(uint32_t base) {
+	// formula: result =floor(64 / log2(base))
+	switch (base) {
+	case 2:
+		return 64;
+	case 3:
+		return 40;
+	case 4:
+		return 32;
+	case 5:
+		return 27;
+	case 6:
+		return 24;
+	case 7:
+		return 22;
+	case 8:
+		return 21;
+	case 9:
+		return 20;
+	case 10:
+		return 19;
+	case 11:
+		return 18;
+	case 12: case 13:
+		return 17;
+	case 14: case 15: case 16:
+		return 16;
+	case 17: case 18: case 19:
+		return 15;
+	case 20: case 21: case 22: case 23:
+		return 14;
+	case 24: case 25: case 26: case 27: case 28: case 29: case 30:
+		return 13;
+	case 31: case 32: case 33: case 34: case 35: case 36: case 37: case 38: case 39: case 40:
+		return 12;
+	case 41: case 42: case 43: case 44: case 45: case 46: case 47: case 48: case 49: case 50: case 51: case 52: case 53: case 54: case 55: case 56:
+		return 11;
+	case 57: case 58: case 59: case 60: case 61: case 62: case 63: case 64:
+		return 10;
+	default:
+		throw std::string("illegal base! it must be between 2 and 64 (inclusive). Also, please use constexpr!");
+	}
+}
+
 struct base_conversion {
-	constexpr base_conversion(uint32_t base) noexcept
-		: base_power(floor(64 / log2(base))), //  = 19 for base 10;
-		division_base(std::pow(base, base_power)) {}
+	consteval base_conversion(uint32_t base) noexcept
+		: base_power(calculate_base_power(base)), //  = 19 for base 10;
+		division_base(utils::consteval_pow(base, base_power)) {}
 	uint32_t base_power;
 	uint64_t division_base;
 };
@@ -916,7 +960,7 @@ to_string_padded_generic(uint64_t n, uint64_t len) -> std::string {
 template <int base>
 CONSTEXPR_AUTO
 to_string_generic(const BigInt &v) -> std::string {
-	const auto conv = base_conversion(base);
+	constexpr auto conv = base_conversion(base);
 
 	DivModResult<BigInt, uint64_t> tempDig = { v, 0ull };
 	tempDig.d.cleanup();
@@ -941,13 +985,13 @@ to_string_generic(const BigInt &v) -> std::string {
 template <int base>
 CONSTEXPR_AUTO
 from_string_generic(const std::string &input) -> BigInt {
-	const auto conv = base_conversion(base);
+	constexpr auto conv = base_conversion(base);
 
 	BigInt result{0};
 
 	for (size_t i = 0; i < input.size(); i += conv.base_power) {
 		auto substr = std::string_view(input).substr(i, conv.base_power);
-		auto mul = substr.size() == conv.base_power ? conv.division_base : uint64_t(std::pow(base, substr.size()));
+		auto mul = substr.size() == conv.base_power ? conv.division_base : (uint64_t)utils::consteval_pow(base, (uint8_t)substr.size());
 		auto add = utils::stoull(substr, base);
 		result *= mul;
 		result += BigInt{add};
@@ -978,7 +1022,7 @@ toDigitSum(const BigInt &v) -> uint64_t {
 	// 1111111110
 	// 18446744073709551616 =>
 	// 10000000000000000000
-	const auto base = _private::base_conversion{10}.division_base; // 19 is the larges value for n such that 10^n fits into 64 bits
+	constexpr auto base = _private::base_conversion{10}.division_base; // 19 is the larges value for n such that 10^n fits into 64 bits
 	// constexpr auto base = uint64_t(10000000000000000000ull);
 	DivModResult<BigInt, uint64_t> tempDig = { v, 0ull };
 	tempDig.d.cleanup();

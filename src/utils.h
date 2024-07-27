@@ -4,6 +4,7 @@
 #include <charconv>
 #include <stdexcept>
 #include <string_view>
+#include <stdint.h>
 
 //      [[nodiscard]] constexpr auto
 #define CONSTEXPR_AUTO [[nodiscard]] constexpr auto
@@ -44,6 +45,67 @@ stoull(const std::string_view& input, int base = 10) {
 	__from_chars_throws(input, result, base);
 	return result;
 }
+
+
+constexpr uint64_t
+consteval_pow(uint32_t base, uint8_t exponent)  {
+	uint64_t base2 = base;
+	uint64_t result = 1;
+	for (uint8_t i = 0; i < 8; ++i) {
+		if (exponent & (0b00000001 << i)) {
+			result *= base2;
+		};
+		base2 *= base2;
+	}
+	return result;
+}
+
+
+#ifdef _MSC_VER
+}
+#include <intrin.h>
+namespace utils {
+
+uint32_t __inline ctzll(uint64_t value) {
+	// adapted from https://stackoverflow.com/a/20468180/8091657
+	unsigned long trailing_zero = 0;
+	if (_BitScanForward64(&trailing_zero, value)) {
+		return trailing_zero;
+	} else {
+		// This is undefined, I better choose 64 than 0
+		return 64;
+	}
+}
+
+uint32_t __inline clzll(uint64_t value) {
+	// adapted from https://stackoverflow.com/a/20468180/8091657
+	unsigned long leading_zero = 0;
+	if (_BitScanReverse64(&leading_zero, value)) {
+		return 63 - leading_zero;
+	} else {
+		// Same remarks as above
+		return 64;
+	}
+}
+#else
+
+uint32_t __inline ctzll(uint64_t value) {
+	if (value != 0) {
+		return __builtin_ctzll(value);
+	} else {
+		return 64;
+	}
+}
+
+uint32_t __inline clzll(uint64_t value) {
+	if (value != 0) {
+		return __builtin_clzll(value);
+	} else {
+		return 64;
+	}
+}
+
+#endif
 
 }
 
