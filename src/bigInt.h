@@ -896,7 +896,7 @@ operator%=(const TLHS &a, const TRHS &b) -> BigInt& {
 
 namespace bigint::_private {
 
-constexpr uint32_t calculate_base_power(uint32_t base) {
+constexpr uint8_t calculate_base_power(uint32_t base) {
 	// formula: result =floor(64 / log2(base))
 	switch (base) {
 	case 2:
@@ -944,7 +944,7 @@ struct base_conversion {
 	consteval base_conversion(uint32_t base) noexcept
 		: base_power(calculate_base_power(base)), //  = 19 for base 10;
 		division_base(utils::consteval_pow(base, base_power)) {}
-	uint32_t base_power;
+	uint8_t base_power;
 	uint64_t division_base;
 };
 
