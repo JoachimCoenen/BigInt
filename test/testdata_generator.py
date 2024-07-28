@@ -39,6 +39,17 @@ def indent_multiline(text: str, *, tabs: int, indentFirstLine: bool = True):
 Operation = tuple[str, Callable[[int, int], int]]
 
 
+INT32_MAX_00 = 2**31 - 1
+INT32_MAX_M2 = INT32_MAX_00 - 2
+INT32_MAX_M1 = INT32_MAX_00 - 1
+INT32_MAX_P1 = INT32_MAX_00 + 1
+INT32_MAX_P2 = INT32_MAX_00 + 2
+INT64_MAX_00 = 2**63 - 1
+INT64_MAX_M2 = INT64_MAX_00 - 2
+INT64_MAX_M1 = INT64_MAX_00 - 1
+INT64_MAX_P1 = INT64_MAX_00 + 1
+INT64_MAX_P2 = INT64_MAX_00 + 2
+
 UINT32_MAX_00 = 2**32 - 1
 UINT32_MAX_M2 = UINT32_MAX_00 - 2
 UINT32_MAX_M1 = UINT32_MAX_00 - 1
@@ -51,6 +62,17 @@ UINT64_MAX_P1 = UINT64_MAX_00 + 1
 UINT64_MAX_P2 = UINT64_MAX_00 + 2
 
 CONSTS = {
+	INT32_MAX_00: 'INT32_MAX_00',
+	INT32_MAX_M2: 'INT32_MAX_M2',
+	INT32_MAX_M1: 'INT32_MAX_M1',
+	INT32_MAX_P1: 'INT32_MAX_P1',
+	INT32_MAX_P2: 'INT32_MAX_P2',
+	INT64_MAX_00: 'INT64_MAX_00',
+	INT64_MAX_M2: 'INT64_MAX_M2',
+	INT64_MAX_M1: 'INT64_MAX_M1',
+	INT64_MAX_P1: 'INT64_MAX_P1',
+	INT64_MAX_P2: 'INT64_MAX_P2',
+
 	UINT32_MAX_00: 'UINT32_MAX_00',
 	UINT32_MAX_M2: 'UINT32_MAX_M2',
 	UINT32_MAX_M1: 'UINT32_MAX_M1',
@@ -68,15 +90,32 @@ def to_str(value: int) -> str:
 	return CONSTS.get(value, f'"{value}"')
 
 
-
-
 def get_ValType(value: int) -> str:
 	if value > UINT64_MAX_00:
 		return 'VT::BIG'
-	elif value > UINT32_MAX_00:
+	elif value > INT64_MAX_00:
 		return 'VT::U64'
-	else:
+	elif value > UINT32_MAX_00:
+		return 'VT::S64'
+	elif value > INT32_MAX_00:
 		return 'VT::U32'
+	elif value >= 0:
+		return 'VT::S32'
+	elif value >= -INT32_MAX_00 - 1:
+		return 'VT::N32'
+	elif value >= -INT64_MAX_00 - 1:
+		return 'VT::N64'
+	else:
+		return 'VT::BIG'
+
+
+# def get_ValType(value: int) -> str:
+# 	if value > UINT64_MAX_00 or value < (-INT32_MAX_00 - 1) :
+# 		return 'VT::BIG'
+# 	elif value > UINT32_MAX_00:
+# 		return 'VT::U64'
+# 	else:
+# 		return 'VT::U32'
 
 
 def make_Param(value: int) -> str:
@@ -90,8 +129,6 @@ def make_ExpectedResult(left: int, right: int, operation: Callable[[int, int], i
 	except ZeroDivisionError:
 		return 'IGNORED'
 	else:
-		if result < 0:
-			return 'IGNORED'
 		return f'{to_str(result)}'
 
 
@@ -111,9 +148,20 @@ def make_BinOpTest(left: int, right: int, operations: list[Operation]) -> str:
 	return f'BinOpTest{{{lparam}, {rparam}, {expected}}}'
 
 
+def make_BinOpTest_combinations(left: int, right: int, operations: list[Operation]) -> str:
+	binOpTests = f'{make_BinOpTest(left, right, operations)},'
+	if left != 0:
+		binOpTests += f'\n{make_BinOpTest(-left, right, operations)},'
+	if right != 0:
+		binOpTests += f'\n{make_BinOpTest(left, -right, operations)},'
+	if left != 0 and right != 0:
+		binOpTests += f'\n{make_BinOpTest(-left, -right, operations)},'
+	return binOpTests
+
+
 def make_ALL_TEST_VALUES(var_name: str, all_params: list[tuple[int, int]], operations: list[Operation]) -> str:
 	all_BinOpTests = '\n'.join([
-		f'{make_BinOpTest(left, right, operations)},'
+		f'{make_BinOpTest_combinations(left, right, operations)}'
 		for left, right in all_params
 	])
 	all_BinOpTests_indented = indent_multiline(all_BinOpTests, tabs=1)
@@ -185,6 +233,8 @@ ALL_PARAMS = [
 	(340282366920938463463374607431768211456, UINT64_MAX_P1),
 	(340282366920938463481821351505477763072, UINT64_MAX_P2),
 	(340282366920938463500268095579187314689, UINT64_MAX_P2),
+	(340282366920938463463374607431768211455, UINT64_MAX_P2), # eqivalent to 99, 11. Tests carry overflow
+	(340282366920938463463374607431768211456, 340282366920938463463374607431768211455), # eqivalent to 100, 99. Tests carry underflow
 	(382362535088167210234626361716426516060166448586892714986920000001800000000081, 618354700061515834059999999799999999991),
 	(85053461164796801949539541639542805770666392330682673302530819774105141531698707146930307290253537320447270457  # 3rd Generalized repunit prime for a=7
 	, 531137992816767098689588206552468627329593117727031923199444138200403559860852242739162502265229285668889),  # 2^107 - 1, a Mersenne prime.

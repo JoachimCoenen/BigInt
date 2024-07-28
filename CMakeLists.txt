@@ -16,8 +16,8 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		# no address sanitazer for gcc on windows :(
 		# no libubsan rich logging capabilities for gcc on windows :(
 		# no sanitazer at all for gcc on windows :'(
-		add_compile_options(-fsanitize=undefined -fsanitize-undefined-trap-on-error)
-		add_link_options(-fsanitize=undefined -fsanitize-undefined-trap-on-error)
+		add_compile_options(-fsanitize=undefined -fsanitize-undefined-trap-on-error -pedantic)
+		add_link_options(-fsanitize=undefined -fsanitize-undefined-trap-on-error -pedantic)
 	else()
 		add_compile_options(-fsanitize=address -fsanitize=leak -fsanitize=undefined -pedantic)
 		add_link_options(-fsanitize=address -fsanitize=leak -fsanitize=undefined -pedantic)
