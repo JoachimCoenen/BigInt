@@ -2,6 +2,36 @@
 #define VALUES_FOR_TEST_H
 
 
+#include "utils_for_test.h"
+#include <vector>
+
+namespace test_data {
+
+using namespace test_utils;
+
+// usefull constants
+#define INT32_MAX_M2 "2147483645"
+#define INT32_MAX_M1 "2147483646"
+#define INT32_MAX_00 "2147483647"
+#define INT32_MAX_P1 "2147483648"
+#define INT32_MAX_P2 "2147483649"
+#define INT64_MAX_M2 "9223372036854775805"
+#define INT64_MAX_M1 "9223372036854775806"
+#define INT64_MAX_00 "9223372036854775807"
+#define INT64_MAX_P1 "9223372036854775808"
+#define INT64_MAX_P2 "9223372036854775809"
+
+#define UINT32_MAX_M2 "4294967293"
+#define UINT32_MAX_M1 "4294967294"
+#define UINT32_MAX_00 "4294967295"
+#define UINT32_MAX_P1 "4294967296"
+#define UINT32_MAX_P2 "4294967297"
+#define UINT64_MAX_M2 "18446744073709551613"
+#define UINT64_MAX_M1 "18446744073709551614"
+#define UINT64_MAX_00 "18446744073709551615"
+#define UINT64_MAX_P1 "18446744073709551616"
+#define UINT64_MAX_P2 "18446744073709551617"
+
 
 const static std::vector<BinOpTest> ALL_TEST_VALUES = {{
 		BinOpTest{Param{VT::S32, "0"}, Param{VT::S32, "0"}, ExpectedResults{
@@ -1468,4 +1498,7 @@ const static std::vector<BinOpTest> ALL_TEST_VALUES = {{
 				.mod="-2",
 		}},
 }};
+
+}
+
 #endif // VALUES_FOR_TEST_H
