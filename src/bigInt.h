@@ -95,6 +95,22 @@ enum class Sign: bool {
 	NEG = 1
 };
 
+}
+
+
+// class BigInt:
+namespace bigint::_private {
+
+CONSTEXPR_AUTO_DISCARD
+neg(Sign sign) -> Sign {
+	return (sign == Sign::POS) ? Sign::NEG : Sign::POS;
+}
+
+}
+
+
+// class BigInt:
+namespace bigint {
 class BigInt : public IBigIntLike
 {
 
@@ -585,7 +601,7 @@ rshifted(TLHS &a, uint64_t b) {
 }
 
 
-// abs():
+// abs(), neg:
 namespace bigint::_private {
 
 template <typename T>
@@ -616,15 +632,50 @@ private:
 	lhs() const -> const T& { return _lhs; }
 };
 
+template <typename T>
+class BigIntNeg: IBigIntLike {
+public:
+	constexpr BigIntNeg(const BigIntBox<T> lhs) :
+		_lhs(lhs) {}
+
+	CONSTEXPR_AUTO
+	sign() const noexcept -> Sign {
+		return _private::neg(lhs());
+	}
+
+	CONSTEXPR_AUTO
+	size() const noexcept -> std::size_t {
+		return lhs().size();
+	}
+
+	CONSTEXPR_AUTO
+	operator[](std::size_t index) const -> uint64_t {
+		return lhs()[index];
+	}
+
+private:
+	BigIntBox<T> _lhs;
+
+	CONSTEXPR_AUTO
+	lhs() const -> const T& { return _lhs; }
+};
+
 }
 
 
-// abs():
+// abs(), neg:
 namespace bigint {
 
-template <typename TLHS>
-inline auto abs(const TLHS &a) {
+template <is_BigInt_like TLHS>
+CONSTEXPR_AUTO
+abs(const TLHS &a) {
 	return _private::BigIntAbs<const TLHS>(a);
+}
+
+template <is_BigInt_like TLHS>
+CONSTEXPR_AUTO
+operator-(const TLHS &a) {
+	return _private::BigIntNeg<const TLHS>(a);
 }
 
 }
@@ -920,6 +971,16 @@ operator-(const TLHS &a, uint64_t b) -> BigInt {
 	return result;
 }
 
+template <typename TRHS>
+	requires is_BigInt_like1<TRHS>
+CONSTEXPR_AUTO
+operator-(uint64_t a, const TRHS &b) -> BigInt {
+	BigInt result = _private::makeBigIntWithSize(b.size());
+	BigIntAdapter a_ {a};
+	sub(result, a_, b);
+	return result;
+}
+
 template <typename TLHS, typename TRHS>
 	requires is_BigInt_like2<TLHS, TRHS>
 CONSTEXPR_AUTO
@@ -1211,7 +1272,15 @@ divmod(const TLHS &a, const int64_t &b) -> DivModResult<BigInt, int64_t> {
 template <typename TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
 	requires is_BigInt_like1<TLHS>
 CONSTEXPR_AUTO
-divmod1(const TLHS &a, int32_t bb) -> DivModResult<BigInt, int64_t> { // todo: validate: Isn't uint32_t sufficient for remainder return type?
+divmod(const TLHS &a, const uint64_t &b) -> DivModResult<BigInt, uint64_t> {
+	const auto res = divmod<TLHS, BigIntAdapter<uint64_t>, ignore_quotient, ignore_remainder>(a, BigIntAdapter{b});
+	return { res.d, res.r[0] };
+}
+
+template <typename TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
+	requires is_BigInt_like1<TLHS>
+CONSTEXPR_AUTO
+divmod1(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> { // todo: validate: Isn't uint32_t sufficient for remainder return type?
 	BigInt q;
 	if constexpr (!ignore_quotient) {
 		_private::resizeBigInt(q, a.size());
@@ -1219,7 +1288,6 @@ divmod1(const TLHS &a, int32_t bb) -> DivModResult<BigInt, int64_t> { // todo: v
 	BigInt y{0, a.sign()};
 	_private::resizeBigInt(y, a.size());
 
-	const int32_t b = labs(bb);
 
 	uint64_t c_div = 0ull;
 
@@ -1256,7 +1324,7 @@ divmod1(const TLHS &a, int32_t bb) -> DivModResult<BigInt, int64_t> { // todo: v
 	}
 
 	if constexpr (!ignore_quotient) {
-		q.sign() = _private::mult_sign(a.sign(), b < 0 ? Sign::NEG : Sign::POS);
+		q.sign() = _private::mult_sign(a.sign(), Sign::POS);
 		if (a != y && q.sign() == Sign::NEG) {
 			q -= 1;
 		}
@@ -1266,15 +1334,24 @@ divmod1(const TLHS &a, int32_t bb) -> DivModResult<BigInt, int64_t> { // todo: v
 		return { q, 0 };
 	} else {
 		BigInt r_big = a - y;
-		int64_t r = (int64_t) r_big[0];
-		if (is_neg(r_big)) {
-			r = -r;
-		}
-
-		if ((r != 0) && (is_neg(a) != (b < 0))) {
-			r += b;
+		uint32_t r = (uint32_t) r_big[0];
+		if (r != 0 && is_neg(a)) {
+			r = b - r;
 		}
 		return { q, r };
+	}
+}
+
+template <typename TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
+	requires is_BigInt_like1<TLHS>
+CONSTEXPR_AUTO
+divmod1(const TLHS &a, int32_t bb) -> DivModResult<BigInt, int32_t> { // todo: validate: Isn't uint32_t sufficient for remainder return type?
+	if (bb < 0) {
+		auto r = divmod1<_private::BigIntNeg<const TLHS>, ignore_quotient, ignore_remainder>(-a, (uint32_t) -bb);
+		return DivModResult{std::move(r.d), -(int32_t)r.r};
+	} else {
+		auto r = divmod1<TLHS, ignore_quotient, ignore_remainder>(a, (uint32_t) bb);
+		return DivModResult{std::move(r.d), (int32_t)r.r};
 	}
 }
 
@@ -1287,7 +1364,7 @@ namespace bigint {
 template <typename TRES, typename TLHS>
 	requires is_BigInt_like2<TRES, TLHS>
 CONSTEXPR_VOID
-div(TRES &result, const TLHS &a, uint32_t b) {
+div(TRES &result, TLHS &a, uint32_t b) {
 	uint64_t c_lo = 0ull;
 	for (auto i = a.size(); i-->0;) {
 		const auto ai = a[i];
@@ -1307,14 +1384,38 @@ div(TRES &result, const TLHS &a, uint32_t b) {
 	}
 }
 
+template <typename TRES, typename TLHS>
+	requires is_BigInt_like2<TRES, TLHS>
+CONSTEXPR_VOID
+div(TRES &result, TLHS &a, int32_t bb) {
+	if (bb < 0) {
+		//_private::BigIntNeg<TLHS>(a)
+		const auto neg_a = -a; // todo check undefined behavior with -a if result === a, because operator-() const-ifys a?
+		div(result, neg_a, (uint32_t) -bb);
+	} else {
+		div(result, a, (uint32_t) bb);
+	}
+}
+
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
 CONSTEXPR_AUTO
-operator/(const TLHS &a, const uint32_t &b) -> BigInt {
+operator/(const TLHS &a, uint32_t b) -> BigInt {
 	BigInt result;
 	_private::resizeBigInt(result, a.size());
-	div(result, a, b);
+	div(result, const_cast<TLHS&>(a), b);
+	result.cleanup();
+	return result;
+}
+
+template <typename TLHS>
+	requires is_BigInt_like1<TLHS>
+CONSTEXPR_AUTO
+operator/(const TLHS &a, int32_t b) -> BigInt {
+	BigInt result;
+	_private::resizeBigInt(result, a.size());
+	div(result, const_cast<TLHS&>(a), b);
 	result.cleanup();
 	return result;
 }
@@ -1324,6 +1425,14 @@ template <typename TLHS>
 CONSTEXPR_AUTO
 operator/(const TLHS &a, uint64_t b) -> BigInt {
 	return divmod<TLHS, BigIntAdapter<uint64_t>, false, true>(a, BigIntAdapter(b)).d;
+}
+
+
+template <typename TLHS>
+	requires is_BigInt_like1<TLHS>
+CONSTEXPR_AUTO
+operator/(const TLHS &a, int64_t b) -> BigInt {
+	return divmod<TLHS, BigIntAdapter<int64_t>, false, true>(a, BigIntAdapter(b)).d;
 }
 
 template <typename TLHS, typename TRHS>
@@ -1337,7 +1446,7 @@ operator/(const TLHS &a, const TRHS &b) -> BigInt {
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
 CONSTEXPR_AUTO
-operator/=(TLHS &a, const uint32_t &b) -> BigInt& {
+operator/=(TLHS &a, uint32_t b) -> BigInt& {
 	div(a, a, b);
 	a.cleanup();
 	return a;
@@ -1346,7 +1455,7 @@ operator/=(TLHS &a, const uint32_t &b) -> BigInt& {
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
 CONSTEXPR_AUTO
-operator/=(TLHS &a, const uint64_t &b) -> BigInt& {
+operator/=(TLHS &a, uint64_t b) -> BigInt& {
 	const auto result = divmod<TLHS, BigIntAdapter<uint64_t>, false, true>(a, BigIntAdapter(b)).d;
 	a = std::move(result);
 	return a;
@@ -1370,14 +1479,28 @@ namespace bigint {
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
 CONSTEXPR_AUTO
-operator%(const TLHS &a, const uint32_t &b) -> uint32_t {
-	return (uint32_t) divmod1<TLHS, true>(a, b).r; // we can trunccate safely because the divisor only also is uint32_t.
+operator%(const TLHS &a, uint32_t b) -> uint32_t {
+	return divmod1<TLHS, true>(a, b).r; // we can trunccate safely because the divisor only also is uint32_t.
 }
 
 template <typename TLHS>
 	requires is_BigInt_like1<TLHS>
 CONSTEXPR_AUTO
-operator%(const TLHS &a, const uint64_t &b) -> uint64_t {
+operator%(const TLHS &a, int32_t b) -> int32_t {
+	return divmod1<TLHS, true>(a, b).r; // we can trunccate safely because the divisor only also is uint32_t.
+}
+
+template <typename TLHS>
+	requires is_BigInt_like1<TLHS>
+CONSTEXPR_AUTO
+operator%(const TLHS &a, uint64_t b) -> uint64_t {
+	return divmod<TLHS, true>(a, b).r;
+}
+
+template <typename TLHS>
+	requires is_BigInt_like1<TLHS>
+CONSTEXPR_AUTO
+operator%(const TLHS &a, int64_t b) -> int64_t {
 	return divmod<TLHS, true>(a, b).r;
 }
 

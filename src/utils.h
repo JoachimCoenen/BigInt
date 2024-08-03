@@ -32,16 +32,30 @@ void __from_chars_throws(const std::string_view input, T &result, int base) {
 }
 
 
-inline unsigned long
+[[nodiscard]] inline unsigned long
 stoul(const std::string_view input, int base = 10) {
 	unsigned long result;
 	__from_chars_throws(input, result, base);
 	return result;
 }
 
-inline unsigned long long
+[[nodiscard]] inline long
+stol(const std::string_view input, int base = 10) {
+	long result;
+	__from_chars_throws(input, result, base);
+	return result;
+}
+
+[[nodiscard]] inline unsigned long long
 stoull(const std::string_view input, int base = 10) {
 	unsigned long long result;
+	__from_chars_throws(input, result, base);
+	return result;
+}
+
+[[nodiscard]] inline long long
+stoll(const std::string_view input, int base = 10) {
+	long long result;
 	__from_chars_throws(input, result, base);
 	return result;
 }
