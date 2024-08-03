@@ -1091,7 +1091,14 @@ CONSTEXPR_AUTO
 divmod_ignore_sign(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
 	a.cleanup();
 	if (is_zero(a)) { // todo handle 0/0 !
-		return {BigInt(0), BigInt(0)};
+		return {BigInt{0}, BigInt{0}};
+	}
+	if (b.size() > a.size()) {
+		if constexpr (!ignore_remainder) {
+			return {BigInt{0}, BigInt{a}};
+		} else {
+			return {BigInt{0}, BigInt{1}}; // remainder could be any positive number. it is only used to signify that the remiander is not zero.
+		}
 	}
 
 	DivModResult<BigInt> r;
