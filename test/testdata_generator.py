@@ -85,6 +85,9 @@ CONSTS = {
 	UINT64_MAX_P2: 'UINT64_MAX_P2',
 }
 
+CONSTS2 = {value: key for key, value in CONSTS.items()}
+assert len(CONSTS) == len(CONSTS2)
+
 
 def to_str(value: int) -> str:
 	return CONSTS.get(value, f'"{value}"')
@@ -137,7 +140,7 @@ def make_ExpectedResults(left: int, right: int, operations: list[Operation]) -> 
 		f'.{operation[0]}={make_ExpectedResult(left, right, operation[1])},'
 		for operation in operations
 	])
-	return f'ExpectedResults{{\n{indent_multiline(results, tabs=1)}\n}}'
+	return f'ExpectedResults{{\n{indent_multiline(results, tabs=2)}\n}}'
 
 
 def make_BinOpTest(left: int, right: int, operations: list[Operation]) -> str:
@@ -159,24 +162,43 @@ def make_BinOpTest_combinations(left: int, right: int, operations: list[Operatio
 	return binOpTests
 
 
-def make_ALL_TEST_VALUES(var_name: str, all_params: list[tuple[int, int]], operations: list[Operation]) -> str:
-	all_BinOpTests = '\n'.join([
-		f'{make_BinOpTest_combinations(left, right, operations)}'
+def make_ALL_TEST_VALUES(var_name: str, all_params: list[tuple[int, int]], operations: list[Operation]) -> list[str]:
+	all_BinOpTests = [
+		indent_multiline(f'{make_BinOpTest_combinations(left, right, operations)}', tabs=2)
 		for left, right in all_params
-	])
-	all_BinOpTests_indented = indent_multiline(all_BinOpTests, tabs=1)
-	return f'const static std::vector<BinOpTest> {var_name} = {{{{\n{all_BinOpTests_indented}\n}}}}'
+	]
+	return [
+		f'const static std::vector<BinOpTest> {var_name} = {{{{',
+		*all_BinOpTests,
+		'}};'
+	]
 
+
+def make_define(var_name: str, value: str) -> str:
+	return f'#define {var_name} {value}'
+
+
+def make_usefull_constants(constants: dict[str, int]) -> list[str]:
+	return [
+		make_define(name, f'"{value}"')
+		for name, value in constants.items()
+	]
 
 
 
 BINARY_ARITHMETIC_OPERATIONS = [
-	('add', operator.add),
-	('sub', operator.sub),
-	('mul', operator.mul),
-	('div', operator.floordiv),
-	('mod', operator.mod),
+	('add',  lambda a, b: a + b),
+	('sub',  lambda a, b: a - b),
+	('rsub', lambda a, b: b - a),
+	('mul',  lambda a, b: a * b),
+	('div',  lambda a, b: a // b),
+	('rdiv', lambda a, b: b // a),
+	('mod',  lambda a, b: a % b),
+	('rmod', lambda a, b: b % a),
+	# ('pow',  lambda a, b: a ** b),
+	# ('rpow', lambda a, b: b ** a),
 ]
+
 
 ALL_PARAMS = [
 	(0, 0),
@@ -243,13 +265,63 @@ ALL_PARAMS = [
 ]
 
 
+def make_values_for_test_h() -> str:
+	lines = [
+		'#ifndef VALUES_FOR_TEST_H',
+		'#define VALUES_FOR_TEST_H',
+		'',
+		'#include "utils_for_test.h"',
+		'#include <vector>',
+		'',
+		'namespace test_data {',
+		'',
+		'using namespace test_utils;',
+		'',
+		'// usefull constants',
+		*make_usefull_constants(CONSTS2),
+		'',
+		'}',
+		'',
+		'',
+		'namespace test_data {',
+		'',
+		*make_ALL_TEST_VALUES(
+			'ALL_TEST_VALUES',
+			ALL_PARAMS,
+			BINARY_ARITHMETIC_OPERATIONS
+		),
+		'',
+		'}',
+		'',
+		'#endif // VALUES_FOR_TEST_H',
+		'',
+	]
+	return '\n'.join(lines)
+
+
 if __name__ == "__main__":
-	all_test_values = make_ALL_TEST_VALUES(
-		'ALL_TEST_VALUES',
-		ALL_PARAMS,
-		BINARY_ARITHMETIC_OPERATIONS
-	)
-	print(all_test_values + ';')
+	values_for_test_h = make_values_for_test_h()
+	# print(values_for_test_h)
+
+	with open('./values_for_test.h', 'w') as file:
+		file.write(values_for_test_h)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

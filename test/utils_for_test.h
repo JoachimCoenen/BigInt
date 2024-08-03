@@ -18,9 +18,14 @@ using ExpectedResult = std::variant<IgnoreTest, std::string_view>; // todo add e
 struct ExpectedResults {
 	ExpectedResult add;
 	ExpectedResult sub;
+	ExpectedResult rsub;
 	ExpectedResult mul;
 	ExpectedResult div;
+	ExpectedResult rdiv;
 	ExpectedResult mod;
+	ExpectedResult rmod;
+	// ExpectedResult pow;
+	// ExpectedResult rpow;
 };
 
 /**
@@ -94,10 +99,9 @@ struct BinOpTest {
 
 template <class T>
 struct ParamSelector {
-	ParamSelector(std::function<Param(BinOpTest)> get, std::function<T(std::string_view)> convert, ParamType type)
-		: get{get}, convert{convert}, type{type} {}
+	ParamSelector(std::function<T(std::string_view)> convert, ParamType type)
+		: convert{convert}, type{type} {}
 
-	std::function<Param(BinOpTest)> get;
 	std::function<T(std::string_view)> convert;
 	ParamType type;
 };
@@ -108,38 +112,43 @@ struct ResultSelector {
 	const std::function<T(std::string_view)> convert;
 };
 
-template <class O1, class O2, class R>
+
 bool isAcceptableTest(
-	const ParamSelector<O1> &left_selector,
-	const ParamSelector<O2> &right_selector,
-	const ResultSelector<R> &result_selector,
-	const BinOpTest &test
-	) {
-	return (is_assignable(left_selector.type, left_selector.get(test).type)) &&
-		   (is_assignable(right_selector.type, right_selector.get(test).type)) &&
-		   !std::holds_alternative<IgnoreTest>(result_selector.get(test.expected));
+	const Param &left_param,
+	const Param &right_param,
+	const ParamType &required_left_type,
+	const ParamType &required_right_type,
+	const ExpectedResult &expected_variant
+) {
+	return (is_assignable(required_left_type, left_param.type)) &&
+		   (is_assignable(required_right_type, right_param.type)) &&
+		   !std::holds_alternative<IgnoreTest>(expected_variant);
 }
+
 
 template <class O1, class O2, class R, class RT>
 inline void testBinaryOpSingle(
 	const std::function<R(O1, O2)>& operation,
+	const Param &left_param,
+	const Param &right_param,
 	const ParamSelector<O1> &left_selector,
 	const ParamSelector<O2> &right_selector,
 	const ResultSelector<R> &result_selector,
 	const std::function<RT(R)>& get_result_compare_value,
 	const BinOpTest &test
-	) {
-	if (!isAcceptableTest(left_selector, right_selector, result_selector, test)) {
+) {
+	const auto expected_variant = result_selector.get(test.expected);
+
+	if (!isAcceptableTest(left_param, right_param, left_selector.type, right_selector.type, expected_variant)) {
 		return; // skip
 	}
 	// std::cout << "retrieving values..." << std::endl;
-	// std::cout << "  lhs = " << left_selector.get(test).val << std::endl;
-	// std::cout << "  rhs = " << right_selector.get(test).val << std::endl;
+	// std::cout << "  lhs = " << left_param.val << std::endl;
+	// std::cout << "  rhs = " << right_param.val << std::endl;
 	// std::cout << "  res = " << std::get<std::string_view>(result_selector.get(test.expected)) << std::endl;
 
-	const auto expected_variant = result_selector.get(test.expected);
-	const auto left = left_selector.convert(left_selector.get(test).val);
-	const auto right = right_selector.convert(right_selector.get(test).val);
+	const auto left = left_selector.convert(left_param.val);
+	const auto right = right_selector.convert(right_param.val);
 	const auto expected = result_selector.convert(std::get<std::string_view>(expected_variant));
 
 	const auto result = operation(left, right);
@@ -154,11 +163,27 @@ inline void testBinaryOp(
 	const ParamSelector<O1> &left_selector,
 	const ParamSelector<O2> &right_selector,
 	const ResultSelector<R> &result_selector,
+	const ResultSelector<R> &rresult_selector, // reverse result_selector. select the result for e.g. right - left.
 	const std::function<RT(R)>& get_result_compare_value,
 	const std::vector<BinOpTest> &tests
-	) {
+) {
 	for (const auto &test : tests) {
-		testBinaryOpSingle(operation, left_selector, right_selector, result_selector, get_result_compare_value, test);
+		testBinaryOpSingle(
+			operation,
+			test.left, test.right,
+			left_selector, right_selector, result_selector,
+			get_result_compare_value,
+			test
+		);
+	}
+	for (const auto &test : tests) {
+		testBinaryOpSingle(
+			operation,
+			test.right, test.left,
+			left_selector, right_selector, rresult_selector,
+			get_result_compare_value,
+			test
+		);
 	}
 }
 

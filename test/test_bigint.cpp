@@ -208,16 +208,9 @@ namespace {
 TEST(HelloTest, TestAdd_big_big) {
 	testBinaryOp<BigInt, BigInt, BigInt, std::vector<uint64_t>>(
 		[](auto a, auto b) -> auto { return a + b; },
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
 		ResultSelector<BigInt>{[](auto res) { return res.add; }, [](auto value) { return BigInt(value); }},
-		[](auto res) { return res.__data_for_testing_only(); },
-		ALL_TEST_VALUES
-	);
-	testBinaryOp<BigInt, BigInt, BigInt, std::vector<uint64_t>>(
-		[](auto a, auto b) -> auto { return a + b; },
-		ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
 		ResultSelector<BigInt>{[](auto res) { return res.add; }, [](auto value) { return BigInt(value); }},
 		[](auto res) { return res.__data_for_testing_only(); },
 		ALL_TEST_VALUES
@@ -227,16 +220,9 @@ TEST(HelloTest, TestAdd_big_big) {
 TEST(HelloTest, TestAdd_big_u64) {
 	testBinaryOp<BigInt, uint64_t, BigInt, std::vector<uint64_t>>(
 		[](auto a, auto b) -> auto { return a + b; },
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<uint64_t>{[](auto test) { return test.right; }, [](auto value) { return utils::stoull(value); }, PT::U64},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<uint64_t>{[](auto value) { return utils::stoull(value); }, PT::U64},
 		ResultSelector<BigInt>{[](auto res) { return res.add; }, [](auto value) { return BigInt(value); }},
-		[](auto res) { return res.__data_for_testing_only(); },
-		ALL_TEST_VALUES
-	);
-	testBinaryOp<BigInt, uint64_t, BigInt, std::vector<uint64_t>>(
-		[](auto a, auto b) -> auto { return a + b; },
-		ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<uint64_t>{[](auto test) { return test.left; }, [](auto value) { return utils::stoull(value); }, PT::U64},
 		ResultSelector<BigInt>{[](auto res) { return res.add; }, [](auto value) { return BigInt(value); }},
 		[](auto res) { return res.__data_for_testing_only(); },
 		ALL_TEST_VALUES
@@ -246,16 +232,9 @@ TEST(HelloTest, TestAdd_big_u64) {
 TEST(HelloTest, TestAdd_u64_big) {
 	testBinaryOp<uint64_t, BigInt, BigInt, std::vector<uint64_t>>(
 		[](auto a, auto b) -> auto { return a + b; },
-		ParamSelector<uint64_t>{[](auto test) { return test.left; }, [](auto value) { return utils::stoull(value); }, PT::U64},
-		ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<uint64_t>{[](auto value) { return utils::stoull(value); }, PT::U64},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
 		ResultSelector<BigInt>{[](auto res) { return res.add; }, [](auto value) { return BigInt(value); }},
-		[](auto res) { return res.__data_for_testing_only(); },
-		ALL_TEST_VALUES
-	);
-	testBinaryOp<uint64_t, BigInt, BigInt, std::vector<uint64_t>>(
-		[](auto a, auto b) -> auto { return a + b; },
-		ParamSelector<uint64_t>{[](auto test) { return test.right; }, [](auto value) { return utils::stoull(value); }, PT::U64},
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
 		ResultSelector<BigInt>{[](auto res) { return res.add; }, [](auto value) { return BigInt(value); }},
 		[](auto res) { return res.__data_for_testing_only(); },
 		ALL_TEST_VALUES
@@ -271,39 +250,25 @@ namespace {
 TEST(HelloTest, TestSub_big_big) {
 	testBinaryOp<BigInt, BigInt, BigInt, std::vector<uint64_t>>(
 		[](auto a, auto b) -> auto { return a - b; },
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
 		ResultSelector<BigInt>{[](auto res) { return res.sub; }, [](auto value) { return BigInt(value); }},
+		ResultSelector<BigInt>{[](auto res) { return res.rsub; }, [](auto value) { return BigInt(value); }},
 		[](auto res) { return res.__data_for_testing_only(); },
 		ALL_TEST_VALUES
-		);
-	// testBinaryOp<BigInt, BigInt, BigInt, std::vector<uint64_t>>(
-	// 	[](auto a, auto b) -> auto { return a - b; },
-	// 	ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
-	// 	ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-	// 	ResultSelector<BigInt>{[](auto res) { return res.sub; }, [](auto value) { return BigInt(value); }},
-	// [](auto res) { return res.__data_for_testing_only(); },
-	// 	ALL_TEST_VALUES
-	// 	);
+	);
 }
 
 TEST(HelloTest, TestSub_big_u64) {
 	testBinaryOp<BigInt, uint64_t, BigInt, std::vector<uint64_t>>(
 		[](auto a, auto b) -> auto { return a - b; },
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<uint64_t>{[](auto test) { return test.right; }, [](auto value) { return utils::stoull(value); }, PT::U64},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<uint64_t>{[](auto value) { return utils::stoull(value); }, PT::U64},
 		ResultSelector<BigInt>{[](auto res) { return res.sub; }, [](auto value) { return BigInt(value); }},
+		ResultSelector<BigInt>{[](auto res) { return res.rsub; }, [](auto value) { return BigInt(value); }},
 		[](auto res) { return res.__data_for_testing_only(); },
 		ALL_TEST_VALUES
-		);
-	// testBinaryOp<BigInt, uint64_t, BigInt, std::vector<uint64_t>>(
-	// 	[](auto a, auto b) -> auto { return a - b; },
-	// 	ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
-	// 	ParamSelector<uint64_t>{[](auto test) { return test.left; }, [](auto value) { return utils::stoull(value); }, PT::U64},
-	// 	ResultSelector<BigInt>{[](auto res) { return res.sub; }, [](auto value) { return BigInt(value); }},
-	// [](auto res) { return res.__data_for_testing_only(); },
-	// 	ALL_TEST_VALUES
-	// 	);
+	);
 }
 
 TEST(HelloTest, TestSub_u64_big) {
@@ -334,77 +299,49 @@ namespace {
 TEST(HelloTest, TestMul_big_big) {
 	testBinaryOp<BigInt, BigInt, BigInt, std::vector<uint64_t>>(
 		[](auto a, auto b) -> auto { return a * b; },
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
+		ResultSelector<BigInt>{[](auto res) { return res.mul; }, [](auto value) { return BigInt(value); }},
 		ResultSelector<BigInt>{[](auto res) { return res.mul; }, [](auto value) { return BigInt(value); }},
 		[](auto res) { return res.__data_for_testing_only(); },
 		ALL_TEST_VALUES
-		);
-	testBinaryOp<BigInt, BigInt, BigInt, std::vector<uint64_t>>(
-		[](auto a, auto b) -> auto { return a * b; },
-		ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ResultSelector<BigInt>{[](auto res) { return res.mul; }, [](auto value) { return BigInt(value); }},
-		[](auto res) { return res.__data_for_testing_only(); },
-		ALL_TEST_VALUES
-		);
+	);
 }
 
 TEST(HelloTest, TestMul_big_u64) {
 	testBinaryOp<BigInt, uint64_t, BigInt, std::vector<uint64_t>>(
 		[](auto a, auto b) -> auto { return a * b; },
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<uint64_t>{[](auto test) { return test.right; }, [](auto value) { return utils::stoull(value); }, PT::U64},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<uint64_t>{[](auto value) { return utils::stoull(value); }, PT::U64},
+		ResultSelector<BigInt>{[](auto res) { return res.mul; }, [](auto value) { return BigInt(value); }},
 		ResultSelector<BigInt>{[](auto res) { return res.mul; }, [](auto value) { return BigInt(value); }},
 		[](auto res) { return res.__data_for_testing_only(); },
 		ALL_TEST_VALUES
-		);
-	testBinaryOp<BigInt, uint64_t, BigInt, std::vector<uint64_t>>(
-		[](auto a, auto b) -> auto { return a * b; },
-		ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<uint64_t>{[](auto test) { return test.left; }, [](auto value) { return utils::stoull(value); }, PT::U64},
-		ResultSelector<BigInt>{[](auto res) { return res.mul; }, [](auto value) { return BigInt(value); }},
-		[](auto res) { return res.__data_for_testing_only(); },
-		ALL_TEST_VALUES
-		);
+	);
 }
 
 TEST(HelloTest, TestMul_u64_big) {
 	testBinaryOp<uint64_t, BigInt, BigInt, std::vector<uint64_t>>(
 		[](auto a, auto b) -> auto { return a * b; },
-		ParamSelector<uint64_t>{[](auto test) { return test.left; }, [](auto value) { return utils::stoull(value); }, PT::U64},
-		ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<uint64_t>{[](auto value) { return utils::stoull(value); }, PT::U64},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
+		ResultSelector<BigInt>{[](auto res) { return res.mul; }, [](auto value) { return BigInt(value); }},
 		ResultSelector<BigInt>{[](auto res) { return res.mul; }, [](auto value) { return BigInt(value); }},
 		[](auto res) { return res.__data_for_testing_only(); },
 		ALL_TEST_VALUES
-		);
-	testBinaryOp<uint64_t, BigInt, BigInt, std::vector<uint64_t>>(
-		[](auto a, auto b) -> auto { return a * b; },
-		ParamSelector<uint64_t>{[](auto test) { return test.right; }, [](auto value) { return utils::stoull(value); }, PT::U64},
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ResultSelector<BigInt>{[](auto res) { return res.mul; }, [](auto value) { return BigInt(value); }},
-		[](auto res) { return res.__data_for_testing_only(); },
-		ALL_TEST_VALUES
-		);
+	);
 }
 
 TEST(HelloTest, TestMul_u64_u64) {
 	testBinaryOp<uint64_t, uint64_t, BigInt, std::vector<uint64_t>>(
 		[](auto a, auto b) -> auto { return BigInt{mult(a, b)}; },
-		ParamSelector<uint64_t>{[](auto test) { return test.left; }, [](auto value) { return utils::stoull(value); }, PT::U64},
-		ParamSelector<uint64_t>{[](auto test) { return test.right; }, [](auto value) { return utils::stoull(value); }, PT::U64},
+		ParamSelector<uint64_t>{[](auto value) { return utils::stoull(value); }, PT::U64},
+		ParamSelector<uint64_t>{[](auto value) { return utils::stoull(value); }, PT::U64},
+		ResultSelector<BigInt>{[](auto res) { return res.mul; }, [](auto value) { return BigInt(value); }},
 		ResultSelector<BigInt>{[](auto res) { return res.mul; }, [](auto value) { return BigInt(value); }},
 		[](auto res) { return res.__data_for_testing_only(); },
 		ALL_TEST_VALUES
-		);
-	testBinaryOp<uint64_t, uint64_t, BigInt, std::vector<uint64_t>>(
-		[](auto a, auto b) -> auto { return BigInt{mult(a, b)}; },
-		ParamSelector<uint64_t>{[](auto test) { return test.right; }, [](auto value) { return utils::stoull(value); }, PT::U64},
-		ParamSelector<uint64_t>{[](auto test) { return test.left; }, [](auto value) { return utils::stoull(value); }, PT::U64},
-		ResultSelector<BigInt>{[](auto res) { return res.mul; }, [](auto value) { return BigInt(value); }},
-		[](auto res) { return res.__data_for_testing_only(); },
-		ALL_TEST_VALUES
-		);
+	);
 }
 
 }
@@ -416,58 +353,37 @@ namespace {
 TEST(HelloTest, TestDiv_big_big) {
 	testBinaryOp<BigInt, BigInt, BigInt, std::vector<uint64_t>>(
 		[](auto a, auto b) -> auto { return a / b; },
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
 		ResultSelector<BigInt>{[](auto res) { return res.div; }, [](auto value) { return BigInt(value); }},
+		ResultSelector<BigInt>{[](auto res) { return res.rdiv; }, [](auto value) { return BigInt(value); }},
 		[](auto res) { return res.__data_for_testing_only(); },
 		ALL_TEST_VALUES
-		);
-	// testBinaryOp<BigInt, BigInt, BigInt, std::vector<uint64_t>>(
-	// 	[](auto a, auto b) -> auto { return a / b; },
-	// 	ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
-	// 	ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-	// 	ResultSelector<BigInt>{[](auto res) { return res.div; }, [](auto value) { return BigInt(value); }},
-	// 	[](auto res) { return res.__data_for_testing_only(); },
-	// 	ALL_TEST_VALUES
-	// 	);
+	);
 }
 
 TEST(HelloTest, TestDiv_big_u64) {
 	testBinaryOp<BigInt, uint64_t, BigInt, std::vector<uint64_t>>(
 		[](auto a, auto b) -> auto { return a / b; },
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<uint64_t>{[](auto test) { return test.right; }, [](auto value) { return utils::stoull(value); }, PT::U64},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<uint64_t>{[](auto value) { return utils::stoull(value); }, PT::U64},
 		ResultSelector<BigInt>{[](auto res) { return res.div; }, [](auto value) { return BigInt(value); }},
+		ResultSelector<BigInt>{[](auto res) { return res.rdiv; }, [](auto value) { return BigInt(value); }},
 		[](auto res) { return res.__data_for_testing_only(); },
 		ALL_TEST_VALUES
-		);
-	// testBinaryOp<BigInt, uint64_t, BigInt, std::vector<uint64_t>>(
-	// 	[](auto a, auto b) -> auto { return a / b; },
-	// 	ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
-	// 	ParamSelector<uint64_t>{[](auto test) { return test.left; }, [](auto value) { return utils::stoull(value); }, PT::U64},
-	// 	ResultSelector<BigInt>{[](auto res) { return res.div; }, [](auto value) { return BigInt(value); }},
-	// 	[](auto res) { return res.__data_for_testing_only(); },
-	// 	ALL_TEST_VALUES
-	// 	);
+	);
 }
 
 TEST(HelloTest, TestDiv_big_u32) {
 	testBinaryOp<BigInt, uint32_t, BigInt, std::vector<uint64_t>>(
 		[](auto a, auto b) -> auto { return a / b; },
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<uint32_t>{[](auto test) { return test.right; }, [](auto value) { return utils::stoul(value); }, PT::U32},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<uint32_t>{[](auto value) { return utils::stoul(value); }, PT::U32},
 		ResultSelector<BigInt>{[](auto res) { return res.div; }, [](auto value) { return BigInt(value); }},
+		ResultSelector<BigInt>{[](auto res) { return res.rdiv; }, [](auto value) { return BigInt(value); }},
 		[](auto res) { return res.__data_for_testing_only(); },
 		ALL_TEST_VALUES
-		);
-	// testBinaryOp<BigInt, uint32_t, BigInt, std::vector<uint64_t>>(
-	// 	[](auto a, auto b) -> auto { return a / b; },
-	// 	ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
-	// 	ParamSelector<uint32_t>{[](auto test) { return test.left; }, [](auto value) { return utils::stoul(value); }, PT::U32},
-	// 	ResultSelector<BigInt>{[](auto res) { return res.div; }, [](auto value) { return BigInt(value); }},
-	// 	[](auto res) { return res.__data_for_testing_only(); },
-	// 	ALL_TEST_VALUES
-	// 	);
+	);
 }
 
 }
@@ -479,58 +395,37 @@ namespace {
 TEST(HelloTest, TestMod_big_big) {
 	testBinaryOp<BigInt, BigInt, BigInt, std::vector<uint64_t>>(
 		[](auto a, auto b) -> auto { return a % b; },
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
 		ResultSelector<BigInt>{[](auto res) { return res.mod; }, [](auto value) { return BigInt(value); }},
+		ResultSelector<BigInt>{[](auto res) { return res.rmod; }, [](auto value) { return BigInt(value); }},
 		[](auto res) { return res.__data_for_testing_only(); },
 		ALL_TEST_VALUES
-		);
-	// testBinaryOp<BigInt, BigInt, BigInt, std::vector<uint64_t>>(
-	// 	[](auto a, auto b) -> auto { return a % b; },
-	// 	ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
-	// 	ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-	// 	ResultSelector<BigInt>{[](auto res) { return res.mod; }, [](auto value) { return BigInt(value); }},
-	// 	[](auto res) { return res.__data_for_testing_only(); },
-	// 	ALL_TEST_VALUES
-	// 	);
+	);
 }
 
 TEST(HelloTest, TestMod_big_u64) {
 	testBinaryOp<BigInt, uint64_t, uint64_t, uint64_t>(
 		[](auto a, auto b) -> auto { return a % b; },
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<uint64_t>{[](auto test) { return test.right; }, [](auto value) { return utils::stoull(value); }, PT::U64},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<uint64_t>{[](auto value) { return utils::stoull(value); }, PT::U64},
 		ResultSelector<uint64_t>{[](auto res) { return res.mod; }, [](auto value) { return utils::stoull(value); }},
+		ResultSelector<uint64_t>{[](auto res) { return res.rmod; }, [](auto value) { return utils::stoull(value); }},
 		[](auto res) { return res; },
 		ALL_TEST_VALUES
-		);
-	// testBinaryOp<BigInt, uint64_t, uint64_t, uint64_t>(
-	// 	[](auto a, auto b) -> auto { return a % b; },
-	// 	ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
-	// 	ParamSelector<uint64_t>{[](auto test) { return test.left; }, [](auto value) { return utils::stoull(value); }, PT::U64},
-	// 	ResultSelector<uint64_t>{[](auto res) { return res.mod; }, [](auto value) { return utils::stoull(value); }},
-	// 	[](auto res) { return res; },
-	// 	ALL_TEST_VALUES
-	// 	);
+	);
 }
 
 TEST(HelloTest, TestMod_big_u32) {
 	testBinaryOp<BigInt, uint32_t, uint32_t, uint32_t>(
 		[](auto a, auto b) -> auto { return a % b; },
-		ParamSelector<BigInt>{[](auto test) { return test.left; }, [](auto value) { return BigInt(value); }, PT::BIG},
-		ParamSelector<uint32_t>{[](auto test) { return test.right; }, [](auto value) { return utils::stoul(value); }, PT::U32},
+		ParamSelector<BigInt>{[](auto value) { return BigInt(value); }, PT::BIG},
+		ParamSelector<uint32_t>{[](auto value) { return utils::stoul(value); }, PT::U32},
 		ResultSelector<uint32_t>{[](auto res) { return res.mod; }, [](auto value) { return utils::stoul(value); }},
+		ResultSelector<uint32_t>{[](auto res) { return res.rmod; }, [](auto value) { return utils::stoul(value); }},
 		[](auto res) { return res; },
 		ALL_TEST_VALUES
-		);
-	// testBinaryOp<BigInt, uint32_t, uint32_t, uint32_t>(
-	// 	[](auto a, auto b) -> auto { return a % b; },
-	// 	ParamSelector<BigInt>{[](auto test) { return test.right; }, [](auto value) { return BigInt(value); }, PT::BIG},
-	// 	ParamSelector<uint32_t>{[](auto test) { return test.left; }, [](auto value) { return utils::stoul(value); }, PT::U32},
-	// 	ResultSelector<uint32_t>{[](auto res) { return res.mod; }, [](auto value) { return utils::stoul(value); }},
-	// 	[](auto res) { return res; },
-	// 	ALL_TEST_VALUES
-	// 	);
+	);
 }
 
 }
