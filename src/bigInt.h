@@ -17,7 +17,7 @@ class IBigIntLike { };
 template <typename T>
 concept is_BigInt_like = std::is_base_of_v<IBigIntLike, T>;
 
-template <typename T, typename T1, typename T2> // todo use concept everywhere!
+template <typename T, typename T1, typename T2>
 concept one_of = std::same_as<T, T1> || std::same_as<T, T2>;
 
 }
@@ -818,43 +818,43 @@ operator<=>(const TLHS &a, const TRHS &b) -> std::strong_ordering {
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_AUTO
-operator<(const TLHS &a, const TRHS &b) {
+operator<(const TLHS &a, const TRHS &b) -> bool {
 	return (a <=> b) < 0;
 }
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_AUTO
-operator>(const TLHS &a, const TRHS &b) {
+operator>(const TLHS &a, const TRHS &b) -> bool {
 	return (a <=> b) > 0;
 }
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_AUTO
-operator<=(const TLHS &a, const TRHS &b) {
+operator<=(const TLHS &a, const TRHS &b) -> bool {
 	return (a <=> b) <= 0;
 }
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_AUTO
-operator>=(const TLHS &a, const TRHS &b) {
+operator>=(const TLHS &a, const TRHS &b) -> bool {
 	return (a <=> b) >= 0;
 }
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_AUTO
-operator==(const TLHS &a, const TRHS &b) {
+operator==(const TLHS &a, const TRHS &b) -> bool {
 	return (a <=> b) == 0;
 }
 
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-operator<(const TLHS &a, const uint64_t &b) {
+operator<(const TLHS &a, const uint64_t &b) -> bool {
 	return a < BigInt(b);
 }
 
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-operator>(const TLHS &a, const uint64_t &b) {
+operator>(const TLHS &a, const uint64_t &b) -> bool {
 	return a > BigInt(b);
 }
 
