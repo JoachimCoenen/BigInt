@@ -1185,7 +1185,7 @@ operator*(const TLHS &a, const TRHS &b) -> BigInt {
 
 template <is_BigInt_like TLHS, std::integral TRHS>
 CONSTEXPR_AUTO_DISCARD
-operator*=(TLHS &a, TRHS b) -> BigInt& {
+operator*=(TLHS &a, TRHS b) -> TLHS& {
 	using TRHS2 = std::conditional_t<std::is_unsigned_v<TRHS>, uint64_t, int64_t>;
 	mult(a, a, (TRHS2)b);
 	return a;
@@ -1193,7 +1193,7 @@ operator*=(TLHS &a, TRHS b) -> BigInt& {
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_AUTO
-operator*=(TLHS &a, const TRHS &b) -> BigInt& {
+operator*=(TLHS &a, const TRHS &b) -> TLHS& {
 	a = std::move(mult(a, b));
 	return a;
 }
