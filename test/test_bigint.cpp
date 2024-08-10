@@ -232,6 +232,21 @@ TEST(HelloTest, TestI##NAME##_##O1##_##O2) {\
 TEST_ASSIGN_OPERATOR(NAME, BigInt, O2, OP, EXP, REXP, std::vector<uint64_t>, res.__data_for_testing_only())
 
 
+// Bitwise Shift
+namespace {
+
+TEST_BINARY_OPERATOR_BIGINT(LShift, BigInt, uint64_t, a << b, lshift, rlshift);
+
+TEST_BINARY_OPERATOR_BIGINT(RShift, BigInt, uint64_t, a >> b, rshift, rrshift);
+
+TEST_ASSIGN_OPERATOR_BIGINT(LShift, uint64_t, a <<= b, lshift, rlshift);
+
+TEST_ASSIGN_OPERATOR_BIGINT(RShift, uint64_t, a >>= b, rshift, rrshift);
+
+}
+
+
+
 // Addition
 namespace {
 

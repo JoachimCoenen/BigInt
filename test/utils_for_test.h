@@ -19,6 +19,10 @@ constexpr auto IGNORED = IgnoreTest{};
 using ExpectedResult = std::variant<IgnoreTest, std::string_view>; // todo add exception option
 
 struct ExpectedResults {
+	ExpectedResult lshift;
+	ExpectedResult rlshift;
+	ExpectedResult rshift;
+	ExpectedResult rrshift;
 	ExpectedResult add;
 	ExpectedResult sub;
 	ExpectedResult rsub;

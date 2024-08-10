@@ -1,5 +1,5 @@
 # This Python file uses the following encoding: utf-8
-import operator
+from dataclasses import dataclass
 from typing import Callable
 
 
@@ -36,7 +36,13 @@ def indent_multiline(text: str, *, tabs: int, indentFirstLine: bool = True):
 	return s
 
 
-Operation = tuple[str, Callable[[int, int], int]]
+
+
+@dataclass
+class Operation:
+	name: str
+	op: Callable[[int, int], int]
+	validForArgs: Callable[[int, int], bool] | None = None
 
 
 INT32_MAX_00 = 2**31 - 1
@@ -126,18 +132,16 @@ def make_Param(value: int) -> str:
 	return f'Param{{{type_}, {to_str(value)}}}'
 
 
-def make_ExpectedResult(left: int, right: int, operation: Callable[[int, int], int]) -> str:
-	try:
-		result = operation(left, right)
-	except ZeroDivisionError:
-		return 'IGNORED'
+def make_ExpectedResult(left: int, right: int, operation: Operation) -> str:
+	if operation.validForArgs is None or operation.validForArgs(left, right):
+		return to_str(operation.op(left, right))
 	else:
-		return f'{to_str(result)}'
+		return 'IGNORED'
 
 
 def make_ExpectedResults(left: int, right: int, operations: list[Operation]) -> str:
 	results = '\n'.join([
-		f'.{operation[0]}={make_ExpectedResult(left, right, operation[1])},'
+		f'.{operation.name}={make_ExpectedResult(left, right, operation)},'
 		for operation in operations
 	])
 	return f'ExpectedResults{{\n{indent_multiline(results, tabs=2)}\n}}'
@@ -192,16 +196,23 @@ def make_usefull_constants(constants: dict[str, int]) -> list[str]:
 	]
 
 
+def sign(a: int) -> int:
+	return  -1 if a < 0 else (1 if a > 0 else 0)
 
-BINARY_ARITHMETIC_OPERATIONS = [
-	('add',  lambda a, b: a + b),
-	('sub',  lambda a, b: a - b),
-	('rsub', lambda a, b: b - a),
-	('mul',  lambda a, b: a * b),
-	('div',  lambda a, b: a // b),
-	('rdiv', lambda a, b: b // a),
-	('mod',  lambda a, b: a % b),
-	('rmod', lambda a, b: b % a),
+
+BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
+	Operation('lshift',  lambda a, b: a << b, lambda a, b: 0 <= b <= 1000),
+	Operation('rlshift',  lambda a, b: b << a, lambda a, b: 0 <= a <= 1000),
+	Operation('rshift',  lambda a, b: (abs(a) >> b) * sign(a), lambda a, b: 0 <= b <= 1000),
+	Operation('rrshift',  lambda a, b: (abs(b) >> a) * sign(b), lambda a, b: 0 <= a <= 1000),
+	Operation('add',  lambda a, b: a + b),
+	Operation('sub',  lambda a, b: a - b),
+	Operation('rsub', lambda a, b: b - a),
+	Operation('mul',  lambda a, b: a * b),
+	Operation('div',  lambda a, b: a // b, lambda a, b: b != 0),
+	Operation('rdiv', lambda a, b: b // a, lambda a, b: a != 0),
+	Operation('mod',  lambda a, b: a % b, lambda a, b: b != 0),
+	Operation('rmod', lambda a, b: b % a, lambda a, b: a != 0),
 	# ('pow',  lambda a, b: a ** b),
 	# ('rpow', lambda a, b: b ** a),
 ]

@@ -205,6 +205,9 @@ class BigInt : public IBigIntLike
 	append(uint64_t v) { _data.push_back(v); }
 
 	CONSTEXPR_VOID
+	remove_last() { _data.pop_back(); }
+
+	CONSTEXPR_VOID
 	cleanup() const { // todo: const???!
 		for (auto i = _data.size(); 0 <--i;) {
 			if (_data[i] == 0) {
@@ -678,36 +681,125 @@ operator-(const TLHS &a) {
 // bitwise shift operations:
 namespace bigint {
 
+namespace _private {
+CONSTEXPR_AUTO
+lshift_safe(uint64_t a, uint64_t b) {
+	return (b >= 64) ? 0 : a << b; // shifting by 64 bits for 64 bit int is undfined.
+}
+
+CONSTEXPR_AUTO
+rshift_safe(uint64_t a, uint64_t b) {
+	return (b >= 64) ? 0 : a >> b; // shifting by 64 bits for 64 bit int is undfined.
+}
+
+}
+
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-lshiftBits(const TLHS &vec, uint64_t digits) -> BigInt {
-	BigInt result{std::vector<uint64_t>(digits / 64, 0), vec.sign()};
-	digits %= 64;
-	result.append(vec[0] << digits);
-	for (uint64_t i = 1; i < vec.size(); ++i) {
-		const uint64_t lo = digits > 0 ? vec[i-1] >> (64-digits) : 0;
-		const uint64_t hi = vec[i] << digits;
-		result.append(lo | hi);
+operator<<(const TLHS &a, uint64_t digits) -> BigInt {
+	if (is_zero(a)) {
+		return BigInt{0, a.sign()};
 	}
-	if (digits > 0) {
-		result.append(vec[vec.size()-1] >> (64-digits));
+
+	const uint64_t start = digits / 64;
+	BigInt result{0, a.sign()};
+	_private::resizeBigInt(result, a.size() + start);
+	digits %= 64;
+	result.set(start, a[0] << digits);
+	for (uint64_t i = 1; i < a.size(); ++i) {
+		const uint64_t lo = _private::rshift_safe(a[i-1], 64-digits);
+		const uint64_t hi = a[i] << digits;
+		result.set(i + start, lo | hi);
+	}
+	const auto last = _private::rshift_safe(a[a.size()-1], 64-digits);
+	if (digits > 0 && last != 0) {
+		result.append(last);
 	}
 	return result;
 }
 
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-rshiftBits(const TLHS &vec, uint64_t digits) -> BigInt {
-	BigInt result{0, vec.sign()};
+operator>>(const TLHS &a, uint64_t digits) -> BigInt {
+	const uint64_t start = digits / 64;
+	if (is_zero(a) || a.size() <= start) {
+		return BigInt{0, a.sign()};
+	}
+	BigInt result{0, a.sign()};
+	_private::resizeBigInt(result, a.size() - start);
+
+	digits %= 64;
+	for (uint64_t i = start; i < a.size()-1; ++i) {
+		const uint64_t lo = a[i] >> digits;
+		const uint64_t hi = _private::lshift_safe(a[i+1], 64-digits);
+		result.set(i - start, lo | hi);
+	}
+	const auto last = a[a.size()-1] >> digits;
+	if (last != 0) {
+		result.set(result.size()-1, last);
+	} else if (result.size() > 1) {
+		result.remove_last();
+	}
+	return result;
+}
+
+
+template <is_BigInt_like TLHS>
+CONSTEXPR_AUTO
+operator<<=(TLHS &a, uint64_t digits) -> TLHS& {
+	if (is_zero(a) || digits == 0) {
+		return a;
+	}
+
 	const uint64_t start = digits / 64;
 	digits %= 64;
-	for (uint64_t i = start; i < vec.size()-1; ++i) {
-		const uint64_t lo = vec[i] >> digits;
-		const uint64_t hi = vec[i+1] << (64-digits);
-		result.append(lo | hi);
+
+	const uint64_t asize = a.size();
+
+	_private::resizeBigInt(a, a.size() + start);
+
+	const auto last = _private::rshift_safe(a[asize-1], 64-digits);
+	if (digits > 0 && last != 0) {
+		a.append(last);
 	}
-	result.append(vec.back() >> digits);
-	return result;
+
+	for (uint64_t i = asize; i --> 1;) {
+		const uint64_t lo = _private::rshift_safe(a[i-1], 64-digits);
+		const uint64_t hi = a[i] << digits;
+		a.set(i + start, lo | hi);
+	}
+	a.set(start, a[0] << digits);
+
+	for (uint64_t i = start; i --> 0;) {
+		a.set(i, 0);
+	}
+
+	return a;
+}
+
+template <is_BigInt_like TLHS>
+CONSTEXPR_AUTO
+operator>>=(TLHS &a, uint64_t digits) -> TLHS& {
+	const uint64_t start = digits / 64;
+	if (a.size() <= start) {
+		_private::resizeBigInt(a, 1);
+		a.set(0, 0);
+		return a;
+	}
+	if (is_zero(a) || digits == 0) {
+		return a;
+	}
+
+	digits %= 64;
+	for (uint64_t i = start; i < a.size()-1; ++i) {
+		const uint64_t lo = a[i] >> digits;
+		const uint64_t hi = _private::lshift_safe(a[i+1], 64-digits);
+		a.set(i - start, lo | hi);
+	}
+	const auto last = a[a.size()-1] >> digits;
+	a.set(a.size()-1, last);
+	a.cleanup();
+	return a;
 }
 
 }
@@ -1157,7 +1249,7 @@ divmod_ignore_sign(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
 
 	while (a2IsSmaller || !(r.r < abs(b))) {
 		--i;
-		BigInt p2 = lshiftBits(b, i%64);
+		BigInt p2 = b << i%64;
 		a2IsSmaller = _private::rshifted(r.r, i/64) < abs(p2);
 		if (! a2IsSmaller) {
 			if constexpr (!ignore_quotient) {
