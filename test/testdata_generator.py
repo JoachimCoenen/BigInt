@@ -151,26 +151,33 @@ def make_BinOpTest(left: int, right: int, operations: list[Operation]) -> str:
 	return f'BinOpTest{{{lparam}, {rparam}, {expected}}}'
 
 
-def make_BinOpTest_combinations(left: int, right: int, operations: list[Operation]) -> str:
-	binOpTests = f'{make_BinOpTest(left, right, operations)},'
+def make_BinOpTest_combinations(left: int, right: int, operations: list[Operation]) -> list[str]:
+	binOpTests = []
+	binOpTests.append(f'{make_BinOpTest(left, right, operations)}')
 	if left != 0:
-		binOpTests += f'\n{make_BinOpTest(-left, right, operations)},'
+		binOpTests.append(f'\n{make_BinOpTest(-left, right, operations)}')
 	if right != 0:
-		binOpTests += f'\n{make_BinOpTest(left, -right, operations)},'
+		binOpTests.append(f'\n{make_BinOpTest(left, -right, operations)}')
 	if left != 0 and right != 0:
-		binOpTests += f'\n{make_BinOpTest(-left, -right, operations)},'
+		binOpTests.append(f'\n{make_BinOpTest(-left, -right, operations)}')
 	return binOpTests
 
 
 def make_ALL_TEST_VALUES(var_name: str, all_params: list[tuple[int, int]], operations: list[Operation]) -> list[str]:
 	all_BinOpTests = [
-		indent_multiline(f'{make_BinOpTest_combinations(left, right, operations)}', tabs=2)
+		binOpTest
 		for left, right in all_params
+		for binOpTest in make_BinOpTest_combinations(left, right, operations)
 	]
 	return [
-		f'const static std::vector<BinOpTest> {var_name} = {{{{',
-		*all_BinOpTests,
-		'}};'
+		'[[nodiscard]] std::vector<BinOpTest>',
+		f'get_{var_name}() {{',
+		f'{INDENT}std::vector<BinOpTest> {var_name};',
+		'',
+		*[indent_multiline(f'{var_name}.push_back({binOpTest});', tabs=1) for binOpTest in all_BinOpTests],
+		'',
+		f'{INDENT}return {var_name};',
+		'};'
 	]
 
 
@@ -286,7 +293,7 @@ def make_values_for_test_h() -> str:
 		'namespace test_data {',
 		'',
 		*make_ALL_TEST_VALUES(
-			'ALL_TEST_VALUES',
+			'all_test_values',
 			ALL_PARAMS,
 			BINARY_ARITHMETIC_OPERATIONS
 		),

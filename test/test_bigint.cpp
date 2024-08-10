@@ -209,7 +209,7 @@ TEST(HelloTest, Test##NAME##_##O1##_##O2) {\
 		[](const auto& expected) { return expected.EXP; },\
 		[](const auto& expected) { return expected.REXP; },\
 		[](const auto& res) { return GET_RT; },\
-		ALL_TEST_VALUES\
+		get_all_test_values()\
 		);\
 }
 
@@ -224,7 +224,7 @@ TEST(HelloTest, TestI##NAME##_##O1##_##O2) {\
 		[](const auto& expected) { return expected.EXP; },\
 		[](const auto& expected) { return expected.REXP; },\
 		[](const auto& res) { return GET_RT; },\
-		ALL_TEST_VALUES\
+		get_all_test_values()\
 		);\
 }
 
