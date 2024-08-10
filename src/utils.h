@@ -6,6 +6,9 @@
 #include <string_view>
 #include <stdint.h>
 
+//      [[nodiscard]] conseval auto
+#define CONSTEVAL_AUTO [[nodiscard]] consteval auto
+
 //      [[nodiscard]] constexpr auto
 #define CONSTEXPR_AUTO [[nodiscard]] constexpr auto
 //      constexpr auto
