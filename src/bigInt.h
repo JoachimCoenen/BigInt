@@ -122,16 +122,6 @@ class BigInt : public IBigIntLike
 		: BigInt(from_string(v))
 	{ }
 
-	explicit constexpr
-	BigInt(const std::vector<uint64_t> &v, Sign sign=Sign::POS)
-		: _data(v), _sign(sign) // todo: maby make it non-public?
-	{ }
-
-	explicit constexpr
-	BigInt(const std::vector<uint64_t> &&v, Sign sign=Sign::POS)
-		: _data(std::move(v)), _sign(sign) // todo: maby make it non-public?
-	{ }
-
 	template<is_BigInt_like T>
 	explicit constexpr
 		BigInt(const T &v)
