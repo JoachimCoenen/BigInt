@@ -854,6 +854,7 @@ namespace bigint {
 template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_VOID
 add(TRES &result, TLHS &a, const TRHS &b) {
+	_private::resizeBigInt(result, std::max(a.size(), b.size()));
 	if (is_pos(a)) {
 		if (is_pos(b)) {
 			_private::add_ignore_sign(result, a, const_cast<TRHS&>(b));
@@ -875,7 +876,7 @@ add(TRES &result, TLHS &a, const TRHS &b) {
 template <is_BigInt_like TLHS, std::integral TRHS>
 CONSTEXPR_AUTO
 operator+(const TLHS &a, TRHS b) -> BigInt {
-	BigInt result = _private::makeBigIntWithSize(a.size());
+	BigInt result;
 	add(result, const_cast<TLHS&>(a), BigIntAdapter(b));
 	return result;
 }
@@ -889,7 +890,7 @@ operator+(TLHS a, const TRHS &b) -> BigInt {
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_AUTO
 operator+(const TLHS &a, const TRHS &b) -> BigInt {
-	BigInt result = _private::makeBigIntWithSize(std::max(a.size(), b.size()));
+	BigInt result;
 	add(result, const_cast<TLHS&>(a), b);
 	return result;
 }
@@ -897,7 +898,6 @@ operator+(const TLHS &a, const TRHS &b) -> BigInt {
 template <is_BigInt_like TLHS, std::integral TRHS>
 CONSTEXPR_AUTO_DISCARD
 operator+=(TLHS &a, TRHS b) -> TLHS& {
-	_private::resizeBigInt(a, a.size());
 	add(a, a, BigIntAdapter(b));
 	return a;
 }
@@ -905,7 +905,6 @@ operator+=(TLHS &a, TRHS b) -> TLHS& {
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_AUTO_DISCARD
 operator+=(TLHS &a, const TRHS &b) -> TLHS& {
-	_private::resizeBigInt(a, std::max(a.size(), b.size()));
 	add(a, a, b);
 	return a;
 }
@@ -919,6 +918,7 @@ namespace bigint {
 template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_VOID
 sub(TRES &result, TLHS &a, const TRHS &b) {
+	_private::resizeBigInt(result, std::max(a.size(), b.size()));
 	if (is_pos(a)) {
 		if (is_pos(b)) {
 			_private::sub_ignore_sign(result, a, const_cast<TRHS&>(b));
@@ -939,7 +939,7 @@ sub(TRES &result, TLHS &a, const TRHS &b) {
 template <is_BigInt_like TLHS, std::integral TRHS>
 CONSTEXPR_AUTO
 operator-(const TLHS &a, TRHS b) -> BigInt {
-	BigInt result = _private::makeBigIntWithSize(a.size());
+	BigInt result;
 	sub(result, const_cast<TLHS&>(a), BigIntAdapter(b));
 	return result;
 }
@@ -947,7 +947,7 @@ operator-(const TLHS &a, TRHS b) -> BigInt {
 template <std::integral TLHS, is_BigInt_like TRHS>
 CONSTEXPR_AUTO
 operator-(TLHS a, const TRHS &b) -> BigInt {
-	BigInt result = _private::makeBigIntWithSize(b.size());
+	BigInt result;
 	BigIntAdapter a_ {a};
 	sub(result, a_, b);
 	return result;
@@ -956,7 +956,7 @@ operator-(TLHS a, const TRHS &b) -> BigInt {
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_AUTO
 operator-(const TLHS &a, const TRHS &b) -> BigInt {
-	BigInt result = _private::makeBigIntWithSize(std::max(a.size(), b.size()));
+	BigInt result;
 	sub(result, const_cast<TLHS&>(a), b);
 	return result;
 }
@@ -964,7 +964,6 @@ operator-(const TLHS &a, const TRHS &b) -> BigInt {
 template <is_BigInt_like TLHS, std::integral TRHS>
 CONSTEXPR_AUTO_DISCARD
 operator-=(TLHS &a, TRHS b) -> TLHS& {
-	_private::resizeBigInt(a, a.size());
 	sub(a, a, BigIntAdapter(b));
 	return a;
 }
@@ -1022,10 +1021,12 @@ mult(uint64_t a, uint64_t b) -> BigIntAdapter2 {
 template <is_BigInt_like TRES, is_BigInt_like TLHS>
 CONSTEXPR_VOID
 mult(TRES &result, TLHS &a, uint64_t b) {
-	if (b == 0) {
+	if (b == 0 || is_zero(a)) {
 		result = BigInt{};
 		return;
 	}
+	_private::resizeBigInt(result, a.size());
+
 	uint64_t c = 0; // carry
 	for (auto i = 0ull; i < a.size(); i++) {
 		const auto rc = mult(a[i], b);
@@ -1049,9 +1050,15 @@ mult(TRES &result, TLHS &a, int64_t b) {
 	}
 }
 
-template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
-CONSTEXPR_VOID
-mult(TRES &result, TLHS &a, const TRHS &b) {
+template <is_BigInt_like TLHS, is_BigInt_like TRHS>
+CONSTEXPR_AUTO
+mult(const TLHS &a, const TRHS &b) -> BigInt {
+	if (is_zero(a) || is_zero(b)) {
+		return BigInt{};
+	}
+	BigInt result;
+	_private::resizeBigInt(result, a.size() + b.size());
+
 	for (auto i = 0ull; i < b.size(); i++) {
 		auto temp = a * b[i];
 		auto lshifted_temp = _private::lshifted(temp, i);
@@ -1060,13 +1067,14 @@ mult(TRES &result, TLHS &a, const TRHS &b) {
 	result.sign() = _private::mult_sign(a.sign(), b.sign());
 	result.cleanup();
 	LOGGING("multiplying: " << result.size());
+	return result;
 }
 
 template <is_BigInt_like TLHS, std::integral TRHS>
 CONSTEXPR_AUTO
 operator*(const TLHS &a, TRHS b) -> BigInt {
 	using TRHS2 = std::conditional_t<std::is_unsigned_v<TRHS>, uint64_t, int64_t>;
-	BigInt result = _private::makeBigIntWithSize(a.size());
+	BigInt result;
 	mult(result, const_cast<TLHS&>(a), (TRHS2)b);
 	return result;
 }
@@ -1080,9 +1088,7 @@ operator*(TLHS a, const TRHS &b) -> BigInt {
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_AUTO
 operator*(const TLHS &a, const TRHS &b) -> BigInt {
-	BigInt result = _private::makeBigIntWithSize(a.size() + b.size());
-	mult(result, const_cast<TLHS&>(a), b);
-	return result;
+	return mult(a, b);
 }
 
 template <is_BigInt_like TLHS, std::integral TRHS>
@@ -1096,7 +1102,7 @@ operator*=(TLHS &a, TRHS b) -> BigInt& {
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_AUTO
 operator*=(TLHS &a, const TRHS &b) -> BigInt& {
-	mult(a, a, b);
+	a = std::move(mult(a, b));
 	return a;
 }
 
@@ -1340,7 +1346,7 @@ div(TRES &result, TLHS &a, uint32_t b) {
 		result.set(i, r);
 	}
 	result.sign() = a.sign();
-	if (c_lo && a.sign() == Sign::NEG) {
+	if (c_lo != 0 && result.sign() == Sign::NEG) {
 		result -= 1;
 	}
 }
@@ -1350,7 +1356,7 @@ CONSTEXPR_VOID
 div(TRES &result, TLHS &a, int32_t bb) {
 	if (bb < 0) {
 		//_private::BigIntNeg<TLHS>(a)
-		const auto neg_a = -a; // todo check undefined behavior with -a if result === a, because operator-() const-ifys a?
+		auto neg_a = -a; // todo check undefined behavior with -a if result === a, because operator-() const-ifys a?
 		div(result, neg_a, (uint32_t) -bb);
 	} else {
 		div(result, a, (uint32_t) bb);
@@ -1383,7 +1389,7 @@ operator/(const TLHS &a, const TRHS &b) -> BigInt {
 
 template <is_BigInt_like TLHS, one_of<uint32_t, int32_t> TRHS>
 CONSTEXPR_AUTO
-operator/=(TLHS &a, TRHS b) -> BigInt& {
+operator/=(TLHS &a, TRHS b) -> TLHS& {
 	div(a, a, b);
 	a.cleanup();
 	return a;
@@ -1391,7 +1397,7 @@ operator/=(TLHS &a, TRHS b) -> BigInt& {
 
 template <is_BigInt_like TLHS, one_of<uint64_t, int64_t> TRHS>
 CONSTEXPR_AUTO
-operator/=(TLHS &a, TRHS b) -> BigInt& {
+operator/=(TLHS &a, TRHS b) -> TLHS& {
 	const auto result = divmod<TLHS, BigIntAdapter<TRHS>, false, true>(a, BigIntAdapter(b)).d;
 	a = std::move(result);
 	return a;
@@ -1399,7 +1405,7 @@ operator/=(TLHS &a, TRHS b) -> BigInt& {
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_AUTO
-operator/=(TLHS &a, const TRHS &b) -> BigInt& {
+operator/=(TLHS &a, const TRHS &b) -> TLHS& {
 	const auto result = divmod<TLHS, TRHS, false, true>(a, b).d;
 	a = std::move(result);
 	return a;
