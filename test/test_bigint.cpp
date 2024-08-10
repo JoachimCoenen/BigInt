@@ -206,8 +206,8 @@ TEST(HelloTest, TestCreateFromString) {
 TEST(HelloTest, Test##NAME##_##O1##_##O2) {\
 	testBinaryOp<O1, O2, R, RT>(\
 		[](auto& a, const auto& b) -> auto { return OP; },\
-		[](const auto& expected) { return expected.EXP; },\
-		[](const auto& expected) { return expected.REXP; },\
+		[](const auto& expected) { return EXP; },\
+		[](const auto& expected) { return REXP; },\
 		[](const auto& res) { return GET_RT; },\
 		get_all_test_values()\
 		);\
@@ -221,8 +221,8 @@ TEST_BINARY_OPERATOR(NAME, O1, O2, BigInt, OP, EXP, REXP, std::vector<uint64_t>,
 TEST(HelloTest, TestI##NAME##_##O1##_##O2) {\
 	testIOp<O1, O2, RT>(\
 		[](auto& a, const auto& b) -> auto& { return OP; },\
-		[](const auto& expected) { return expected.EXP; },\
-		[](const auto& expected) { return expected.REXP; },\
+		[](const auto& expected) { return EXP; },\
+		[](const auto& expected) { return REXP; },\
 		[](const auto& res) { return GET_RT; },\
 		get_all_test_values()\
 		);\
@@ -235,13 +235,13 @@ TEST_ASSIGN_OPERATOR(NAME, BigInt, O2, OP, EXP, REXP, std::vector<uint64_t>, res
 // Bitwise Shift
 namespace {
 
-TEST_BINARY_OPERATOR_BIGINT(LShift, BigInt, uint64_t, a << b, lshift, rlshift);
+TEST_BINARY_OPERATOR_BIGINT(LShift, BigInt, uint64_t, a << b, expected.lshift, expected.rlshift);
 
-TEST_BINARY_OPERATOR_BIGINT(RShift, BigInt, uint64_t, a >> b, rshift, rrshift);
+TEST_BINARY_OPERATOR_BIGINT(RShift, BigInt, uint64_t, a >> b, expected.rshift, expected.rrshift);
 
-TEST_ASSIGN_OPERATOR_BIGINT(LShift, uint64_t, a <<= b, lshift, rlshift);
+TEST_ASSIGN_OPERATOR_BIGINT(LShift, uint64_t, a <<= b, expected.lshift, expected.rlshift);
 
-TEST_ASSIGN_OPERATOR_BIGINT(RShift, uint64_t, a >>= b, rshift, rrshift);
+TEST_ASSIGN_OPERATOR_BIGINT(RShift, uint64_t, a >>= b, expected.rshift, expected.rrshift);
 
 }
 
@@ -250,33 +250,33 @@ TEST_ASSIGN_OPERATOR_BIGINT(RShift, uint64_t, a >>= b, rshift, rrshift);
 // Addition
 namespace {
 
-TEST_BINARY_OPERATOR_BIGINT(Add, BigInt, BigInt, a + b, add, add);
+TEST_BINARY_OPERATOR_BIGINT(Add, BigInt, BigInt, a + b, expected.add, expected.add);
 
-TEST_BINARY_OPERATOR_BIGINT(Add, BigInt, uint64_t, a + b, add, add);
+TEST_BINARY_OPERATOR_BIGINT(Add, BigInt, uint64_t, a + b, expected.add, expected.add);
 
-TEST_BINARY_OPERATOR_BIGINT(Add, BigInt, int64_t, a + b, add, add);
+TEST_BINARY_OPERATOR_BIGINT(Add, BigInt, int64_t, a + b, expected.add, expected.add);
 
-TEST_BINARY_OPERATOR_BIGINT(Add, BigInt, uint32_t, a + b, add, add);
+TEST_BINARY_OPERATOR_BIGINT(Add, BigInt, uint32_t, a + b, expected.add, expected.add);
 
-TEST_BINARY_OPERATOR_BIGINT(Add, BigInt, int32_t, a + b, add, add);
+TEST_BINARY_OPERATOR_BIGINT(Add, BigInt, int32_t, a + b, expected.add, expected.add);
 
-TEST_BINARY_OPERATOR_BIGINT(Add, uint64_t, BigInt, a + b, add, add);
+TEST_BINARY_OPERATOR_BIGINT(Add, uint64_t, BigInt, a + b, expected.add, expected.add);
 
-TEST_BINARY_OPERATOR_BIGINT(Add, int64_t, BigInt, a + b, add, add);
+TEST_BINARY_OPERATOR_BIGINT(Add, int64_t, BigInt, a + b, expected.add, expected.add);
 
-TEST_BINARY_OPERATOR_BIGINT(Add, uint32_t, BigInt, a + b, add, add);
+TEST_BINARY_OPERATOR_BIGINT(Add, uint32_t, BigInt, a + b, expected.add, expected.add);
 
-TEST_BINARY_OPERATOR_BIGINT(Add, int32_t, BigInt, a + b, add, add);
+TEST_BINARY_OPERATOR_BIGINT(Add, int32_t, BigInt, a + b, expected.add, expected.add);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Add, BigInt, a += b, add, add);
+TEST_ASSIGN_OPERATOR_BIGINT(Add, BigInt, a += b, expected.add, expected.add);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Add, uint64_t, a += b, add, add);
+TEST_ASSIGN_OPERATOR_BIGINT(Add, uint64_t, a += b, expected.add, expected.add);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Add, int64_t, a += b, add, add);
+TEST_ASSIGN_OPERATOR_BIGINT(Add, int64_t, a += b, expected.add, expected.add);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Add, uint32_t, a += b, add, add);
+TEST_ASSIGN_OPERATOR_BIGINT(Add, uint32_t, a += b, expected.add, expected.add);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Add, int32_t, a += b, add, add);
+TEST_ASSIGN_OPERATOR_BIGINT(Add, int32_t, a += b, expected.add, expected.add);
 
 }
 
@@ -284,33 +284,33 @@ TEST_ASSIGN_OPERATOR_BIGINT(Add, int32_t, a += b, add, add);
 // Subtraction
 namespace {
 
-TEST_BINARY_OPERATOR_BIGINT(Sub, BigInt, BigInt, a - b, sub, rsub);
+TEST_BINARY_OPERATOR_BIGINT(Sub, BigInt, BigInt, a - b, expected.sub, expected.rsub);
 
-TEST_BINARY_OPERATOR_BIGINT(Sub, BigInt, uint64_t, a - b, sub, rsub);
+TEST_BINARY_OPERATOR_BIGINT(Sub, BigInt, uint64_t, a - b, expected.sub, expected.rsub);
 
-TEST_BINARY_OPERATOR_BIGINT(Sub, BigInt, int64_t, a - b, sub, rsub);
+TEST_BINARY_OPERATOR_BIGINT(Sub, BigInt, int64_t, a - b, expected.sub, expected.rsub);
 
-TEST_BINARY_OPERATOR_BIGINT(Sub, BigInt, uint32_t, a - b, sub, rsub);
+TEST_BINARY_OPERATOR_BIGINT(Sub, BigInt, uint32_t, a - b, expected.sub, expected.rsub);
 
-TEST_BINARY_OPERATOR_BIGINT(Sub, BigInt, int32_t, a - b, sub, rsub);
+TEST_BINARY_OPERATOR_BIGINT(Sub, BigInt, int32_t, a - b, expected.sub, expected.rsub);
 
-TEST_BINARY_OPERATOR_BIGINT(Sub, uint64_t, BigInt, a - b, sub, rsub);
+TEST_BINARY_OPERATOR_BIGINT(Sub, uint64_t, BigInt, a - b, expected.sub, expected.rsub);
 
-TEST_BINARY_OPERATOR_BIGINT(Sub, int64_t, BigInt, a - b, sub, rsub);
+TEST_BINARY_OPERATOR_BIGINT(Sub, int64_t, BigInt, a - b, expected.sub, expected.rsub);
 
-TEST_BINARY_OPERATOR_BIGINT(Sub, uint32_t, BigInt, a - b, sub, rsub);
+TEST_BINARY_OPERATOR_BIGINT(Sub, uint32_t, BigInt, a - b, expected.sub, expected.rsub);
 
-TEST_BINARY_OPERATOR_BIGINT(Sub, int32_t, BigInt, a - b, sub, rsub);
+TEST_BINARY_OPERATOR_BIGINT(Sub, int32_t, BigInt, a - b, expected.sub, expected.rsub);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Sub, BigInt, a -= b, sub, rsub);
+TEST_ASSIGN_OPERATOR_BIGINT(Sub, BigInt, a -= b, expected.sub, expected.rsub);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Sub, uint64_t, a -= b, sub, rsub);
+TEST_ASSIGN_OPERATOR_BIGINT(Sub, uint64_t, a -= b, expected.sub, expected.rsub);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Sub, int64_t, a -= b, sub, rsub);
+TEST_ASSIGN_OPERATOR_BIGINT(Sub, int64_t, a -= b, expected.sub, expected.rsub);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Sub, uint32_t, a -= b, sub, rsub);
+TEST_ASSIGN_OPERATOR_BIGINT(Sub, uint32_t, a -= b, expected.sub, expected.rsub);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Sub, int32_t, a -= b, sub, rsub);
+TEST_ASSIGN_OPERATOR_BIGINT(Sub, int32_t, a -= b, expected.sub, expected.rsub);
 
 }
 
@@ -318,35 +318,35 @@ TEST_ASSIGN_OPERATOR_BIGINT(Sub, int32_t, a -= b, sub, rsub);
 // Multiplication
 namespace {
 
-TEST_BINARY_OPERATOR_BIGINT(Mul, BigInt, BigInt, a * b, mul, mul);
+TEST_BINARY_OPERATOR_BIGINT(Mul, BigInt, BigInt, a * b, expected.mul, expected.mul);
 
-TEST_BINARY_OPERATOR_BIGINT(Mul, BigInt, uint64_t, a * b, mul, mul);
+TEST_BINARY_OPERATOR_BIGINT(Mul, BigInt, uint64_t, a * b, expected.mul, expected.mul);
 
-TEST_BINARY_OPERATOR_BIGINT(Mul, BigInt, int64_t, a * b, mul, mul);
+TEST_BINARY_OPERATOR_BIGINT(Mul, BigInt, int64_t, a * b, expected.mul, expected.mul);
 
-TEST_BINARY_OPERATOR_BIGINT(Mul, BigInt, uint32_t, a * b, mul, mul);
+TEST_BINARY_OPERATOR_BIGINT(Mul, BigInt, uint32_t, a * b, expected.mul, expected.mul);
 
-TEST_BINARY_OPERATOR_BIGINT(Mul, BigInt, int32_t, a * b, mul, mul);
+TEST_BINARY_OPERATOR_BIGINT(Mul, BigInt, int32_t, a * b, expected.mul, expected.mul);
 
-TEST_BINARY_OPERATOR_BIGINT(Mul, uint64_t, BigInt, a * b, mul, mul);
+TEST_BINARY_OPERATOR_BIGINT(Mul, uint64_t, BigInt, a * b, expected.mul, expected.mul);
 
-TEST_BINARY_OPERATOR_BIGINT(Mul, int64_t, BigInt, a * b, mul, mul);
+TEST_BINARY_OPERATOR_BIGINT(Mul, int64_t, BigInt, a * b, expected.mul, expected.mul);
 
-TEST_BINARY_OPERATOR_BIGINT(Mul, uint32_t, BigInt, a * b, mul, mul);
+TEST_BINARY_OPERATOR_BIGINT(Mul, uint32_t, BigInt, a * b, expected.mul, expected.mul);
 
-TEST_BINARY_OPERATOR_BIGINT(Mul, int32_t, BigInt, a * b, mul, mul);
+TEST_BINARY_OPERATOR_BIGINT(Mul, int32_t, BigInt, a * b, expected.mul, expected.mul);
 
-TEST_BINARY_OPERATOR_BIGINT(Mul, uint64_t, uint64_t, BigInt{mult(a, b)}, mul, mul);
+TEST_BINARY_OPERATOR_BIGINT(Mul, uint64_t, uint64_t, BigInt{mult(a, b)}, expected.mul, expected.mul);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Mul, BigInt, a *= b, mul, mul);
+TEST_ASSIGN_OPERATOR_BIGINT(Mul, BigInt, a *= b, expected.mul, expected.mul);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Mul, uint64_t, a *= b, mul, mul);
+TEST_ASSIGN_OPERATOR_BIGINT(Mul, uint64_t, a *= b, expected.mul, expected.mul);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Mul, int64_t, a *= b, mul, mul);
+TEST_ASSIGN_OPERATOR_BIGINT(Mul, int64_t, a *= b, expected.mul, expected.mul);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Mul, uint32_t, a *= b, mul, mul);
+TEST_ASSIGN_OPERATOR_BIGINT(Mul, uint32_t, a *= b, expected.mul, expected.mul);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Mul, int32_t, a *= b, mul, mul);
+TEST_ASSIGN_OPERATOR_BIGINT(Mul, int32_t, a *= b, expected.mul, expected.mul);
 
 }
 
@@ -354,25 +354,25 @@ TEST_ASSIGN_OPERATOR_BIGINT(Mul, int32_t, a *= b, mul, mul);
 // Division
 namespace {
 
-TEST_BINARY_OPERATOR_BIGINT(Div, BigInt, BigInt, a / b, div, rdiv);
+TEST_BINARY_OPERATOR_BIGINT(Div, BigInt, BigInt, a / b, expected.div, expected.rdiv);
 
-TEST_BINARY_OPERATOR_BIGINT(Div, BigInt, uint64_t, a / b, div, rdiv);
+TEST_BINARY_OPERATOR_BIGINT(Div, BigInt, uint64_t, a / b, expected.div, expected.rdiv);
 
-TEST_BINARY_OPERATOR_BIGINT(Div, BigInt, int64_t, a / b, div, rdiv);
+TEST_BINARY_OPERATOR_BIGINT(Div, BigInt, int64_t, a / b, expected.div, expected.rdiv);
 
-TEST_BINARY_OPERATOR_BIGINT(Div, BigInt, uint32_t, a / b, div, rdiv);
+TEST_BINARY_OPERATOR_BIGINT(Div, BigInt, uint32_t, a / b, expected.div, expected.rdiv);
 
-TEST_BINARY_OPERATOR_BIGINT(Div, BigInt, int32_t, a / b, div, rdiv);
+TEST_BINARY_OPERATOR_BIGINT(Div, BigInt, int32_t, a / b, expected.div, expected.rdiv);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Div, BigInt, a /= b, div, rdiv);
+TEST_ASSIGN_OPERATOR_BIGINT(Div, BigInt, a /= b, expected.div, expected.rdiv);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Div, uint64_t, a /= b, div, rdiv);
+TEST_ASSIGN_OPERATOR_BIGINT(Div, uint64_t, a /= b, expected.div, expected.rdiv);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Div, int64_t, a /= b, div, rdiv);
+TEST_ASSIGN_OPERATOR_BIGINT(Div, int64_t, a /= b, expected.div, expected.rdiv);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Div, uint32_t, a /= b, div, rdiv);
+TEST_ASSIGN_OPERATOR_BIGINT(Div, uint32_t, a /= b, expected.div, expected.rdiv);
 
-TEST_ASSIGN_OPERATOR_BIGINT(Div, int32_t, a /= b, div, rdiv);
+TEST_ASSIGN_OPERATOR_BIGINT(Div, int32_t, a /= b, expected.div, expected.rdiv);
 
 }
 
@@ -380,16 +380,51 @@ TEST_ASSIGN_OPERATOR_BIGINT(Div, int32_t, a /= b, div, rdiv);
 // Modulo
 namespace {
 
-TEST_BINARY_OPERATOR_BIGINT(Mod, BigInt, BigInt, a % b, mod, rmod);
+TEST_BINARY_OPERATOR_BIGINT(Mod, BigInt, BigInt, a % b, expected.mod, expected.rmod);
 
-TEST_BINARY_OPERATOR(Mod, BigInt, uint64_t, uint64_t, a % b, mod, rmod, uint64_t, res);
+TEST_BINARY_OPERATOR(Mod, BigInt, uint64_t, uint64_t, a % b, expected.mod, expected.rmod, uint64_t, res);
 
-TEST_BINARY_OPERATOR(Mod, BigInt, int64_t, int64_t, a % b, mod, rmod, int64_t, res);
+TEST_BINARY_OPERATOR(Mod, BigInt, int64_t, int64_t, a % b, expected.mod, expected.rmod, int64_t, res);
 
-TEST_BINARY_OPERATOR(Mod, BigInt, uint32_t, uint32_t, a % b, mod, rmod, uint32_t, res);
+TEST_BINARY_OPERATOR(Mod, BigInt, uint32_t, uint32_t, a % b, expected.mod, expected.rmod, uint32_t, res);
 
-TEST_BINARY_OPERATOR(Mod, BigInt, int32_t, int32_t, a % b, mod, rmod, int32_t, res);
+TEST_BINARY_OPERATOR(Mod, BigInt, int32_t, int32_t, a % b, expected.mod, expected.rmod, int32_t, res);
 
-// TEST_ASSIGN_OPERATOR_BIGINT(Mod, BigInt, a %= b, mod, rmod);
+// TEST_ASSIGN_OPERATOR_BIGINT(Mod, BigInt, a %= b, expected.mod, expected.rmod);
+
+}
+
+
+// divmod
+namespace {
+
+ExpectedResult buildRes(
+	const ExpectedResult &d,
+	const ExpectedResult &r
+) {
+	if (!std::holds_alternative<IgnoreTest>(d) && !std::holds_alternative<IgnoreTest>(r)) {
+		return std::get<std::string>(d) + "|" + std::get<std::string>(r);
+	}
+	return IGNORED;
+}
+
+template<typename RT>
+using Divmod_RT = std::tuple<std::vector<uint64_t>, RT>;
+
+template<typename R>
+using Divmod_R = DivModResult<BigInt, R>;
+
+#define TEST_DIVMOD(NAME, O1, O2, OP, RT, GET_RT) \
+TEST_BINARY_OPERATOR(NAME, O1, O2, Divmod_R<O2>, OP, buildRes(expected.div, expected.mod), buildRes(expected.rdiv, expected.rmod), Divmod_RT<RT>, std::tuple(res.d.__data_for_testing_only(), GET_RT))
+
+TEST_DIVMOD(Divmod, BigInt, BigInt, divmod(a, b), std::vector<uint64_t>, res.r.__data_for_testing_only());
+
+TEST_DIVMOD(Divmod, BigInt, uint64_t, divmod(a, b), uint64_t, res.r);
+
+TEST_DIVMOD(Divmod, BigInt, int64_t, divmod(a, b), int64_t, res.r);
+
+TEST_DIVMOD(Divmod1, BigInt, uint32_t, divmod1(a, b), uint32_t, res.r);
+
+TEST_DIVMOD(Divmod1, BigInt, int32_t, divmod1(a, b), int32_t, res.r);
 
 }

@@ -16,7 +16,7 @@ struct IgnoreTest {};
 constexpr auto IGNORED = IgnoreTest{};
 
 
-using ExpectedResult = std::variant<IgnoreTest, std::string_view>; // todo add exception option
+using ExpectedResult = std::variant<IgnoreTest, std::string>; // todo add exception option
 
 struct ExpectedResults {
 	ExpectedResult lshift;
@@ -116,6 +116,11 @@ str_to_int(const std::string_view str_value) -> T {
 		return utils::stol(str_value);
 	} else if constexpr (std::is_same_v<T, bigint::BigInt>) {
 		return bigint::BigInt(str_value);
+	} else if constexpr (std::is_same_v<T, bigint::DivModResult<typename T::_D, typename T::_R>>) {
+		auto delimiter = str_value.find("|");
+		auto d = str_value.substr(0, delimiter);
+		auto r = str_value.substr(delimiter + 1);
+		return bigint::DivModResult{str_to_int<typename T::_D>(d), str_to_int<typename T::_R>(r)};
 	} else {
 		static_assert(false, "unhandeled type provided");
 	}
@@ -174,7 +179,7 @@ void testBinaryOpSingle1(
 
 	O1 left = str_to_int<O1>(left_param.val);
 	const O2 right = str_to_int<O2>(right_param.val);
-	const auto expected = str_to_int<std::remove_cvref_t<R>>(std::get<std::string_view>(expected_variant));
+	const auto expected = str_to_int<std::remove_cvref_t<R>>(std::get<std::string>(expected_variant));
 
 	const auto& result = operation(left, right);
 	const std::string test_str = std::string{left_param.val} + " . " + std::string{right_param.val};

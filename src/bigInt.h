@@ -1195,7 +1195,11 @@ operator*=(TLHS &a, const TRHS &b) -> TLHS& {
 namespace bigint {
 
 template<class D, class R=D>
-struct DivModResult { D d; R r; };
+struct DivModResult {
+	typedef D _D;
+	typedef R _R;
+	D d; R r;
+};
 
 }
 
@@ -1331,7 +1335,7 @@ divmod(const TLHS &a, const uint64_t &b) -> DivModResult<BigInt, uint64_t> {
 
 template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
 CONSTEXPR_AUTO
-divmod1(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> { // todo: validate: Isn't uint32_t sufficient for remainder return type?
+divmod1(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> {
 	BigInt q;
 	if constexpr (!ignore_quotient) {
 		_private::resizeBigInt(q, a.size());
@@ -1358,7 +1362,7 @@ divmod1(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> { // todo: 
 				   c_div = (ai_lo % b) << 32; // ???
 		const auto di = (di_hi << 32) | di_lo;
 		if constexpr (!ignore_quotient) {
-				   q[i] = di;
+			q.set(i, di);
 		}
 
 		const auto ai_next = (i != 0) ? a[i-1]: 0;
@@ -1371,12 +1375,13 @@ divmod1(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> { // todo: 
 		const auto ji = di + c_;
 		const auto yi = ji*b;
 		y.set(i, yi);
-
 	}
+
+	y.cleanup();
 
 	if constexpr (!ignore_quotient) {
 		q.sign() = _private::mult_sign(a.sign(), Sign::POS);
-		if (a != y && q.sign() == Sign::NEG) {
+		if ((a != y) && q.sign() == Sign::NEG) {
 			q -= 1;
 		}
 		q.cleanup();
