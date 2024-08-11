@@ -4,9 +4,10 @@
 #include "utils.h"
 
 #include <cstdint>
-#include <vector>
+#include <sstream>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 #define LOGGING(a)
 
@@ -42,6 +43,10 @@ to_string_base16(const BigInt &v) -> std::string;
 
 CONSTEXPR_AUTO
 to_string(const BigInt &v) -> std::string;
+
+template<is_BigInt_like T>
+NODISCARD_AUTO
+to_debug_string(const T& value) -> std::string;
 
 CONSTEXPR_AUTO
 from_string_base2(const std::string_view input) -> BigInt;
@@ -105,6 +110,22 @@ neg(Sign sign) -> Sign {
 
 // class BigInt:
 namespace bigint {
+
+class BigIntError: public std::logic_error {
+public:
+	explicit BigIntError(const std::string& message)
+		: std::logic_error{message} {}
+
+};
+
+class ZeroDivisionError: public BigIntError {
+public:
+	template<is_BigInt_like T>
+	explicit ZeroDivisionError(const T& dividend)
+		: BigIntError{"division by zero. dividend was " + to_debug_string(dividend)} {}
+};
+
+
 class BigInt : public IBigIntLike
 {
 
@@ -1181,9 +1202,9 @@ operator*=(TLHS &a, TRHS b) -> TLHS& {
 	return a;
 }
 
-template <is_BigInt_like TLHS, is_BigInt_like TRHS>
+template <is_BigInt_like TRHS>
 CONSTEXPR_AUTO
-operator*=(TLHS &a, const TRHS &b) -> TLHS& {
+operator*=(BigInt &a, const TRHS &b) -> BigInt& {
 	a = std::move(mult(a, b));
 	return a;
 }
@@ -1210,8 +1231,11 @@ namespace bigint::_private {
 template <is_BigInt_like TLHS, is_BigInt_like TRHS, bool ignore_quotient = false, bool ignore_remainder = false>
 CONSTEXPR_AUTO
 divmod_ignore_sign(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
-	a.cleanup();
-	if (is_zero(a)) { // todo handle 0/0 !
+	a.cleanup(); // todo: is this cleanup neccessary?
+	if (is_zero(b)) {
+		throw ZeroDivisionError{a};
+	}
+	if (is_zero(a)) {
 		return {BigInt{0}, BigInt{0}};
 	}
 	if (b.size() > a.size()) {
@@ -1281,11 +1305,6 @@ namespace bigint {
 template <is_BigInt_like TLHS, is_BigInt_like TRHS, bool ignore_quotient = false, bool ignore_remainder = false>
 CONSTEXPR_AUTO
 divmod(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
-	a.cleanup();
-	if (is_zero(a)) { // todo handle 0/0 !
-		return {BigInt(0), BigInt(0)};
-	}
-
 	auto r = _private::divmod_ignore_sign<TLHS, TRHS, ignore_quotient, ignore_remainder>(a, b);
 
 	r.r.cleanup(); //r.r is also used by quotient.
@@ -1336,6 +1355,13 @@ divmod(const TLHS &a, const uint64_t &b) -> DivModResult<BigInt, uint64_t> {
 template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
 CONSTEXPR_AUTO
 divmod1(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> {
+	if (b == 0) {
+		throw ZeroDivisionError{a};
+	}
+	if (is_zero(a)) {
+		return {BigInt{0}, 0};
+	}
+
 	BigInt q;
 	if constexpr (!ignore_quotient) {
 		_private::resizeBigInt(q, a.size());
@@ -1416,9 +1442,15 @@ divmod1(const TLHS &a, int32_t bb) -> DivModResult<BigInt, int32_t> { // todo: v
 // division:
 namespace bigint {
 
-template <is_BigInt_like TRES, is_BigInt_like TLHS>
+template <is_BigInt_like TLHS>
 CONSTEXPR_VOID
-div(TRES &result, TLHS &a, uint32_t b) {
+div(BigInt &result, TLHS &a, uint32_t b) {
+	if (b == 0) {
+		throw ZeroDivisionError{a};
+	}
+	if (is_zero(a)) {
+		result = BigInt{0};
+	}
 	uint64_t c_lo = 0ull;
 	for (auto i = a.size(); i-->0;) {
 		const auto ai = a[i];
@@ -1438,9 +1470,9 @@ div(TRES &result, TLHS &a, uint32_t b) {
 	}
 }
 
-template <is_BigInt_like TRES, is_BigInt_like TLHS>
+template <is_BigInt_like TLHS>
 CONSTEXPR_VOID
-div(TRES &result, TLHS &a, int32_t bb) {
+div(BigInt &result, TLHS &a, int32_t bb) {
 	if (bb < 0) {
 		//_private::BigIntNeg<TLHS>(a)
 		auto neg_a = -a; // todo check undefined behavior with -a if result === a, because operator-() const-ifys a?
@@ -1474,26 +1506,26 @@ operator/(const TLHS &a, const TRHS &b) -> BigInt {
 }
 
 
-template <is_BigInt_like TLHS, one_of<uint32_t, int32_t> TRHS>
+template <one_of<uint32_t, int32_t> TRHS>
 CONSTEXPR_AUTO
-operator/=(TLHS &a, TRHS b) -> TLHS& {
+operator/=(BigInt &a, TRHS b) -> BigInt& {
 	div(a, a, b);
 	a.cleanup();
 	return a;
 }
 
-template <is_BigInt_like TLHS, one_of<uint64_t, int64_t> TRHS>
+template <one_of<uint64_t, int64_t> TRHS>
 CONSTEXPR_AUTO
-operator/=(TLHS &a, TRHS b) -> TLHS& {
-	const auto result = divmod<TLHS, BigIntAdapter<TRHS>, false, true>(a, BigIntAdapter(b)).d;
+operator/=(BigInt &a, TRHS b) -> BigInt& {
+	const auto result = divmod<BigInt, BigIntAdapter<TRHS>, false, true>(a, BigIntAdapter(b)).d;
 	a = std::move(result);
 	return a;
 }
 
-template <is_BigInt_like TLHS, is_BigInt_like TRHS>
+template <is_BigInt_like TRHS>
 CONSTEXPR_AUTO
-operator/=(TLHS &a, const TRHS &b) -> TLHS& {
-	const auto result = divmod<TLHS, TRHS, false, true>(a, b).d;
+operator/=(BigInt &a, const TRHS &b) -> BigInt& {
+	const auto result = divmod<BigInt, TRHS, false, true>(a, b).d;
 	a = std::move(result);
 	return a;
 }
@@ -1535,7 +1567,7 @@ operator%=(const TLHS &a, const TRHS &b) -> BigInt& {
 
 namespace bigint::_private {
 
-constexpr uint8_t calculate_base_power(uint32_t base) {
+consteval uint8_t calculate_base_power(uint32_t base) {
 	// formula: result =floor(64 / log2(base))
 	switch (base) {
 	case 2:
@@ -1719,6 +1751,37 @@ to_string_base16(const BigInt &v) -> std::string {
 CONSTEXPR_AUTO
 to_string(const BigInt &v) -> std::string {
 	return to_string_base10(v);
+}
+
+
+template<is_BigInt_like T>
+NODISCARD_AUTO
+_to_debug_string_data(const T& value) -> std::string {
+	if (value.size() == 0) {
+		return "{}";
+	} else {
+		std::ostringstream oss;
+		oss << "{";
+
+		size_t i = 0;
+		// add the first element with no delimiter
+		oss << value[i];
+		++i;
+		for (; i < value.size(); ++i) {
+			oss << ", ";
+			oss << value[i];
+		}
+
+		oss << "}";
+		return oss.str();
+	}
+}
+
+template<is_BigInt_like T>
+NODISCARD_AUTO
+to_debug_string(const T& value) -> std::string {
+	const std::string sign = value.sign() == Sign::POS ? "POS" : "NEG";
+	return std::string{"IBigIntLike {_data: "} + _to_debug_string_data(value) + ", _sign: " + sign + "}";
 }
 
 

@@ -16,7 +16,13 @@
 //      constexpr void
 #define CONSTEXPR_VOID constexpr void
 
-namespace utils {
+//      [[nodiscard]] auto
+#define NODISCARD_AUTO [[nodiscard]] inline auto
+
+// //      auto
+// #define AUTO_DISCARD auto
+
+namespace bigint::utils {
 
 template <class T>
 void __from_chars_throws(const std::string_view input, T &result, int base) {
@@ -64,8 +70,8 @@ stoll(const std::string_view input, int base = 10) {
 }
 
 
-constexpr uint64_t
-consteval_pow(uint32_t base, uint8_t exponent)  {
+CONSTEXPR_AUTO
+consteval_pow(uint32_t base, uint8_t exponent) -> uint64_t {
 	uint64_t base2 = base;
 	uint64_t result = 1;
 	for (uint8_t i = 0; i < 8; ++i) {
@@ -78,10 +84,11 @@ consteval_pow(uint32_t base, uint8_t exponent)  {
 }
 
 
-#ifdef _MSC_VER
 }
+
+#ifdef _MSC_VER
 #include <intrin.h>
-namespace utils {
+namespace bigint::utils {
 
 uint32_t __inline ctzll(uint64_t value) {
 	// adapted from https://stackoverflow.com/a/20468180/8091657
@@ -104,7 +111,12 @@ uint32_t __inline clzll(uint64_t value) {
 		return 64;
 	}
 }
+
+}
+
 #else
+
+namespace bigint::utils {
 
 uint32_t __inline ctzll(uint64_t value) {
 	if (value != 0) {
@@ -122,8 +134,8 @@ uint32_t __inline clzll(uint64_t value) {
 	}
 }
 
-#endif
-
 }
+
+#endif
 
 #endif // UTILS_H

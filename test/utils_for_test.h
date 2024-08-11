@@ -107,13 +107,13 @@ template <typename T>
 CONSTEXPR_AUTO
 str_to_int(const std::string_view str_value) -> T {
 	if constexpr (std::is_same_v<T, uint64_t>) {
-		return utils::stoull(str_value);
+		return bigint::utils::stoull(str_value);
 	} else if constexpr (std::is_same_v<T, int64_t>) {
-		return utils::stoll(str_value);
+		return bigint::utils::stoll(str_value);
 	} else if constexpr (std::is_same_v<T, uint32_t>) {
-		return utils::stoul(str_value);
+		return bigint::utils::stoul(str_value);
 	} else if constexpr (std::is_same_v<T, int32_t>) {
-		return utils::stol(str_value);
+		return bigint::utils::stol(str_value);
 	} else if constexpr (std::is_same_v<T, bigint::BigInt>) {
 		return bigint::BigInt(str_value);
 	} else if constexpr (std::is_same_v<T, bigint::DivModResult<typename T::_D, typename T::_R>>) {
