@@ -1203,7 +1203,7 @@ operator*=(TLHS &a, TRHS b) -> TLHS& {
 }
 
 template <is_BigInt_like TRHS>
-CONSTEXPR_AUTO
+CONSTEXPR_AUTO_DISCARD
 operator*=(BigInt &a, const TRHS &b) -> BigInt& {
 	a = std::move(mult(a, b));
 	return a;
@@ -1719,6 +1719,36 @@ toDigitSum(const BigInt &v) -> uint64_t {
 		tempDig.d.cleanup();
 	}
 	return sum;
+}
+
+
+template<is_BigInt_like BASE>
+CONSTEXPR_AUTO
+pow(const BASE& base, uint64_t exp) -> BigInt {
+	if (exp == 0) {
+		if (is_zero(base)) {
+			throw std::invalid_argument("{Pow} ->  Zero to the power of Zero is undefined."); // todo better error
+		} else {
+			return BigInt{1};
+		}
+	} else if (is_zero(base)) {
+		return BigInt{0};
+	}
+
+	BigInt result{1};
+	BigInt temp{base};
+
+	const uint8_t exp_bits = (uint8_t) (64 - utils::clzll(exp));
+	for (uint8_t i = 0; i < exp_bits; ++i) {
+		const auto mask = 1ull << i;
+		if (exp & mask) {
+			result *= temp;
+		}
+		if (i+1 < exp_bits) {
+			temp = temp * temp;
+		}
+	}
+	return result;
 }
 
 }

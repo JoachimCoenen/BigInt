@@ -31,8 +31,8 @@ struct ExpectedResults {
 	ExpectedResult rdiv;
 	ExpectedResult mod;
 	ExpectedResult rmod;
-	// ExpectedResult pow;
-	// ExpectedResult rpow;
+	ExpectedResult pow;
+	ExpectedResult rpow;
 };
 
 /**

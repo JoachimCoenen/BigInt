@@ -1,5 +1,6 @@
 # This Python file uses the following encoding: utf-8
 from dataclasses import dataclass
+import math
 from typing import Callable
 
 
@@ -213,8 +214,8 @@ BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
 	Operation('rdiv', lambda a, b: b // a, lambda a, b: a != 0),
 	Operation('mod',  lambda a, b: a % b, lambda a, b: b != 0),
 	Operation('rmod', lambda a, b: b % a, lambda a, b: a != 0),
-	# ('pow',  lambda a, b: a ** b),
-	# ('rpow', lambda a, b: b ** a),
+	Operation('pow',  lambda a, b: a ** b, lambda a, b: (a != 0 or b != 0) and (b > 0) and (a == 0 or math.log10(abs(a))*b <= 1000) ),
+	Operation('rpow', lambda a, b: b ** a, lambda b, a: (a != 0 or b != 0) and (b > 0) and (a == 0 or math.log10(abs(a))*b <= 1000) ),
 ]
 
 

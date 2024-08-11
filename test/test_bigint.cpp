@@ -453,3 +453,11 @@ TEST_DIVMOD(Divmod1, BigInt, uint32_t, divmod1(a, b), uint32_t, res.r);
 TEST_DIVMOD(Divmod1, BigInt, int32_t, divmod1(a, b), int32_t, res.r);
 
 }
+
+
+// pow
+namespace {
+
+TEST_BINARY_OPERATOR_BIGINT(pow, BigInt, uint64_t, pow(a, b), expected.pow, expected.rpow);
+
+}

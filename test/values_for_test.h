@@ -52,6 +52,8 @@ get_all_test_values() {
 			.rdiv=IGNORED,
 			.mod=IGNORED,
 			.rmod=IGNORED,
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "1"}, Param{VT::S32, "0"}, ExpectedResults{
 			.lshift="1",
@@ -66,6 +68,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow="0",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-1"}, Param{VT::S32, "0"}, ExpectedResults{
@@ -81,6 +85,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "2"}, Param{VT::S32, "0"}, ExpectedResults{
 			.lshift="2",
@@ -95,6 +101,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow="0",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-2"}, Param{VT::S32, "0"}, ExpectedResults{
@@ -110,6 +118,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "3"}, Param{VT::S32, "0"}, ExpectedResults{
 			.lshift="3",
@@ -124,6 +134,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow="0",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-3"}, Param{VT::S32, "0"}, ExpectedResults{
@@ -139,6 +151,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::U32, UINT32_MAX_M1}, Param{VT::S32, "0"}, ExpectedResults{
 			.lshift=UINT32_MAX_M1,
@@ -153,6 +167,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow="0",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967294"}, Param{VT::S32, "0"}, ExpectedResults{
@@ -168,6 +184,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::U32, UINT32_MAX_00}, Param{VT::S32, "0"}, ExpectedResults{
 			.lshift=UINT32_MAX_00,
@@ -182,6 +200,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow="0",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967295"}, Param{VT::S32, "0"}, ExpectedResults{
@@ -197,6 +217,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S64, UINT32_MAX_P1}, Param{VT::S32, "0"}, ExpectedResults{
 			.lshift=UINT32_MAX_P1,
@@ -211,6 +233,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow="0",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967296"}, Param{VT::S32, "0"}, ExpectedResults{
@@ -226,6 +250,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::U64, UINT64_MAX_M1}, Param{VT::S32, "0"}, ExpectedResults{
 			.lshift=UINT64_MAX_M1,
@@ -240,6 +266,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow="0",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551614"}, Param{VT::S32, "0"}, ExpectedResults{
@@ -255,6 +283,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::U64, UINT64_MAX_00}, Param{VT::S32, "0"}, ExpectedResults{
 			.lshift=UINT64_MAX_00,
@@ -269,6 +299,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow="0",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551615"}, Param{VT::S32, "0"}, ExpectedResults{
@@ -284,6 +316,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, UINT64_MAX_P1}, Param{VT::S32, "0"}, ExpectedResults{
 			.lshift=UINT64_MAX_P1,
@@ -298,6 +332,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow="0",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551616"}, Param{VT::S32, "0"}, ExpectedResults{
@@ -313,6 +349,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, "618354700061515834059999999999999999991"}, Param{VT::S32, "0"}, ExpectedResults{
 			.lshift="618354700061515834059999999999999999991",
@@ -327,6 +365,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow="0",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-618354700061515834059999999999999999991"}, Param{VT::S32, "0"}, ExpectedResults{
@@ -342,6 +382,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod=IGNORED,
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "0"}, Param{VT::S32, "1"}, ExpectedResults{
 			.lshift="0",
@@ -356,6 +398,8 @@ get_all_test_values() {
 			.rdiv=IGNORED,
 			.mod="0",
 			.rmod=IGNORED,
+			.pow="0",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "0"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -371,6 +415,8 @@ get_all_test_values() {
 			.rdiv=IGNORED,
 			.mod="0",
 			.rmod=IGNORED,
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "1"}, Param{VT::S32, "1"}, ExpectedResults{
 			.lshift="2",
@@ -385,6 +431,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="0",
 			.rmod="0",
+			.pow="1",
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-1"}, Param{VT::S32, "1"}, ExpectedResults{
@@ -400,6 +448,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="0",
+			.pow="-1",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "1"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -415,6 +465,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow="-1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-1"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -430,6 +482,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "2"}, Param{VT::S32, "1"}, ExpectedResults{
 			.lshift="4",
@@ -444,6 +498,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="1",
+			.pow="2",
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-2"}, Param{VT::S32, "1"}, ExpectedResults{
@@ -459,6 +515,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-1",
+			.pow="-2",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "2"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -474,6 +532,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="1",
+			.pow=IGNORED,
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-2"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -489,6 +549,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "3"}, Param{VT::S32, "1"}, ExpectedResults{
 			.lshift="6",
@@ -503,6 +565,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="1",
+			.pow="3",
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-3"}, Param{VT::S32, "1"}, ExpectedResults{
@@ -518,6 +582,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-2",
+			.pow="-3",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "3"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -533,6 +599,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="2",
+			.pow=IGNORED,
+			.rpow="-1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-3"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -548,6 +616,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::U32, UINT32_MAX_M1}, Param{VT::S32, "1"}, ExpectedResults{
 			.lshift="8589934588",
@@ -562,6 +632,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="1",
+			.pow=UINT32_MAX_M1,
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967294"}, Param{VT::S32, "1"}, ExpectedResults{
@@ -577,6 +649,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-4294967293",
+			.pow="-4294967294",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::U32, UINT32_MAX_M1}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -592,6 +666,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod=UINT32_MAX_M2,
+			.pow=IGNORED,
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967294"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -607,6 +683,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::U32, UINT32_MAX_00}, Param{VT::S32, "1"}, ExpectedResults{
 			.lshift="8589934590",
@@ -621,6 +699,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="1",
+			.pow=UINT32_MAX_00,
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967295"}, Param{VT::S32, "1"}, ExpectedResults{
@@ -636,6 +716,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-4294967294",
+			.pow="-4294967295",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::U32, UINT32_MAX_00}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -651,6 +733,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod=UINT32_MAX_M1,
+			.pow=IGNORED,
+			.rpow="-1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967295"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -666,6 +750,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S64, UINT32_MAX_P1}, Param{VT::S32, "1"}, ExpectedResults{
 			.lshift="8589934592",
@@ -680,6 +766,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="1",
+			.pow=UINT32_MAX_P1,
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967296"}, Param{VT::S32, "1"}, ExpectedResults{
@@ -695,6 +783,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-4294967295",
+			.pow="-4294967296",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S64, UINT32_MAX_P1}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -710,6 +800,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod=UINT32_MAX_00,
+			.pow=IGNORED,
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967296"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -725,6 +817,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::U64, UINT64_MAX_M1}, Param{VT::S32, "1"}, ExpectedResults{
 			.lshift="36893488147419103228",
@@ -739,6 +833,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="1",
+			.pow=UINT64_MAX_M1,
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551614"}, Param{VT::S32, "1"}, ExpectedResults{
@@ -754,6 +850,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-18446744073709551613",
+			.pow="-18446744073709551614",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::U64, UINT64_MAX_M1}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -769,6 +867,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod=UINT64_MAX_M2,
+			.pow=IGNORED,
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551614"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -784,6 +884,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::U64, UINT64_MAX_00}, Param{VT::S32, "1"}, ExpectedResults{
 			.lshift="36893488147419103230",
@@ -798,6 +900,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="1",
+			.pow=UINT64_MAX_00,
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551615"}, Param{VT::S32, "1"}, ExpectedResults{
@@ -813,6 +917,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-18446744073709551614",
+			.pow="-18446744073709551615",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::U64, UINT64_MAX_00}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -828,6 +934,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod=UINT64_MAX_M1,
+			.pow=IGNORED,
+			.rpow="-1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551615"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -843,6 +951,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, UINT64_MAX_P1}, Param{VT::S32, "1"}, ExpectedResults{
 			.lshift="36893488147419103232",
@@ -857,6 +967,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="1",
+			.pow=UINT64_MAX_P1,
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551616"}, Param{VT::S32, "1"}, ExpectedResults{
@@ -872,6 +984,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-18446744073709551615",
+			.pow="-18446744073709551616",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, UINT64_MAX_P1}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -887,6 +1001,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod=UINT64_MAX_00,
+			.pow=IGNORED,
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551616"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -902,6 +1018,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, "618354700061515834059999999999999999991"}, Param{VT::S32, "1"}, ExpectedResults{
 			.lshift="1236709400123031668119999999999999999982",
@@ -916,6 +1034,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="1",
+			.pow="618354700061515834059999999999999999991",
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-618354700061515834059999999999999999991"}, Param{VT::S32, "1"}, ExpectedResults{
@@ -931,6 +1051,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-618354700061515834059999999999999999990",
+			.pow="-618354700061515834059999999999999999991",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "618354700061515834059999999999999999991"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -946,6 +1068,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="618354700061515834059999999999999999990",
+			.pow=IGNORED,
+			.rpow="-1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-618354700061515834059999999999999999991"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -961,6 +1085,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "0"}, Param{VT::S32, "5"}, ExpectedResults{
 			.lshift="0",
@@ -975,6 +1101,8 @@ get_all_test_values() {
 			.rdiv=IGNORED,
 			.mod="0",
 			.rmod=IGNORED,
+			.pow="0",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "0"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -990,6 +1118,8 @@ get_all_test_values() {
 			.rdiv=IGNORED,
 			.mod="0",
 			.rmod=IGNORED,
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "1"}, Param{VT::S32, "5"}, ExpectedResults{
 			.lshift="32",
@@ -1004,6 +1134,8 @@ get_all_test_values() {
 			.rdiv="5",
 			.mod="1",
 			.rmod="0",
+			.pow="1",
+			.rpow="5",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-1"}, Param{VT::S32, "5"}, ExpectedResults{
@@ -1019,6 +1151,8 @@ get_all_test_values() {
 			.rdiv="-5",
 			.mod="4",
 			.rmod="0",
+			.pow="-1",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "1"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1034,6 +1168,8 @@ get_all_test_values() {
 			.rdiv="-5",
 			.mod="-4",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow="-5",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-1"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1049,6 +1185,8 @@ get_all_test_values() {
 			.rdiv="5",
 			.mod="-1",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "2"}, Param{VT::S32, "5"}, ExpectedResults{
 			.lshift="64",
@@ -1063,6 +1201,8 @@ get_all_test_values() {
 			.rdiv="2",
 			.mod="2",
 			.rmod="1",
+			.pow="32",
+			.rpow="25",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-2"}, Param{VT::S32, "5"}, ExpectedResults{
@@ -1078,6 +1218,8 @@ get_all_test_values() {
 			.rdiv="-3",
 			.mod="3",
 			.rmod="-1",
+			.pow="-32",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "2"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1093,6 +1235,8 @@ get_all_test_values() {
 			.rdiv="-3",
 			.mod="-3",
 			.rmod="1",
+			.pow=IGNORED,
+			.rpow="25",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-2"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1108,6 +1252,8 @@ get_all_test_values() {
 			.rdiv="2",
 			.mod="-2",
 			.rmod="-1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "3"}, Param{VT::S32, "5"}, ExpectedResults{
 			.lshift="96",
@@ -1122,6 +1268,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="3",
 			.rmod="2",
+			.pow="243",
+			.rpow="125",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-3"}, Param{VT::S32, "5"}, ExpectedResults{
@@ -1137,6 +1285,8 @@ get_all_test_values() {
 			.rdiv="-2",
 			.mod="2",
 			.rmod="-1",
+			.pow="-243",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "3"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1152,6 +1302,8 @@ get_all_test_values() {
 			.rdiv="-2",
 			.mod="-2",
 			.rmod="1",
+			.pow=IGNORED,
+			.rpow="-125",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-3"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1167,6 +1319,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="-3",
 			.rmod="-2",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, "618354700061515834059999999999999999991"}, Param{VT::S32, "5"}, ExpectedResults{
 			.lshift="19787350401968506689919999999999999999712",
@@ -1181,6 +1335,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="1",
 			.rmod="5",
+			.pow="90404142433818912947877910416617137782526760569616113471710631825276763594873043197587881807507803600001131189427109006588167429858196533822185689545170841125935518026936338299999999999999940951",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-618354700061515834059999999999999999991"}, Param{VT::S32, "5"}, ExpectedResults{
@@ -1196,6 +1352,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="4",
 			.rmod="-618354700061515834059999999999999999986",
+			.pow="-90404142433818912947877910416617137782526760569616113471710631825276763594873043197587881807507803600001131189427109006588167429858196533822185689545170841125935518026936338299999999999999940951",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "618354700061515834059999999999999999991"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1211,6 +1369,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="-4",
 			.rmod="618354700061515834059999999999999999986",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-618354700061515834059999999999999999991"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1226,6 +1386,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="-1",
 			.rmod="-5",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::U32, UINT32_MAX_00}, Param{VT::U32, UINT32_MAX_00}, ExpectedResults{
 			.lshift=IGNORED,
@@ -1240,6 +1402,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967295"}, Param{VT::U32, UINT32_MAX_00}, ExpectedResults{
@@ -1255,6 +1419,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::U32, UINT32_MAX_00}, Param{VT::N64, "-4294967295"}, ExpectedResults{
@@ -1270,6 +1436,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967295"}, Param{VT::N64, "-4294967295"}, ExpectedResults{
@@ -1285,6 +1453,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, "618354700061515834059999999999999999991"}, Param{VT::BIG, "618354700061515834059999999799999999991"}, ExpectedResults{
 			.lshift=IGNORED,
@@ -1299,6 +1469,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="200000000000",
 			.rmod="618354700061515834059999999799999999991",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-618354700061515834059999999999999999991"}, Param{VT::BIG, "618354700061515834059999999799999999991"}, ExpectedResults{
@@ -1314,6 +1486,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="618354700061515834059999999599999999991",
 			.rmod="-200000000000",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "618354700061515834059999999999999999991"}, Param{VT::BIG, "-618354700061515834059999999799999999991"}, ExpectedResults{
@@ -1329,6 +1503,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="-618354700061515834059999999599999999991",
 			.rmod="200000000000",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-618354700061515834059999999999999999991"}, Param{VT::BIG, "-618354700061515834059999999799999999991"}, ExpectedResults{
@@ -1344,6 +1520,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="-200000000000",
 			.rmod="-618354700061515834059999999799999999991",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "4"}, Param{VT::S32, "1"}, ExpectedResults{
 			.lshift="8",
@@ -1358,6 +1536,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="1",
+			.pow="4",
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-4"}, Param{VT::S32, "1"}, ExpectedResults{
@@ -1373,6 +1553,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-3",
+			.pow="-4",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "4"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -1388,6 +1570,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="3",
+			.pow=IGNORED,
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-4"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -1403,6 +1587,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S64, UINT32_MAX_P2}, Param{VT::S32, "1"}, ExpectedResults{
 			.lshift="8589934594",
@@ -1417,6 +1603,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="1",
+			.pow=UINT32_MAX_P2,
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967297"}, Param{VT::S32, "1"}, ExpectedResults{
@@ -1432,6 +1620,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-4294967296",
+			.pow="-4294967297",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S64, UINT32_MAX_P2}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -1447,6 +1637,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod=UINT32_MAX_P1,
+			.pow=IGNORED,
+			.rpow="-1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967297"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -1462,6 +1654,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, UINT64_MAX_P2}, Param{VT::S32, "1"}, ExpectedResults{
 			.lshift="36893488147419103234",
@@ -1476,6 +1670,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="1",
+			.pow=UINT64_MAX_P2,
+			.rpow="1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551617"}, Param{VT::S32, "1"}, ExpectedResults{
@@ -1491,6 +1687,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-18446744073709551616",
+			.pow="-18446744073709551617",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, UINT64_MAX_P2}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -1506,6 +1704,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod=UINT64_MAX_P1,
+			.pow=IGNORED,
+			.rpow="-1",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551617"}, Param{VT::N32, "-1"}, ExpectedResults{
@@ -1521,6 +1721,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "10"}, Param{VT::S32, "5"}, ExpectedResults{
 			.lshift="320",
@@ -1535,6 +1737,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="5",
+			.pow="100000",
+			.rpow="9765625",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-10"}, Param{VT::S32, "5"}, ExpectedResults{
@@ -1550,6 +1754,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-5",
+			.pow="-100000",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "10"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1565,6 +1771,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="5",
+			.pow=IGNORED,
+			.rpow="9765625",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-10"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1580,6 +1788,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-5",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "11"}, Param{VT::S32, "5"}, ExpectedResults{
 			.lshift="352",
@@ -1594,6 +1804,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="1",
 			.rmod="5",
+			.pow="161051",
+			.rpow="48828125",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-11"}, Param{VT::S32, "5"}, ExpectedResults{
@@ -1609,6 +1821,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="4",
 			.rmod="-6",
+			.pow="-161051",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "11"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1624,6 +1838,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="-4",
 			.rmod="6",
+			.pow=IGNORED,
+			.rpow="-48828125",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-11"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1639,6 +1855,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="-1",
 			.rmod="-5",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "12"}, Param{VT::S32, "5"}, ExpectedResults{
 			.lshift="384",
@@ -1653,6 +1871,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="2",
 			.rmod="5",
+			.pow="248832",
+			.rpow="244140625",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-12"}, Param{VT::S32, "5"}, ExpectedResults{
@@ -1668,6 +1888,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="3",
 			.rmod="-7",
+			.pow="-248832",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "12"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1683,6 +1905,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="-3",
 			.rmod="7",
+			.pow=IGNORED,
+			.rpow="244140625",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-12"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1698,6 +1922,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="-2",
 			.rmod="-5",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "13"}, Param{VT::S32, "5"}, ExpectedResults{
 			.lshift="416",
@@ -1712,6 +1938,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="3",
 			.rmod="5",
+			.pow="371293",
+			.rpow="1220703125",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-13"}, Param{VT::S32, "5"}, ExpectedResults{
@@ -1727,6 +1955,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="2",
 			.rmod="-8",
+			.pow="-371293",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "13"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1742,6 +1972,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="-2",
 			.rmod="8",
+			.pow=IGNORED,
+			.rpow="-1220703125",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-13"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -1757,6 +1989,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="-3",
 			.rmod="-5",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::U64, UINT64_MAX_00}, Param{VT::U32, UINT32_MAX_00}, ExpectedResults{
 			.lshift=IGNORED,
@@ -1771,6 +2005,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod=UINT32_MAX_00,
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551615"}, Param{VT::U32, UINT32_MAX_00}, ExpectedResults{
@@ -1786,6 +2022,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-18446744069414584320",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::U64, UINT64_MAX_00}, Param{VT::N64, "-4294967295"}, ExpectedResults{
@@ -1801,6 +2039,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="18446744069414584320",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551615"}, Param{VT::N64, "-4294967295"}, ExpectedResults{
@@ -1816,6 +2056,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-4294967295",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, "1236709400123031668119999999799999999982"}, Param{VT::BIG, "618354700061515834059999999799999999991"}, ExpectedResults{
 			.lshift=IGNORED,
@@ -1830,6 +2072,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="200000000000",
 			.rmod="618354700061515834059999999799999999991",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-1236709400123031668119999999799999999982"}, Param{VT::BIG, "618354700061515834059999999799999999991"}, ExpectedResults{
@@ -1845,6 +2089,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="618354700061515834059999999599999999991",
 			.rmod="-618354700061515834059999999999999999991",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "1236709400123031668119999999799999999982"}, Param{VT::BIG, "-618354700061515834059999999799999999991"}, ExpectedResults{
@@ -1860,6 +2106,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="-618354700061515834059999999599999999991",
 			.rmod="618354700061515834059999999999999999991",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-1236709400123031668119999999799999999982"}, Param{VT::BIG, "-618354700061515834059999999799999999991"}, ExpectedResults{
@@ -1875,6 +2123,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="-200000000000",
 			.rmod="-618354700061515834059999999799999999991",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S64, UINT32_MAX_P1}, Param{VT::S64, UINT32_MAX_P1}, ExpectedResults{
 			.lshift=IGNORED,
@@ -1889,6 +2139,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967296"}, Param{VT::S64, UINT32_MAX_P1}, ExpectedResults{
@@ -1904,6 +2156,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S64, UINT32_MAX_P1}, Param{VT::N64, "-4294967296"}, ExpectedResults{
@@ -1919,6 +2173,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967296"}, Param{VT::N64, "-4294967296"}, ExpectedResults{
@@ -1934,6 +2190,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S64, UINT32_MAX_P2}, Param{VT::S64, UINT32_MAX_P2}, ExpectedResults{
 			.lshift=IGNORED,
@@ -1948,6 +2206,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967297"}, Param{VT::S64, UINT32_MAX_P2}, ExpectedResults{
@@ -1963,6 +2223,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S64, UINT32_MAX_P2}, Param{VT::N64, "-4294967297"}, ExpectedResults{
@@ -1978,6 +2240,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N64, "-4294967297"}, Param{VT::N64, "-4294967297"}, ExpectedResults{
@@ -1993,6 +2257,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::U64, UINT64_MAX_00}, Param{VT::U64, UINT64_MAX_00}, ExpectedResults{
 			.lshift=IGNORED,
@@ -2007,6 +2273,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551615"}, Param{VT::U64, UINT64_MAX_00}, ExpectedResults{
@@ -2022,6 +2290,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::U64, UINT64_MAX_00}, Param{VT::BIG, "-18446744073709551615"}, ExpectedResults{
@@ -2037,6 +2307,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551615"}, Param{VT::BIG, "-18446744073709551615"}, ExpectedResults{
@@ -2052,6 +2324,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, UINT64_MAX_P1}, Param{VT::BIG, UINT64_MAX_P1}, ExpectedResults{
 			.lshift=IGNORED,
@@ -2066,6 +2340,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551616"}, Param{VT::BIG, UINT64_MAX_P1}, ExpectedResults{
@@ -2081,6 +2357,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, UINT64_MAX_P1}, Param{VT::BIG, "-18446744073709551616"}, ExpectedResults{
@@ -2096,6 +2374,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551616"}, Param{VT::BIG, "-18446744073709551616"}, ExpectedResults{
@@ -2111,6 +2391,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, UINT64_MAX_P1}, Param{VT::BIG, UINT64_MAX_P2}, ExpectedResults{
 			.lshift=IGNORED,
@@ -2125,6 +2407,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod=UINT64_MAX_P1,
 			.rmod="1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551616"}, Param{VT::BIG, UINT64_MAX_P2}, ExpectedResults{
@@ -2140,6 +2424,8 @@ get_all_test_values() {
 			.rdiv="-2",
 			.mod="1",
 			.rmod="-18446744073709551615",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, UINT64_MAX_P1}, Param{VT::BIG, "-18446744073709551617"}, ExpectedResults{
@@ -2155,6 +2441,8 @@ get_all_test_values() {
 			.rdiv="-2",
 			.mod="-1",
 			.rmod=UINT64_MAX_00,
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551616"}, Param{VT::BIG, "-18446744073709551617"}, ExpectedResults{
@@ -2170,6 +2458,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="-18446744073709551616",
 			.rmod="-1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, UINT64_MAX_P2}, Param{VT::BIG, UINT64_MAX_P2}, ExpectedResults{
 			.lshift=IGNORED,
@@ -2184,6 +2474,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551617"}, Param{VT::BIG, UINT64_MAX_P2}, ExpectedResults{
@@ -2199,6 +2491,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, UINT64_MAX_P2}, Param{VT::BIG, "-18446744073709551617"}, ExpectedResults{
@@ -2214,6 +2508,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551617"}, Param{VT::BIG, "-18446744073709551617"}, ExpectedResults{
@@ -2229,6 +2525,8 @@ get_all_test_values() {
 			.rdiv="1",
 			.mod="0",
 			.rmod="0",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "14"}, Param{VT::S32, "5"}, ExpectedResults{
 			.lshift="448",
@@ -2243,6 +2541,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="4",
 			.rmod="5",
+			.pow="537824",
+			.rpow="6103515625",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-14"}, Param{VT::S32, "5"}, ExpectedResults{
@@ -2258,6 +2558,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="1",
 			.rmod="-9",
+			.pow="-537824",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "14"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -2273,6 +2575,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="-1",
 			.rmod="9",
+			.pow=IGNORED,
+			.rpow="6103515625",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-14"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -2288,6 +2592,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="-4",
 			.rmod="-5",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "15"}, Param{VT::S32, "5"}, ExpectedResults{
 			.lshift="480",
@@ -2302,6 +2608,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="5",
+			.pow="759375",
+			.rpow="30517578125",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-15"}, Param{VT::S32, "5"}, ExpectedResults{
@@ -2317,6 +2625,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-10",
+			.pow="-759375",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "15"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -2332,6 +2642,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="10",
+			.pow=IGNORED,
+			.rpow="-30517578125",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-15"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -2347,6 +2659,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-5",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::S32, "97"}, Param{VT::S32, "5"}, ExpectedResults{
 			.lshift="3104",
@@ -2361,6 +2675,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="2",
 			.rmod="5",
+			.pow="8587340257",
+			.rpow="63108872417680944432938285222622898373856514808721840381622314453125",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-97"}, Param{VT::S32, "5"}, ExpectedResults{
@@ -2376,6 +2692,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="3",
 			.rmod="-92",
+			.pow="-8587340257",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::S32, "97"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -2391,6 +2709,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="-3",
 			.rmod="92",
+			.pow=IGNORED,
+			.rpow="-63108872417680944432938285222622898373856514808721840381622314453125",
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::N32, "-97"}, Param{VT::N32, "-5"}, ExpectedResults{
@@ -2406,6 +2726,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="-2",
 			.rmod="-5",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::U64, "18446744065119617025"}, Param{VT::U32, UINT32_MAX_00}, ExpectedResults{
 			.lshift=IGNORED,
@@ -2420,6 +2742,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod=UINT32_MAX_00,
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744065119617025"}, Param{VT::U32, UINT32_MAX_00}, ExpectedResults{
@@ -2435,6 +2759,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-18446744060824649730",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::U64, "18446744065119617025"}, Param{VT::N64, "-4294967295"}, ExpectedResults{
@@ -2450,6 +2776,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="18446744060824649730",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744065119617025"}, Param{VT::N64, "-4294967295"}, ExpectedResults{
@@ -2465,6 +2793,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-4294967295",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, UINT64_MAX_P1}, Param{VT::S64, UINT32_MAX_P1}, ExpectedResults{
 			.lshift=IGNORED,
@@ -2479,6 +2809,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod=UINT32_MAX_P1,
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551616"}, Param{VT::S64, UINT32_MAX_P1}, ExpectedResults{
@@ -2494,6 +2826,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-18446744069414584320",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, UINT64_MAX_P1}, Param{VT::N64, "-4294967296"}, ExpectedResults{
@@ -2509,6 +2843,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="18446744069414584320",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744073709551616"}, Param{VT::N64, "-4294967296"}, ExpectedResults{
@@ -2524,6 +2860,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-4294967296",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, "18446744082299486209"}, Param{VT::S64, UINT32_MAX_P2}, ExpectedResults{
 			.lshift=IGNORED,
@@ -2538,6 +2876,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod=UINT32_MAX_P2,
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744082299486209"}, Param{VT::S64, UINT32_MAX_P2}, ExpectedResults{
@@ -2553,6 +2893,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-18446744078004518912",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "18446744082299486209"}, Param{VT::N64, "-4294967297"}, ExpectedResults{
@@ -2568,6 +2910,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="18446744078004518912",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-18446744082299486209"}, Param{VT::N64, "-4294967297"}, ExpectedResults{
@@ -2583,6 +2927,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-4294967297",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, "340282366920938463426481119284349108225"}, Param{VT::U64, UINT64_MAX_00}, ExpectedResults{
 			.lshift=IGNORED,
@@ -2597,6 +2943,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod=UINT64_MAX_00,
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-340282366920938463426481119284349108225"}, Param{VT::U64, UINT64_MAX_00}, ExpectedResults{
@@ -2612,6 +2960,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-340282366920938463408034375210639556610",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "340282366920938463426481119284349108225"}, Param{VT::BIG, "-18446744073709551615"}, ExpectedResults{
@@ -2627,6 +2977,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="340282366920938463408034375210639556610",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-340282366920938463426481119284349108225"}, Param{VT::BIG, "-18446744073709551615"}, ExpectedResults{
@@ -2642,6 +2994,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-18446744073709551615",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, "340282366920938463463374607431768211456"}, Param{VT::BIG, UINT64_MAX_P1}, ExpectedResults{
 			.lshift=IGNORED,
@@ -2656,6 +3010,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod=UINT64_MAX_P1,
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-340282366920938463463374607431768211456"}, Param{VT::BIG, UINT64_MAX_P1}, ExpectedResults{
@@ -2671,6 +3027,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-340282366920938463444927863358058659840",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "340282366920938463463374607431768211456"}, Param{VT::BIG, "-18446744073709551616"}, ExpectedResults{
@@ -2686,6 +3044,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="340282366920938463444927863358058659840",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-340282366920938463463374607431768211456"}, Param{VT::BIG, "-18446744073709551616"}, ExpectedResults{
@@ -2701,6 +3061,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-18446744073709551616",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, "340282366920938463481821351505477763072"}, Param{VT::BIG, UINT64_MAX_P2}, ExpectedResults{
 			.lshift=IGNORED,
@@ -2715,6 +3077,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod=UINT64_MAX_P2,
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-340282366920938463481821351505477763072"}, Param{VT::BIG, UINT64_MAX_P2}, ExpectedResults{
@@ -2730,6 +3094,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-340282366920938463463374607431768211455",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "340282366920938463481821351505477763072"}, Param{VT::BIG, "-18446744073709551617"}, ExpectedResults{
@@ -2745,6 +3111,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="340282366920938463463374607431768211455",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-340282366920938463481821351505477763072"}, Param{VT::BIG, "-18446744073709551617"}, ExpectedResults{
@@ -2760,6 +3128,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-18446744073709551617",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, "340282366920938463500268095579187314689"}, Param{VT::BIG, UINT64_MAX_P2}, ExpectedResults{
 			.lshift=IGNORED,
@@ -2774,6 +3144,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod=UINT64_MAX_P2,
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-340282366920938463500268095579187314689"}, Param{VT::BIG, UINT64_MAX_P2}, ExpectedResults{
@@ -2789,6 +3161,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-340282366920938463481821351505477763072",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "340282366920938463500268095579187314689"}, Param{VT::BIG, "-18446744073709551617"}, ExpectedResults{
@@ -2804,6 +3178,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="340282366920938463481821351505477763072",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-340282366920938463500268095579187314689"}, Param{VT::BIG, "-18446744073709551617"}, ExpectedResults{
@@ -2819,6 +3195,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-18446744073709551617",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, "340282366920938463463374607431768211455"}, Param{VT::BIG, UINT64_MAX_P2}, ExpectedResults{
 			.lshift=IGNORED,
@@ -2833,6 +3211,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod=UINT64_MAX_P2,
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-340282366920938463463374607431768211455"}, Param{VT::BIG, UINT64_MAX_P2}, ExpectedResults{
@@ -2848,6 +3228,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-340282366920938463444927863358058659838",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "340282366920938463463374607431768211455"}, Param{VT::BIG, "-18446744073709551617"}, ExpectedResults{
@@ -2863,6 +3245,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="340282366920938463444927863358058659838",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-340282366920938463463374607431768211455"}, Param{VT::BIG, "-18446744073709551617"}, ExpectedResults{
@@ -2878,6 +3262,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-18446744073709551617",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, "340282366920938463463374607431768211456"}, Param{VT::BIG, "340282366920938463463374607431768211455"}, ExpectedResults{
 			.lshift=IGNORED,
@@ -2892,6 +3278,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="1",
 			.rmod="340282366920938463463374607431768211455",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-340282366920938463463374607431768211456"}, Param{VT::BIG, "340282366920938463463374607431768211455"}, ExpectedResults{
@@ -2907,6 +3295,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="340282366920938463463374607431768211454",
 			.rmod="-1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "340282366920938463463374607431768211456"}, Param{VT::BIG, "-340282366920938463463374607431768211455"}, ExpectedResults{
@@ -2922,6 +3312,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="-340282366920938463463374607431768211454",
 			.rmod="1",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-340282366920938463463374607431768211456"}, Param{VT::BIG, "-340282366920938463463374607431768211455"}, ExpectedResults{
@@ -2937,6 +3329,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="-1",
 			.rmod="-340282366920938463463374607431768211455",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, "382362535088167210234626361716426516060166448586892714986920000001800000000081"}, Param{VT::BIG, "618354700061515834059999999799999999991"}, ExpectedResults{
 			.lshift=IGNORED,
@@ -2951,6 +3345,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="618354700061515834059999999799999999991",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-382362535088167210234626361716426516060166448586892714986920000001800000000081"}, Param{VT::BIG, "618354700061515834059999999799999999991"}, ExpectedResults{
@@ -2966,6 +3362,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="-382362535088167210234626361716426516059548093886831199152860000002000000000090",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "382362535088167210234626361716426516060166448586892714986920000001800000000081"}, Param{VT::BIG, "-618354700061515834059999999799999999991"}, ExpectedResults{
@@ -2981,6 +3379,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="0",
 			.rmod="382362535088167210234626361716426516059548093886831199152860000002000000000090",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-382362535088167210234626361716426516060166448586892714986920000001800000000081"}, Param{VT::BIG, "-618354700061515834059999999799999999991"}, ExpectedResults{
@@ -2996,6 +3396,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="0",
 			.rmod="-618354700061515834059999999799999999991",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, "85053461164796801949539541639542805770666392330682673302530819774105141531698707146930307290253537320447270457"}, Param{VT::BIG, "531137992816767098689588206552468627329593117727031923199444138200403559860852242739162502265229285668889"}, ExpectedResults{
 			.lshift=IGNORED,
@@ -3010,6 +3412,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="209823076619367981023771469794601869328016582143312911032147521717876940994108137259152513310889145399331",
 			.rmod="531137992816767098689588206552468627329593117727031923199444138200403559860852242739162502265229285668889",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-85053461164796801949539541639542805770666392330682673302530819774105141531698707146930307290253537320447270457"}, Param{VT::BIG, "531137992816767098689588206552468627329593117727031923199444138200403559860852242739162502265229285668889"}, ExpectedResults{
@@ -3025,6 +3429,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="321314916197399117665816736757866758001576535583719012167296616482526618866744105480009988954340140269558",
 			.rmod="-85052930026803985182440852051336253302039062737564946270607620329966941128138846294687568127751272091161601568",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "85053461164796801949539541639542805770666392330682673302530819774105141531698707146930307290253537320447270457"}, Param{VT::BIG, "-531137992816767098689588206552468627329593117727031923199444138200403559860852242739162502265229285668889"}, ExpectedResults{
@@ -3040,6 +3446,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="-321314916197399117665816736757866758001576535583719012167296616482526618866744105480009988954340140269558",
 			.rmod="85052930026803985182440852051336253302039062737564946270607620329966941128138846294687568127751272091161601568",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-85053461164796801949539541639542805770666392330682673302530819774105141531698707146930307290253537320447270457"}, Param{VT::BIG, "-531137992816767098689588206552468627329593117727031923199444138200403559860852242739162502265229285668889"}, ExpectedResults{
@@ -3055,6 +3463,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="-209823076619367981023771469794601869328016582143312911032147521717876940994108137259152513310889145399331",
 			.rmod="-531137992816767098689588206552468627329593117727031923199444138200403559860852242739162502265229285668889",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(BinOpTest{Param{VT::BIG, "85053461164796801949539541639542805770666392330682673302530819774105141531698707146930307290253537320447270457"}, Param{VT::S32, "9"}, ExpectedResults{
 			.lshift="43547372116375962598164245319445916554581192873309528730895779724341832464229738059228317332609811108069002473984",
@@ -3069,6 +3479,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="2",
 			.rmod="9",
+			.pow="232931339070793815325001255056475653097414553258567232362355333800726680988985211211511618544321786091997319753227407650675307289491579353812743868042530535645583501676791893975824413269763335943643852169932557667460526773009345243875370397849117323089797180562438607414082502653894345431248479157325597883382872512363227313754806954943153356578030776827687214915975118411696925363193046840152997695054949759239436030221189399569495065261571909317195249060117631093190757937905478380376220775299132932095692407152418600171521692410082916811004893488551669708031326717521609627874636918587185311894953297033903530024987034571168265799599738597170087562202071727690098194094667637598749519054320005270025574623421370998076822409787859412171793316629735570507939613093936361860660116895996666614701661706651554237530968709455913093851747168282813733538360222849832599391587758749240972379619381546053404797147940009298302796846728059527866721345117244337673312761146439865070539453356727697657",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-85053461164796801949539541639542805770666392330682673302530819774105141531698707146930307290253537320447270457"}, Param{VT::S32, "9"}, ExpectedResults{
@@ -3084,6 +3496,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="7",
 			.rmod="-85053461164796801949539541639542805770666392330682673302530819774105141531698707146930307290253537320447270448",
+			.pow="-232931339070793815325001255056475653097414553258567232362355333800726680988985211211511618544321786091997319753227407650675307289491579353812743868042530535645583501676791893975824413269763335943643852169932557667460526773009345243875370397849117323089797180562438607414082502653894345431248479157325597883382872512363227313754806954943153356578030776827687214915975118411696925363193046840152997695054949759239436030221189399569495065261571909317195249060117631093190757937905478380376220775299132932095692407152418600171521692410082916811004893488551669708031326717521609627874636918587185311894953297033903530024987034571168265799599738597170087562202071727690098194094667637598749519054320005270025574623421370998076822409787859412171793316629735570507939613093936361860660116895996666614701661706651554237530968709455913093851747168282813733538360222849832599391587758749240972379619381546053404797147940009298302796846728059527866721345117244337673312761146439865070539453356727697657",
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "85053461164796801949539541639542805770666392330682673302530819774105141531698707146930307290253537320447270457"}, Param{VT::N32, "-9"}, ExpectedResults{
@@ -3099,6 +3513,8 @@ get_all_test_values() {
 			.rdiv="-1",
 			.mod="-7",
 			.rmod="85053461164796801949539541639542805770666392330682673302530819774105141531698707146930307290253537320447270448",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 	all_test_values.push_back(
 	BinOpTest{Param{VT::BIG, "-85053461164796801949539541639542805770666392330682673302530819774105141531698707146930307290253537320447270457"}, Param{VT::N32, "-9"}, ExpectedResults{
@@ -3114,6 +3530,8 @@ get_all_test_values() {
 			.rdiv="0",
 			.mod="-2",
 			.rmod="-9",
+			.pow=IGNORED,
+			.rpow=IGNORED,
 	}});
 
 	return all_test_values;
