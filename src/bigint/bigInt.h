@@ -1265,16 +1265,37 @@ divmod_ignore_sign(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
 	uint64_t i = max;//(a.size() - b.size())*64;
 	auto a2IsSmaller = false;
 
-	while (a2IsSmaller || !(r.r < abs(b))) {
-		--i;
-		BigInt p2 = b << i%64;
-		a2IsSmaller = _private::rshifted(r.r, i/64) < abs(p2);
-		if (! a2IsSmaller) {
-			if constexpr (!ignore_quotient) {
-				r.d.set(i/64, r.d[i/64] | 1ull << i % 64);
+	if (i < 64 ) { // magic number should probably be <= 64.
+		// do not precompute the bit shifts.
+		while (a2IsSmaller || !(r.r < abs(b))) {
+			--i;
+			BigInt p2 = b << i%64;
+			a2IsSmaller = _private::rshifted(r.r, i/64) < abs(p2);
+			if (! a2IsSmaller) {
+				if constexpr (!ignore_quotient) {
+					r.d.set(i/64, r.d[i/64] | 1ull << i % 64);
+				}
+				auto rshifted_r_r = _private::rshifted(r.r, i/64);
+				_private::sub_ignore_sign(rshifted_r_r, rshifted_r_r, p2);
 			}
-			auto rshifted_r_r = _private::rshifted(r.r, i/64);
-			_private::sub_ignore_sign(rshifted_r_r, rshifted_r_r, p2);
+		}
+	} else {
+		// do precompute the bit shifts:
+		std::vector<BigInt> p2s{};
+		for (uint64_t g = 0; g < std::min(i, 64ull); ++g) {
+			p2s.push_back(std::move(b << g));
+		}
+		while (a2IsSmaller || !(r.r < abs(b))) {
+			--i;
+			const auto& p2 = p2s[i % 64];
+			a2IsSmaller = _private::rshifted(r.r, i/64) < abs(p2);
+			if (! a2IsSmaller) {
+				if constexpr (!ignore_quotient) {
+					r.d.set(i/64, r.d[i/64] | 1ull << i % 64);
+				}
+				auto rshifted_r_r = _private::rshifted(r.r, i/64);
+				_private::sub_ignore_sign(rshifted_r_r, rshifted_r_r, p2);
+			}
 		}
 	}
 
