@@ -1718,7 +1718,7 @@ factorial(uint32_t n) -> BigInt {
 }
 
 CONSTEXPR_AUTO
-toDigitSum(const BigInt &v) -> uint64_t {
+digit_sum(const BigInt &v) -> uint64_t {
 	// 4294967296 =>
 	// 1000000000
 	// 1111111110
