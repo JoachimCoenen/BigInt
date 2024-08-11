@@ -1,8 +1,8 @@
 #ifndef UTILS_FOR_TEST_H
 #define UTILS_FOR_TEST_H
 
-#include "../src/bigInt.h"
-#include "../src/utils.h"
+#include "../src/bigint/bigInt.h"
+#include "../src/bigint/utils.h"
 
 #include <functional>
 #include <string_view>

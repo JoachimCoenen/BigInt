@@ -1695,6 +1695,7 @@ toDigitSum(const BigInt &v) -> uint64_t {
 // to string & from string:
 namespace bigint {
 
+ // todo convert argument to BigIntLike
 CONSTEXPR_AUTO
 to_string_base2(const BigInt &v) -> std::string {
 	return _private::to_string_generic<2>(v);
@@ -1747,6 +1748,7 @@ from_string(const std::string_view input) -> BigInt {
 }
 
 
+ // todo convert argument to BigIntLike
 inline std::ostream & operator<<(std::ostream &ostream, const BigInt &val) {
 	return ostream << to_string(val);
 }

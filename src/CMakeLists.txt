@@ -1,1 +1,1 @@
-add_executable ("demo" main.cpp  bigInt.h utils.h)
+add_executable ("demo" main.cpp  bigint/bigInt.h bigint/utils.h)

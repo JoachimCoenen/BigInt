@@ -1,5 +1,5 @@
-#include "../src/bigInt.h"
-#include "../src/utils.h"
+#include "../src/bigint/bigInt.h"
+#include "../src/bigint/utils.h"
 
 #include "values_for_test.h"
 
