@@ -22,7 +22,10 @@ If you experience problems, found a bug, or have suggestions, Feel free to creat
 ## Overview
 BigInt is a header only library for working with integers values bigger than the hardware limit.  
 BigInt has no additional dependencies and is as simple as possible to use without unneccesary performance compromises.  
-It is fully `constexpr'd` and therfore requires **C++20**
+It is fully `constexpr'd` and therfore 
+
+## Requirements
+BigInt requires **C++20** or higher and a compatible GCC (or MinGW), Clang, or MSVC compiler.
 
 
 ## Installing
@@ -58,7 +61,7 @@ BigInt G = "4561273837";  // BigInt(std::string_view) is an explicit contructor
 BigInt H = 2;  // BigInt(uint64_t) is also explicit
 ```
 
-### Operators
+### Operators and Basic Math Functions 
 Following operators are provided: 
 * Basic arithmetic operators: `+`, `-`, `*`, `/`, `%`.
 * Bitwise shift operators: `<<`, `>>`.
@@ -70,6 +73,8 @@ Following operators are provided:
 * `mult(uint64_t, uint64_t)`: multilpies both numbers and returns an entirely stack-allocated BigInt-like object.
 * `divmod(...)`, `divmod1(...)`: to get both the quotient and the reminder with only one calculation.
 * `pow(const BigInt& x, uin64_t y)`: calculates x<sup>y</sup>.
+* (upcoming `pow_mid(const BigInt& x, const BigInt& y, const BigInt& n)`: calculates x<sup>y</sup> mod n. This is way faster thsn doing `pow(x, y) % n`.
+* `factorial(uin32_t x)`: calculates `x! = 1 * 2 * 3 * ... * x`.
 
 All arithmetic operators can be used with mixed BigInt and integral types.
 ```c++
@@ -95,6 +100,9 @@ A few methods will throw exceptions of type `bigint::BigIntError` in case an inv
 * `std::invalid_argument` gets thrown when instantiating a BigInt from a non-number string.
 * `std::invalid_argument` gets thrown when calling `from_string(std::string_view)` or `from_string_baseXY(std::string_view)` with a non-number string argument.
 
+### Internals
+
+BigInt internally represents numbers in base 2<sup>64</sup> and uses only a fraction of the memory of a typical base 10 approach. That makes it (potentially) very fast.
 
 ## Examples
 
