@@ -216,7 +216,13 @@ class BigInt : public IBigIntLike
 	append(uint64_t v) { _data.push_back(v); }
 
 	CONSTEXPR_VOID
-	remove_last() { _data.pop_back(); }
+	remove_last() {
+		if (_data.size() > 1) {
+			_data.pop_back();
+		} else {
+			_data.at(0) = 0;
+		}
+	}
 
 	CONSTEXPR_VOID
 	cleanup() const { // todo: const???!
@@ -269,13 +275,6 @@ namespace bigint::_private {
 CONSTEXPR_VOID
 resizeBigInt(BigInt &a, std::size_t size) {
 	a.resize(size);
-}
-
-CONSTEXPR_AUTO
-makeBigIntWithSize(std::size_t size) -> BigInt {
-	auto r = BigInt();
-	resizeBigInt(r, size); //OCTOPUS
-	return r;
 }
 
 }
@@ -748,7 +747,7 @@ operator>>(const TLHS &a, uint64_t digits) -> BigInt {
 	const auto last = a[a.size()-1] >> digits;
 	if (last != 0) {
 		result.set(result.size()-1, last);
-	} else if (result.size() > 1) {
+	} else {
 		result.remove_last();
 	}
 	return result;
@@ -808,8 +807,12 @@ operator>>=(TLHS &a, uint64_t digits) -> TLHS& {
 		a.set(i - start, lo | hi);
 	}
 	const auto last = a[a.size()-1] >> digits;
-	a.set(a.size()-1, last);
-	a.cleanup();
+	_private::resizeBigInt(a, a.size() - start);
+	if (last != 0) {
+		a.set(a.size()-1, last);
+	} else {
+		a.remove_last();
+	}
 	return a;
 }
 
@@ -867,16 +870,47 @@ operator==(const TLHS &a, const TRHS &b) -> bool {
 	return (a <=> b) == 0;
 }
 
-template <is_BigInt_like TLHS>
+
+template <is_BigInt_like TLHS, std::integral TRHS>
 CONSTEXPR_AUTO
-operator<(const TLHS &a, const uint64_t &b) -> bool {
-	return a < BigInt(b);
+operator<=>(const TLHS &a, TRHS b) -> std::strong_ordering {
+	if (a.size() > 1) {
+		return is_neg(a) ? std::strong_ordering::less : std::strong_ordering::greater;
+	} else if (is_neg(a)) {
+		return (b < 0) ? a[0] <=> uint64_t(-b) : std::strong_ordering::less;
+	} else {
+		return (b < 0) ? std::strong_ordering::greater : a[0] <=> uint64_t(b);
+	}
 }
 
-template <is_BigInt_like TLHS>
+template <is_BigInt_like TLHS, std::integral TRHS>
 CONSTEXPR_AUTO
-operator>(const TLHS &a, const uint64_t &b) -> bool {
-	return a > BigInt(b);
+operator<(const TLHS &a, const TRHS &b) -> bool {
+	return (a <=> b) < 0;
+}
+
+template <is_BigInt_like TLHS, std::integral TRHS>
+CONSTEXPR_AUTO
+operator>(const TLHS &a, const TRHS &b) -> bool {
+	return (a <=> b) > 0;
+}
+
+template <is_BigInt_like TLHS, std::integral TRHS>
+CONSTEXPR_AUTO
+operator<=(const TLHS &a, const TRHS &b) -> bool {
+	return (a <=> b) <= 0;
+}
+
+template <is_BigInt_like TLHS, std::integral TRHS>
+CONSTEXPR_AUTO
+operator>=(const TLHS &a, const TRHS &b) -> bool {
+	return (a <=> b) >= 0;
+}
+
+template <is_BigInt_like TLHS, std::integral TRHS>
+CONSTEXPR_AUTO
+operator==(const TLHS &a, const TRHS &b) -> bool {
+	return (a <=> b) == 0;
 }
 
 }
@@ -1285,6 +1319,7 @@ divmod_ignore_sign(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
 		for (uint64_t g = 0; g < std::min(i, 64ull); ++g) {
 			p2s.push_back(std::move(b << g));
 		}
+
 		while (a2IsSmaller || !(r.r < abs(b))) {
 			--i;
 			const auto& p2 = p2s[i % 64];
@@ -1387,6 +1422,8 @@ divmod1(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> {
 	if constexpr (!ignore_quotient) {
 		_private::resizeBigInt(q, a.size());
 	}
+
+	// y = q * b; but not always.
 	BigInt y{0, a.sign()};
 	_private::resizeBigInt(y, a.size());
 
@@ -1428,7 +1465,7 @@ divmod1(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> {
 
 	if constexpr (!ignore_quotient) {
 		q.sign() = _private::mult_sign(a.sign(), Sign::POS);
-		if ((a != y) && q.sign() == Sign::NEG) {
+		if (c_div != 0 && q.sign() == Sign::NEG) {
 			q -= 1;
 		}
 		q.cleanup();
@@ -1696,7 +1733,7 @@ from_string_generic(const std::string_view input) -> BigInt {
 		auto mul = substr.size() == conv.base_power ? conv.division_base : (uint64_t)utils::consteval_pow(base, (uint8_t)substr.size());
 		auto add = utils::stoull(substr, base);
 		result *= mul;
-		result += BigInt{add};
+		result += add;
 	}
 	result.sign() = input[0] == '-' ? Sign::NEG : Sign::POS;
 	return result;
