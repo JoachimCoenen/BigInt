@@ -1,3 +1,7 @@
+#ifdef BIGINT_TRACY_ENABLE
+#	include <tracy/Tracy.hpp>
+#endif
+
 #include <iostream>
 #include "bigint/bigInt.h"
 

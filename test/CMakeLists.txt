@@ -17,9 +17,17 @@ add_executable("Test_BigInt"
 	data_loader.h
 )
 
-target_link_libraries(Test_BigInt
-	GTest::gtest_main
-)
+if (BIGINT_TRACY_ENABLE)
+	target_link_libraries(Test_BigInt PUBLIC
+		GTest::gtest_main
+		TracyClient
+	)
+else()
+	target_link_libraries(Test_BigInt PUBLIC
+		GTest::gtest_main
+	)
+endif()
+
 
 include(GoogleTest)
 gtest_discover_tests(Test_BigInt)
