@@ -227,6 +227,9 @@ class BigInt : public IBigIntLike
 	append(uint64_t v) { _data.push_back(v); }
 
 	CONSTEXPR_VOID
+	insert_front(uint64_t v) { _data.insert(_data.cbegin(), v); }
+
+	CONSTEXPR_VOID
 	remove_last() {
 		if (_data.size() > 1) {
 			_data.pop_back();
@@ -274,6 +277,27 @@ CONSTEXPR_VOID
 swap(BigInt& a, BigInt& b) noexcept {
 	std::swap(a._data, b._data);
 	std::swap(a._sign, b._sign);
+}
+
+}
+
+
+// copy_digits_to_from
+namespace bigint::_private {
+
+template <is_BigInt_like TLHS, is_BigInt_like TRHS>
+BIGINT_TRACY_CONSTEXPR_VOID
+copy_digits_to_from(TLHS &to, const TRHS& from) {
+	if (to.size() < from.size()) {
+		auto msg = utils::concat(
+			"Param 'to' must not have less digits than 'from'.",
+			" to.size(): ", to.size(), " from.size(): ", from.size(), ".");
+		throw std::invalid_argument(utils::error_msg(std::move(msg)));
+	}
+
+	for(auto i = from.size(); i --> 0;) {
+		to.set(i, from[i]);
+	}
 }
 
 }
@@ -418,6 +442,23 @@ class BigIntAdapter2 : public IBigIntLike
 		default:
 			return 0;
 		}
+	}
+
+	CONSTEXPR_VOID
+	set(std::size_t index, uint64_t digit) {
+		if (index >= 2) {
+			auto msg = utils::concat(
+				"index out of bound.",
+				" size(): ", size(), " index: ", index, ".");
+			throw BigIntInternalError(utils::error_msg(std::move(msg)));
+		}
+		switch (index) {
+		case 0:
+			_lo = digit; return;
+		case 1:
+			_hi = digit; return;
+		}
+		// we cannot get here
 	}
 
 private:
@@ -1308,86 +1349,140 @@ struct DivModResult {
 // divmod ignoring sign:
 namespace bigint::_private {
 
+/**
+ * @brief copy n most-significant digits (prefix) from s to d
+ * @param d destination
+ * @param s source
+ * @param n number of digits
+ */
+BIGINT_TRACY_CONSTEXPR_AUTO
+_prefix(BigInt& d, const BigInt& s, size_t n) {
+	d.resize(n);
+	_private::copy_digits_to_from(d, _private::rshifted(s, s.size() - n));
+}
+
+template <is_BigInt_like TLHS, is_BigInt_like TRHS>
+BIGINT_TRACY_CONSTEXPR_AUTO
+correct_d_and_subtract(TLHS& x, const TRHS& b, uint64_t d) -> uint64_t {
+	// all values are guaranteed to be positive.
+	x -= b * d;
+	if (is_neg(x)) {
+		x += b;
+		d -= 1;
+		if (is_neg(x)) {
+			x += b;
+			d -= 1;
+		}
+	}
+	// x is now positive again and (t = bd) holds.
+	return d;
+}
+
+// forward declaration:
+template <is_BigInt_like TLHS, is_BigInt_like TRHS, bool ignore_quotient, bool ignore_remainder>
+BIGINT_TRACY_CONSTEXPR_AUTO
+divmod_ignore_sign(const TLHS& aa, const TRHS& bb) -> DivModResult<BigInt>;
+
+
+/**
+ * @brief division algorithm adapted from Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division
+ * @param a the dividend
+ * @param b the divisor
+ * @param e estimator (?) for the divisor
+ * @param f
+ * @return
+ */
+template <is_BigInt_like TLHS, is_BigInt_like TRHS, bool ignore_quotient, bool ignore_remainder>
+BIGINT_TRACY_CONSTEXPR_AUTO
+_divide_loop(const TLHS& a, const TRHS& b, uint64_t e) -> DivModResult<BigInt> {
+	const auto na = a.size();
+	const auto nb = b.size();
+	const bool is_single_digit_division = nb == 1;
+	/* na >= nb holds. */
+	BigInt qt;
+	if constexpr (!ignore_quotient) {
+		/* quotient can have maximum (na-nb+1) digits */
+		qt.resize(na-nb+1);
+	}
+	BigInt x;
+	_prefix(x, a, nb-1);
+
+	/* loop-invariant P: first m digits of ’a’ have been brought-down and processed. */
+	for(auto m = nb; m <= na; ++m) {
+		x.insert_front(a[na - m]);
+
+		auto yz = BigIntAdapter2{x[nb-1], x[nb]};
+
+		// mul with carry because d might be 64^2, which does not fit.
+		if (yz[1] >= e) {
+			BigIntAdapter e_big{e};
+			_private::_sub_ignore_sign_no_gegative_result_private(yz, yz, e_big);
+			// the the fact that yz is now too small is handeled by correct_d_and_subtract().
+		}
+		uint64_t d = utils::udiv128(yz[1], yz[0], e); // yz/e;
+
+		if(is_single_digit_division) {
+			x = yz - mult(e, d); // remainder is less than e, so must be single digit
+		} else {
+			d = correct_d_and_subtract(x, b, d);
+		}
+
+		if constexpr (!ignore_quotient) {
+			qt.set(qt.size() - 1 - m + nb, d);
+		}
+	}
+	/* (loop-invariant P) AND (m=na) holds. */
+	/* Now x contains the remainder. */
+
+	if constexpr (!ignore_quotient) {
+		qt.cleanup();
+	}
+	return {std::move(qt), std::move(x)};
+}
+
+
+/**
+ * @brief division algorithm adapted from Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division
+ *
+ * @param aa the dividend
+ * @param bb the divisor
+ * @return the result
+ */
 template <is_BigInt_like TLHS, is_BigInt_like TRHS, bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
-divmod_ignore_sign(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
+divmod_ignore_sign(const TLHS& aa, const TRHS& bb) -> DivModResult<BigInt> {
 	BIGINT_TRACY_ZONE_SCOPED;
 
-	if (is_zero(b)) {
+	if (is_zero(bb)) {
 		throw std::domain_error{utils::error_msg("division by zero")};
 	}
-	if (is_zero(a)) {
+	if (is_zero(aa)) {
 		return {BigInt{0}, BigInt{0}};
 	}
-	if (b.size() > a.size()) {
+	if (bb.size() > aa.size()) {
 		if constexpr (!ignore_remainder) {
-			return {BigInt{0}, BigInt{a}};
+			return {BigInt{0}, BigInt{aa}};
 		} else {
-			return {BigInt{0}, BigInt{1}}; // remainder could be any positive number. it is only used to signify that the remiander is not zero.
+			return {BigInt{0}, BigInt{1}}; // remainder could be any positive number. it is only used to signify that the remiander is non-zero.
 		}
 	}
 
-	DivModResult<BigInt> r;
-	r.r = BigInt{abs(a)};
-	r.r.sign() = Sign::POS;
-	if constexpr (!ignore_quotient) {
-		r.d.resize(a.size() - b.size() + 1);
-	}
+	uint64_t e = bb[bb.size() - 1];
+	if((bb.size() > 1) && (e < 1ull<<63)) {
+		/* normalization */
+		uint64_t f = utils::udiv128(1ull, 0ull, e + 1); // 1^64/(e + 1);
+		const auto af = aa * f;
+		const auto bf = bb * f;
+		e = bf[bf.size() - 1];
+		auto result = _divide_loop<BigInt, _private::BigIntAbs<const BigInt&>, ignore_quotient, ignore_remainder>(af, abs(bf), e);
 
-	// because were muiltiplying the size by 64, this only works for BigInts with less tha 1 Exabyte of memory footprint.
-	// (1 Exabyte == 1024 Petabyte)
-	const auto aHi = a[a.size()-1];
-	const auto ad  = a.size()*64 - (aHi==0 ? 64 : utils::clzll(aHi));
-	const auto b2Hi = b[b.size()-1];
-	const auto b2d = b.size()*64 - utils::clzll(b2Hi);
-	const auto adbd2 = int64_t(ad - b2d);
-	//uint64_t min = std::max(0ll, adbd2 - 1);
-	const uint64_t max = std::max(0ll, adbd2 + 1ll);//%64; //std::numeric_limits<uint64_t>::max();
-	uint64_t i = max;//(a.size() - b.size())*64;
-	auto a2IsSmaller = false;
-
-	if (i < 64 ) { // magic number should probably be <= 64.
-		// do not precompute the bit shifts.
-		while (a2IsSmaller || !(r.r < abs(b))) {
-			--i;
-			BigInt p2 = b << i%64;
-			a2IsSmaller = _private::rshifted(r.r, i/64) < abs(p2);
-			if (! a2IsSmaller) {
-				if constexpr (!ignore_quotient) {
-					r.d.set(i/64, r.d[i/64] | 1ull << i % 64);
-				}
-				auto rshifted_r_r = _private::rshifted(r.r, i/64);
-				_private::sub_ignore_sign(rshifted_r_r, rshifted_r_r, p2);
-			}
+		if constexpr (!ignore_remainder) {
+			result.r = std::move(divmod_ignore_sign<BigInt, BigIntAdapter<uint64_t>, false, true>(result.r, BigIntAdapter{f}).d);
 		}
+		return result;
 	} else {
-		// do precompute the bit shifts:
-		std::vector<BigInt> p2s{};
-		for (uint64_t g = 0; g < std::min(i, 64ull); ++g) {
-			p2s.push_back(std::move(b << g));
-		}
-
-		while (a2IsSmaller || !(r.r < abs(b))) {
-			--i;
-			const auto& p2 = p2s[i % 64];
-			a2IsSmaller = _private::rshifted(r.r, i/64) < abs(p2);
-			if (! a2IsSmaller) {
-				if constexpr (!ignore_quotient) {
-					r.d.set(i/64, r.d[i/64] | 1ull << i % 64);
-				}
-				auto rshifted_r_r = _private::rshifted(r.r, i/64);
-				_private::sub_ignore_sign(rshifted_r_r, rshifted_r_r, p2);
-			}
-		}
+		return _divide_loop<TLHS, _private::BigIntAbs<const TRHS&>, ignore_quotient, ignore_remainder>(aa, abs(bb), e);
 	}
-
-	if constexpr (!ignore_remainder) {
-		r.r.cleanup();
-	}
-	if constexpr (!ignore_quotient) {
-		r.d.cleanup();
-	}
-	return r;
 }
 
 
