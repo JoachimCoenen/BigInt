@@ -369,12 +369,12 @@ TEST_ASSIGN_OPERATOR_BIGINT(Mul, int32_t, a *= b, get_all_mul_test_values())
 TEST(HelloTest, Test##NAME##ByZero_##O1##_##O2) {\
 	O1 a = str_to_int<O1>("15");\
 	const O2 b = str_to_int<O2>("0");\
-	EXPECT_THROW([[maybe_unused]] auto x = OP, ZeroDivisionError);\
+	EXPECT_THROW([[maybe_unused]] auto x = OP, std::domain_error);\
 }\
 TEST(HelloTest, Test##NAME##ZeroByZero_##O1##_##O2) {\
 	O1 a = str_to_int<O1>("0");\
 	const O2 b = str_to_int<O2>("0");\
-	EXPECT_THROW([[maybe_unused]] auto y = OP, ZeroDivisionError);\
+	EXPECT_THROW([[maybe_unused]] auto y = OP, std::domain_error);\
 }
 
 
