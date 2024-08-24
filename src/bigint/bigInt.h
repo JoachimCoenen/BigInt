@@ -472,29 +472,13 @@ is_pos(const T &value) -> bool {
 namespace bigint::_private {
 
 template <typename T>
-struct BigIntBox_t {
-	using type = T;
-
-};
-
-template <>
-struct BigIntBox_t<BigInt> {
-	using type = BigInt&;
-
-};
-template <>
-struct BigIntBox_t<const BigInt> {
-	using type = const BigInt&;
-
-};
-
-template <typename T>
-using BigIntBox = typename BigIntBox_t<T>::type;
-
-template <typename T>
 class BigIntLShifted : IBigIntLike {
+	using T_Plain = std::remove_cvref_t<T>;
 public:
-	constexpr BigIntLShifted(const BigIntBox<T> lhs, const uint64_t rhs) :
+	constexpr BigIntLShifted(T_Plain&& lhs, const uint64_t rhs) :
+		_lhs(std::move(lhs)), _rhs(rhs) {}
+
+	constexpr BigIntLShifted(std::remove_reference_t<T>& lhs, const uint64_t rhs) :
 		_lhs(lhs), _rhs(rhs) {}
 
 	CONSTEXPR_AUTO
@@ -523,24 +507,23 @@ public:
 	}
 
 private:
-	BigIntBox<T> _lhs;
+	T _lhs;
 	uint64_t _rhs;
 
 	CONSTEXPR_AUTO
-	lhs() const -> const T& { return _lhs; }
+	lhs() const -> const T_Plain& { return _lhs; }
 	CONSTEXPR_AUTO
-	lhs() -> T& { return _lhs; }
+	lhs() -> T_Plain& { return _lhs; }
 };
-
-template <is_BigInt_like TLHS>
-inline auto lshifted(const TLHS &a, uint64_t b) {
-	return BigIntLShifted<const TLHS>(a, b);
-}
 
 template <typename T>
 class BigIntRShifted : IBigIntLike {
+	using T_Plain = std::remove_cvref_t<T>;
 public:
-	constexpr BigIntRShifted(const BigIntBox<T> lhs, const uint64_t rhs) :
+	constexpr BigIntRShifted(T_Plain&& lhs, const uint64_t rhs) :
+		_lhs(std::move(lhs)), _rhs(rhs) {}
+
+	constexpr BigIntRShifted(std::remove_reference_t<T>& lhs, const uint64_t rhs) :
 		_lhs(lhs), _rhs(rhs) {}
 
 	CONSTEXPR_AUTO
@@ -589,25 +572,44 @@ public:
 	}
 
 private:
-	BigIntBox<T> _lhs;
+	T _lhs;
 	uint64_t _rhs;
 
 	CONSTEXPR_AUTO
-	lhs() const -> const T& { return _lhs; }
+	lhs() const -> const T_Plain& { return _lhs; }
 	CONSTEXPR_AUTO
-	lhs() -> T& { return _lhs; }
+	lhs() -> T_Plain& { return _lhs; }
 };
+
 
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-rshifted(const TLHS &a, uint64_t b) {
-	return BigIntRShifted<const TLHS>(a, b);
+lshifted(const TLHS& a, uint64_t b) {
+	return BigIntLShifted<const TLHS&>(a, b);
 }
 
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-rshifted(TLHS &a, uint64_t b) {
-	return BigIntRShifted<TLHS>(a, b);
+lshifted(TLHS&& a, uint64_t b) {
+	return BigIntLShifted<TLHS>(std::move(a), b);
+}
+
+template <is_BigInt_like TLHS>
+CONSTEXPR_AUTO
+rshifted(const TLHS& a, uint64_t b) {
+	return BigIntRShifted<const TLHS&>(a, b);
+}
+
+template <is_BigInt_like TLHS>
+CONSTEXPR_AUTO
+rshifted(TLHS& a, uint64_t b) {
+	return BigIntRShifted<TLHS&>(a, b);
+}
+
+template <is_BigInt_like TLHS>
+CONSTEXPR_AUTO
+rshifted(TLHS&& a, uint64_t b) {
+	return BigIntRShifted<TLHS>(std::move(a), b);
 }
 
 }
@@ -618,8 +620,12 @@ namespace bigint::_private {
 
 template <typename T>
 class BigIntAbs: IBigIntLike {
+	using T_Plain = std::remove_cvref_t<T>;
 public:
-	constexpr BigIntAbs(const BigIntBox<T> lhs) :
+	constexpr BigIntAbs(T_Plain&& lhs) :
+		_lhs(std::move(lhs)) {}
+
+	constexpr BigIntAbs(const T_Plain& lhs) :
 		_lhs(lhs) {}
 
 	CONSTEXPR_AUTO
@@ -638,16 +644,20 @@ public:
 	}
 
 private:
-	BigIntBox<T> _lhs;
+	T _lhs;
 
 	CONSTEXPR_AUTO
-	lhs() const -> const T& { return _lhs; }
+	lhs() const -> const T_Plain& { return _lhs; }
 };
 
 template <typename T>
 class BigIntNeg: IBigIntLike {
+	using T_Plain = std::remove_cvref_t<T>;
 public:
-	constexpr BigIntNeg(const BigIntBox<T> lhs) :
+	constexpr BigIntNeg(T_Plain&& lhs) :
+		_lhs(std::move(lhs)) {}
+
+	constexpr BigIntNeg(const T_Plain& lhs) :
 		_lhs(lhs) {}
 
 	CONSTEXPR_AUTO
@@ -666,10 +676,10 @@ public:
 	}
 
 private:
-	BigIntBox<T> _lhs;
+	T _lhs;
 
 	CONSTEXPR_AUTO
-	lhs() const -> const T& { return _lhs; }
+	lhs() const -> const T_Plain& { return _lhs; }
 };
 
 }
@@ -680,14 +690,26 @@ namespace bigint {
 
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-abs(const TLHS &a) {
-	return _private::BigIntAbs<const TLHS>(a);
+abs(const TLHS& a) {
+	return _private::BigIntAbs<const TLHS&>(a);
 }
 
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-operator-(const TLHS &a) {
-	return _private::BigIntNeg<const TLHS>(a);
+abs(TLHS&& a) {
+	return _private::BigIntAbs<const TLHS>(std::move(a));
+}
+
+template <is_BigInt_like TLHS>
+CONSTEXPR_AUTO
+operator-(const TLHS& a) {
+	return _private::BigIntNeg<const TLHS&>(a);
+}
+
+template <is_BigInt_like TLHS>
+CONSTEXPR_AUTO
+operator-(TLHS&& a) {
+	return _private::BigIntNeg<const TLHS>(std::move(a));
 }
 
 }
