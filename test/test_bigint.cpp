@@ -462,6 +462,8 @@ TEST_DIVMOD(Divmod1, BigInt, int32_t, divmod1(a, b), int32_t, res.r)
 // pow
 namespace {
 
+TEST_UNARY_OPERATOR(Log2, BigInt, uint64_t, log2(a), get_all_log2_test_values(), uint64_t, res)
+
 TEST_BINARY_OPERATOR_BIGINT(Pow, BigInt, uint64_t, pow(a, b), get_all_pow_test_values())
 
 }

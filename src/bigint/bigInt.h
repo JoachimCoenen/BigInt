@@ -1782,6 +1782,14 @@ factorial(uint32_t n) -> BigInt {
 }
 
 
+template<is_BigInt_like T>
+BIGINT_TRACY_CONSTEXPR_AUTO
+log2(const T& y) -> uint64_t {
+	BIGINT_TRACY_ZONE_SCOPED;
+	return (64 - utils::clzll(y[y.size() - 1])) + 64 * (y.size() - 1) - 1;
+}
+
+
 template<is_BigInt_like BASE>
 BIGINT_TRACY_CONSTEXPR_AUTO
 pow(const BASE& base, uint64_t exp) -> BigInt {
