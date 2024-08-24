@@ -3,6 +3,7 @@
 
 #include "utils.h"
 
+// standard library
 #include <cstdint>
 #include <sstream>
 #include <string>
@@ -28,6 +29,7 @@
 #	define BIGINT_TRACY_CONSTEXPR_VOID CONSTEXPR_VOID
 //      constexpr
 #	define BIGINT_TRACY_CONSTEXPR constexpr
+
 #endif
 
 #ifdef ZoneScoped
@@ -44,8 +46,7 @@ class IBigIntLike { };
 template <typename T>
 concept is_BigInt_like = std::is_base_of_v<IBigIntLike, T>;
 
-template <typename T, typename T1, typename T2>
-concept one_of = std::same_as<T, T1> || std::same_as<T, T2>;
+using utils::one_of;
 
 }
 
@@ -130,18 +131,10 @@ neg(Sign sign) -> Sign {
 // class BigInt:
 namespace bigint {
 
-class BigIntError: public std::logic_error {
+class BigIntInternalError: public std::logic_error {
 public:
-	explicit BigIntError(const std::string& message)
+	explicit BigIntInternalError(const std::string& message)
 		: std::logic_error{message} {}
-
-};
-
-class ZeroDivisionError: public BigIntError {
-public:
-	template<is_BigInt_like T>
-	explicit ZeroDivisionError(const T& dividend)
-		: BigIntError{"division by zero. dividend was " + to_debug_string(dividend)} {}
 };
 
 
@@ -222,7 +215,10 @@ class BigInt : public IBigIntLike
 	CONSTEXPR_VOID
 	set(std::size_t index, uint64_t digit) {
 		if (index >= _data.size()) {
-			throw std::string(" index out of bound!");
+			auto msg = utils::concat(
+				"index out of bound.",
+				" size(): ", size(), " index: ", index, ".");
+			throw BigIntInternalError(utils::error_msg(std::move(msg)));
 		}
 		_data.at(index) = digit;
 	}
@@ -565,7 +561,10 @@ public:
 	CONSTEXPR_AUTO
 	operator[](std::size_t index) const -> uint64_t {
 		if (index < 0) {
-			throw std::string(" index out of bound!");
+			auto msg = utils::concat(
+				"index < 0.",
+				" index: ", index, ".");
+			throw BigIntInternalError(utils::error_msg(std::move(msg)));
 		}
 		return lhs()[index + _rhs];
 	}
@@ -573,7 +572,10 @@ public:
 	CONSTEXPR_VOID
 	set(std::size_t index, uint64_t digit) {
 		if (index < 0) {
-			throw std::string(" index out of bound!");
+			auto msg = utils::concat(
+				"index < 0.",
+				" index: ", index, ".");
+			throw BigIntInternalError(utils::error_msg(std::move(msg)));
 		}
 		lhs().set(index + _rhs, digit);
 	}
@@ -975,7 +977,10 @@ _sub_ignore_sign_no_gegative_result_private(TRES &result, TLHS &a, TRHS &b) {
 		c = (result[i] > ai || (c && result[i] == ai)) ? 1: 0;
 	}
 	if (c) { // should NEVER happen.
-		throw std::string("leftover carry! this should not have happened.");
+		auto msg = utils::concat(
+			"leftover carry! this should not have happened.",
+			" c: ", c, ".");
+		throw BigIntInternalError(utils::error_msg(std::move(msg)));
 	}
 }
 
@@ -1287,7 +1292,7 @@ divmod_ignore_sign(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
 	BIGINT_TRACY_ZONE_SCOPED;
 
 	if (is_zero(b)) {
-		throw ZeroDivisionError{a};
+		throw std::domain_error{utils::error_msg("division by zero")};
 	}
 	if (is_zero(a)) {
 		return {BigInt{0}, BigInt{0}};
@@ -1431,7 +1436,7 @@ BIGINT_TRACY_CONSTEXPR_AUTO
 divmod1(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> {
 	BIGINT_TRACY_ZONE_SCOPED;
 	if (b == 0) {
-		throw ZeroDivisionError{a};
+		throw std::domain_error{utils::error_msg("division by zero")};
 	}
 	if (is_zero(a)) {
 		return {BigInt{0}, 0};
@@ -1502,9 +1507,9 @@ divmod1(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> {
 
 template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
-divmod1(const TLHS &a, int32_t bb) -> DivModResult<BigInt, int32_t> { // todo: validate: Isn't uint32_t sufficient for remainder return type?
+divmod1(const TLHS &a, int32_t bb) -> DivModResult<BigInt, int32_t> {
 	if (bb < 0) {
-		auto r = divmod1<_private::BigIntNeg<const TLHS>, ignore_quotient, ignore_remainder>(-a, (uint32_t) -bb);
+		auto r = divmod1<_private::BigIntNeg<const TLHS&>, ignore_quotient, ignore_remainder>(-a, (uint32_t) -bb);
 		return DivModResult{std::move(r.d), -(int32_t)r.r};
 	} else {
 		auto r = divmod1<TLHS, ignore_quotient, ignore_remainder>(a, (uint32_t) bb);
@@ -1523,7 +1528,7 @@ BIGINT_TRACY_CONSTEXPR_VOID
 div(BigInt &result, TLHS &a, uint32_t b) {
 	BIGINT_TRACY_ZONE_SCOPED;
 	if (b == 0) {
-		throw ZeroDivisionError{a};
+		throw std::domain_error{utils::error_msg("division by zero")};
 	}
 	if (is_zero(a)) {
 		result = BigInt{0};
@@ -1551,7 +1556,6 @@ template <is_BigInt_like TLHS>
 BIGINT_TRACY_CONSTEXPR_VOID
 div(BigInt &result, TLHS &a, int32_t bb) {
 	if (bb < 0) {
-		//_private::BigIntNeg<TLHS>(a)
 		auto neg_a = -a; // todo check undefined behavior with -a if result === a, because operator-() const-ifys a?
 		div(result, neg_a, (uint32_t) -bb);
 	} else {
@@ -1661,7 +1665,7 @@ BIGINT_TRACY_CONSTEXPR_AUTO
 pow(const BASE& base, uint64_t exp) -> BigInt {
 	if (exp == 0) {
 		if (is_zero(base)) {
-			throw std::invalid_argument("{Pow} ->  Zero to the power of Zero is undefined.");
+			throw std::domain_error{utils::error_msg("zero to the power of zero is undefined.")};
 		} else {
 			return BigInt{1};
 		}
@@ -1730,7 +1734,7 @@ consteval uint8_t calculate_base_power(uint32_t base) {
 	case 57: case 58: case 59: case 60: case 61: case 62: case 63: case 64:
 		return 10;
 	default:
-		throw std::string("illegal base! it must be between 2 and 64 (inclusive). Also, please use constexpr!");
+		throw std::invalid_argument("illegal base! it must be between 2 and 64 (inclusive). Also, please use constexpr!");
 	}
 }
 

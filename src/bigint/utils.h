@@ -4,7 +4,10 @@
 #include <charconv>
 #include <ranges>
 #include <stdexcept>
+#include <string>
 #include <string_view>
+#include <source_location>
+#include <type_traits>
 #include <stdint.h>
 #include <vector>
 
@@ -86,6 +89,54 @@ constexpr auto operator|(R&& r, const to_vector_adapter& a)
 	return a(std::forward<R>(r));
 }
 
+
+template <typename T, typename T0, typename... Tn>
+concept one_of = std::same_as<std::remove_cvref_t<T>, T0> || (std::same_as<std::remove_cvref_t<T>, Tn> || ...);
+
+template <typename T, bool T0, bool... Tn>
+concept or_c = T0 || (Tn || ...);
+
+
+template <typename T>
+	requires std::convertible_to<T, std::string> || std::convertible_to<T, std::string_view> || std::integral<std::remove_cvref_t<T>> || std::floating_point<std::remove_cvref_t<T>>
+std::string _to_string(T&& arg) {
+	if constexpr (std::integral<std::remove_cvref_t<T>> || std::floating_point<std::remove_cvref_t<T>>) {
+		return std::to_string(arg); // no need to forward integral and floating point types
+	} else {
+		return std::string{std::forward<T>(arg)};
+	}
+}
+
+
+/** Concept which is satisfied by any type “T” such that for values “a” of type “T”,
+ *  the expression utils::_to_string<T>(a) compiles and its result is convertible
+ *  to std::string.
+ */
+template<typename T>
+concept _to_string_able = requires(T a)
+{
+	{ _to_string<T>(std::forward<T>(a)) } -> std::convertible_to<std::string>;
+};
+
+
+/**
+ * @brief concatenates a number of strings
+ * @param args the strings to
+ * @return
+ */
+template<_to_string_able... Args>
+std::string concat(Args&&... args) {
+	return (_to_string(std::forward<Args>(args)) + ...);
+}
+
+std::string error_msg(std::string&& msg, const std::source_location& location = std::source_location::current()) {
+	return concat(
+		"{", location.file_name(),
+		":", location.line(),
+		":", location.function_name(),
+		"} -> ", std::forward<std::string>(msg)
+	);
+}
 
 
 template <class T>
