@@ -224,6 +224,8 @@ constexpr_abs(T x) -> std::make_unsigned_t<T> {
 
 }
 
+
+// clzll, clzll
 #ifdef _MSC_VER
 #include <intrin.h>
 namespace bigint::utils {
@@ -253,7 +255,6 @@ uint32_t __inline clzll(uint64_t value) {
 }
 
 #else
-
 namespace bigint::utils {
 
 uint32_t __inline ctzll(uint64_t value) {
@@ -270,6 +271,67 @@ uint32_t __inline clzll(uint64_t value) {
 	} else {
 		return 64;
 	}
+}
+
+}
+
+#endif
+
+
+// udiv128
+#ifdef _MSC_VER
+// #include <immintrin.h>
+#include <intrin0.inl.h>
+
+namespace bigint::utils {
+
+uint64_t __inline udiv128(uint64_t high_dividend, uint64_t low_dividend, uint64_t divisor, uint64_t *remainder) {
+	return _udiv128(high_dividend, low_dividend, divisor, remainder);
+}
+
+uint64_t __inline udiv128(uint64_t high_dividend, uint64_t low_dividend, uint64_t divisor) {
+	uint64_t ignored_rm = 0;
+	return _udiv128(high_dividend, low_dividend, divisor, &ignored_rm);
+}
+
+uint64_t __inline umul128(uint64_t multiplier, uint64_t multiplicand, uint64_t *high_product) {
+	return _umul128(multiplier, multiplicand, high_product);
+}
+
+}
+
+#else
+namespace bigint::utils::_private {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wpedantic"
+#pragma GCC diagnostic ignored "-pedantic"
+using uint128_t_ = unsigned __int128;
+#pragma GCC diagnostic pop
+
+uint128_t_ __inline make_uint128(uint64_t high, uint64_t low) {
+	return (uint128_t_(high) << 64) | uint128_t_(low);
+}
+
+}
+namespace bigint::utils {
+
+uint64_t __inline udiv128(uint64_t high_dividend, uint64_t low_dividend, uint64_t divisor, uint64_t *remainder) {
+	const auto dividend = _private::make_uint128(high_dividend, low_dividend);
+	*remainder = uint64_t(dividend % divisor);
+	return uint64_t(dividend / divisor); // maybe add overflow check?
+}
+
+uint64_t __inline udiv128(uint64_t high_dividend, uint64_t low_dividend, uint64_t divisor) {
+	const auto dividend = _private::make_uint128(high_dividend, low_dividend);
+	return uint64_t(dividend / divisor); // maybe add overflow check?
+}
+
+uint64_t __inline umul128(uint64_t multiplier, uint64_t multiplicand, uint64_t *high_product) {
+	const auto result = _private::uint128_t_(multiplier) * _private::uint128_t_(multiplicand);
+	*high_product = uint64_t(result >> 64);
+	return uint64_t(result);
 }
 
 }

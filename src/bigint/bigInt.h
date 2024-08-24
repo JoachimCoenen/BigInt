@@ -1566,42 +1566,45 @@ divmod1(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> {
 
 	// y = q * b; but not always.
 	BigInt y{0, a.sign()};
-	y.resize(a.size() + 1);
-
-	uint64_t c_div = 0ull;
-
-	const auto ai_next = a[a.size()-1];
-	const auto ai_hi_next = (ai_next >> 32) | c_div;
-		  auto di_hi_next = ai_hi_next / b;
-	const auto c_diw_next = (ai_hi_next % b) << 32;
-		  auto ai_lo_next = (ai_next & 0xFFFFFFFFull) | c_diw_next;
-	const auto c_ = di_hi_next >> 32;
-	y.append(c_*b);
-
-	for (auto i = a.size(); i-->0;) {
-		const auto di_hi = di_hi_next;
-
-		const auto ai_lo = ai_lo_next;
-		const auto di_lo = ai_lo / b;
-				   c_div = (ai_lo % b) << 32; // ???
-		const auto di = (di_hi << 32) | di_lo;
-		if constexpr (!ignore_quotient) {
-			q.set(i, di);
-		}
-
-		const auto ai_next = (i != 0) ? a[i-1]: 0;
-		const auto ai_hi_next = (i != 0) ? (ai_next >> 32) | c_div : 0;
-				   di_hi_next = ai_hi_next / b;
-		const auto c_diw_next = (ai_hi_next % b) << 32;
-				   ai_lo_next = (ai_next & 0xFFFFFFFFull) | c_diw_next;
-
-		const auto c_ = di_hi_next >> 32;
-		const auto ji = di + c_;
-		const auto yi = ji*b;
-		y.set(i, yi);
+	if constexpr (!ignore_remainder) {
+		y.resize(a.size() + 1);
 	}
 
-	y.cleanup();
+	uint64_t c_div = 0ull;
+	uint64_t di_hi = 0ull;
+	uint64_t ai_lo = 0ull;
+
+	size_t i = a.size() + 1;
+	bool is_first_iter = true;
+	while (i > 0) {
+		--i;
+		uint64_t di = 0;
+		if (!is_first_iter) {
+			const auto di_lo = ai_lo / b;
+			c_div = (ai_lo % b) << 32; // ???
+			di = (di_hi << 32) | di_lo;
+
+			if constexpr (!ignore_quotient) {
+				q.set(i, di);
+			}
+		}
+
+		const auto ai = (i != 0) ? a[i-1]: 0;
+		const auto ai_hi = (i != 0) ? (ai >> 32) | c_div : 0;
+				   di_hi = ai_hi / b;
+		const auto c_diw = (ai_hi % b) << 32;
+				   ai_lo = (ai & 0xFFFFFFFFull) | c_diw;
+
+		if constexpr (!ignore_remainder) {
+			const uint32_t c_ = di_hi >> 32;
+			const auto ji = di + c_;
+			const auto yi = ji*b; // todo: investigate why doesn't this overflow ??
+			y.set(i, yi);
+		}
+
+		is_first_iter = false;
+	}
+
 
 	if constexpr (!ignore_quotient) {
 		q.sign() = _private::mult_sign(a.sign(), Sign::POS);
@@ -1610,9 +1613,11 @@ divmod1(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> {
 		}
 		q.cleanup();
 	}
+
 	if constexpr (ignore_remainder) {
 		return { q, 0 };
 	} else {
+		y.cleanup();
 		BigInt r_big = a - y;
 		uint32_t r = (uint32_t) r_big[0];
 		if (r != 0 && is_neg(a)) {
