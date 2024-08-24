@@ -236,7 +236,7 @@ class BigInt : public IBigIntLike
 	}
 
 	BIGINT_TRACY_CONSTEXPR_VOID
-	cleanup() { // todo: const???!
+	cleanup() {
 		BIGINT_TRACY_ZONE_SCOPED;
 		for (auto i = _data.size(); 0 <--i;) {
 			if (_data[i] == 0) {
@@ -334,7 +334,7 @@ class BigIntAdapter : public IBigIntLike
 
 	CONSTEXPR_AUTO
 	operator[](std::size_t index) const noexcept -> std::make_unsigned_t<T> {
-		return (index >= size()) ? 0 : (std::make_unsigned_t<T>)(_data < 0 ? -_data : _data);
+		return (index >= size()) ? 0 : utils::constexpr_abs(_data);
 	}
 
 private:
@@ -1741,7 +1741,7 @@ consteval uint8_t calculate_base_power(uint32_t base) {
 struct base_conversion {
 	consteval base_conversion(uint32_t base) noexcept
 		: base_power(calculate_base_power(base)), //  = 19 for base 10;
-		division_base(utils::consteval_pow(base, base_power)) {}
+		division_base(utils::ipow(base, base_power)) {}
 	uint8_t base_power;
 	uint64_t division_base;
 };
@@ -1799,7 +1799,7 @@ from_string_generic(const std::string_view input) -> BigInt {
 
 	for (size_t i = i0; i < input.size(); i += conv.base_power) {
 		auto substr = std::string_view(input).substr(i, conv.base_power);
-		auto mul = substr.size() == conv.base_power ? conv.division_base : (uint64_t)utils::consteval_pow(base, (uint8_t)substr.size());
+		auto mul = substr.size() == conv.base_power ? conv.division_base : utils::ipow(base, (uint8_t)substr.size());
 		auto add = utils::stoull(substr, base);
 		result *= mul;
 		result += add;

@@ -185,8 +185,14 @@ stoll(const std::string_view input, int base = 10) {
 }
 
 
+/**
+ * @brief std::pow() but for integers and constexpr.
+ * @param base
+ * @param exponent
+ * @return
+ */
 CONSTEXPR_AUTO
-consteval_pow(uint32_t base, uint8_t exponent) -> uint64_t {
+ipow(uint32_t base, uint8_t exponent) -> uint64_t {
 	uint64_t base2 = base;
 	uint64_t result = 1;
 	for (uint8_t i = 0; i < 8; ++i) {
@@ -196,6 +202,23 @@ consteval_pow(uint32_t base, uint8_t exponent) -> uint64_t {
 		base2 *= base2;
 	}
 	return result;
+}
+
+
+/**
+ * @brief like std::abs(), but constexpr. (std::abs() is only constexpr since c++23.)
+ * @param base
+ * @param exponent
+ * @return
+ */
+template <std::integral T>
+CONSTEXPR_AUTO
+constexpr_abs(T x) -> std::make_unsigned_t<T> {
+	if constexpr (std::is_unsigned_v<T>) {
+		return x;
+	} else {
+		return std::make_unsigned_t<T>(x < 0 ? -x : x);
+	}
 }
 
 
