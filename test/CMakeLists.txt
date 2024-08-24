@@ -14,6 +14,7 @@ add_executable("Test_BigInt"
 	test_bigint.cpp
 	values_for_test.h
 	utils_for_test.h
+	data_loader.h
 )
 
 target_link_libraries(Test_BigInt

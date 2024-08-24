@@ -6,35 +6,11 @@
 
 #include <functional>
 #include <string_view>
-#include <variant>
+
 // required for EXPECT_EQ:
 #include <gtest/gtest.h>
 
 namespace test_utils {
-
-struct IgnoreTest {};
-constexpr auto IGNORED = IgnoreTest{};
-
-
-using ExpectedResult = std::variant<IgnoreTest, std::string>; // todo add exception option
-
-struct ExpectedResults {
-	ExpectedResult lshift;
-	ExpectedResult rlshift;
-	ExpectedResult rshift;
-	ExpectedResult rrshift;
-	ExpectedResult add;
-	ExpectedResult sub;
-	ExpectedResult rsub;
-	ExpectedResult mul;
-	ExpectedResult div;
-	ExpectedResult rdiv;
-	ExpectedResult mod;
-	ExpectedResult rmod;
-	ExpectedResult pow;
-	ExpectedResult rpow;
-};
-
 /**
  * minimum integer size required to fit value
  */
@@ -85,6 +61,7 @@ is_assignable(const ParamType param, const ValType value) {
 		return false;
 	}
 }
+
 template <typename T>
 CONSTEVAL_AUTO
 param_type() {
@@ -127,59 +104,104 @@ str_to_int(const std::string_view str_value) -> T {
 }
 
 
-struct Param {
+struct Value {
 	ValType type;
-	std::string_view val;
-	constexpr Param (ValType type, std::string_view val)
-		: type{type}, val{val} {}
+	std::string val;
+	Value (ValType type, std::string&& val)
+		: type{type}, val{std::move(val)} {}
 };
 
-struct BinOpTest {
-	Param left;
-	Param right;
-	ExpectedResults expected;
+struct UnaOpTest {
+	Value left;
+	std::string expected;
 
-	constexpr BinOpTest(Param left, Param right, ExpectedResults expected)
-		: left(left), right(right), expected(expected) {}
+	UnaOpTest(Value&& left, std::string&& expected)
+		: left{std::move(left)}, expected{std::move(expected)} {}
 };
 
-
-using ResultSelector = std::function<ExpectedResult(const ExpectedResults&)>;
-
-
-bool isAcceptableTest(
-	ValType left_arg_type,
-	ValType right_arg_type,
-	ParamType required_left_type,
-	ParamType required_right_type,
-	const ExpectedResult &expected_variant
+template <class O1, class R>
+void testUnaryOpSingle(
+	const std::function<R(const O1&)> operation,
+	const Value& left_param,
+	const std::string expected_str,
+	const std::function<void(const O1&, const std::remove_cvref_t<R>&, const std::remove_cvref_t<R>&, const std::string_view)> test
 ) {
-	return (is_assignable(required_left_type, left_arg_type)) &&
-		   (is_assignable(required_right_type, right_arg_type)) &&
-		   !std::holds_alternative<IgnoreTest>(expected_variant);
+	if (!(is_assignable( param_type<O1>(), left_param.type))) {
+		return; // skip
+	}
+
+	// std::cout << "retrieving values..." << std::endl;
+	// std::cout << "  lhs = " << left_param.val << std::endl;
+	// std::cout << "  res = " << expected_str << std::endl;
+
+	const O1 left = str_to_int<O1>(left_param.val);
+	const auto expected = str_to_int<std::remove_cvref_t<R>>(expected_str);
+
+	const auto& result = operation(left);
+	const std::string test_str = std::string{left_param.val};
+	test(left, result, expected, test_str);
 }
 
+template <class O1, class R>
+inline void testUnaryOpBase(
+	const std::function<R(const O1&)> operation,
+	const std::vector<UnaOpTest>& tests,
+	const std::function<void(const O1&, const std::remove_cvref_t<R>&, const std::remove_cvref_t<R>&, const std::string_view)> test_func
+) {
+	for (const auto &test : tests) {
+		testUnaryOpSingle(
+			operation,
+			test.left,
+			test.expected,
+			test_func
+		);
+	}
+}
+
+template <class O1, class R, class RT>
+inline void testUnaryOp(
+	const std::function<R(const O1&)> operation,
+	const std::function<RT(const R&)> get_result_compare_value,
+	const std::vector<UnaOpTest>& tests
+) {
+	testUnaryOpBase<O1, R>(
+		operation,
+		tests,
+		[&]([[maybe_unused]]const O1& l, const R& result, const R& expected, const std::string_view test_str) {
+			EXPECT_EQ(get_result_compare_value(result), get_result_compare_value(expected)) << test_str;
+		}
+	);
+}
+
+struct BinOpTest {
+	Value left;
+	Value right;
+	std::string expected;
+
+	BinOpTest(Value&& left, Value right, std::string&& expected)
+		: left{std::move(left)}, right{std::move(right)}, expected{std::move(expected)} {}
+};
 
 template <class O1, class O2, class R>
 void testBinaryOpSingle1(
 	const std::function<R(O1&, const O2&)> operation,
-	const Param& left_param,
-	const Param& right_param,
-	const ExpectedResult expected_variant,
+	const Value& left_param,
+	const Value& right_param,
+	const std::string expected_str,
 	const std::function<void(const O1&, const O2&, const std::remove_cvref_t<R>&, const std::remove_cvref_t<R>&, const std::string_view)> test
 ) {
-	if (!isAcceptableTest(left_param.type, right_param.type, param_type<O1>(), param_type<O2>(), expected_variant)) {
+	if (!(is_assignable( param_type<O1>(), left_param.type) && is_assignable(param_type<O2>(), right_param.type))) {
 		return; // skip
 	}
 
 	// std::cout << "retrieving values..." << std::endl;
 	// std::cout << "  lhs = " << left_param.val << std::endl;
 	// std::cout << "  rhs = " << right_param.val << std::endl;
-	// std::cout << "  res = " << std::get<std::string_view>(get_result_str(test.expected)) << std::endl;
+	// std::cout << "  res = " << expected_str << std::endl;
 
 	O1 left = str_to_int<O1>(left_param.val);
 	const O2 right = str_to_int<O2>(right_param.val);
-	const auto expected = str_to_int<std::remove_cvref_t<R>>(std::get<std::string>(expected_variant));
+	const auto expected = str_to_int<std::remove_cvref_t<R>>(expected_str);
 
 	const auto& result = operation(left, right);
 	const std::string test_str = std::string{left_param.val} + " . " + std::string{right_param.val};
@@ -189,24 +211,15 @@ void testBinaryOpSingle1(
 template <class O1, class O2, class R>
 inline void testBinaryOpBase(
 	const std::function<R(O1&, const O2&)> operation,
-	const ResultSelector result_selector,
-	const ResultSelector rresult_selector, // reverse result_selector. select the result for e.g. right - left.
-	const std::vector<BinOpTest> &tests,
+	const std::vector<BinOpTest>& tests,
 	const std::function<void(const O1&, const O2&, const std::remove_cvref_t<R>&, const std::remove_cvref_t<R>&, const std::string_view)> test_func
 ) {
 	for (const auto &test : tests) {
 		testBinaryOpSingle1(
 			operation,
-			test.left, test.right,
-			result_selector(test.expected),
-			test_func
-		);
-	}
-	for (const auto &test : tests) {
-		testBinaryOpSingle1(
-			operation,
-			test.right, test.left,
-			rresult_selector(test.expected),
+			test.left,
+			test.right,
+			test.expected,
 			test_func
 		);
 	}
@@ -215,15 +228,11 @@ inline void testBinaryOpBase(
 template <class O1, class O2, class R, class RT>
 inline void testBinaryOp(
 	const std::function<R(O1&, const O2&)> operation,
-	const ResultSelector result_selector,
-	const ResultSelector rresult_selector, // reverse result_selector. select the result for e.g. right - left.
 	const std::function<RT(const R&)> get_result_compare_value,
-	const std::vector<BinOpTest> &tests
+	const std::vector<BinOpTest>& tests
 ) {
 	testBinaryOpBase<O1, O2, R>(
 		operation,
-		result_selector,
-		rresult_selector,
 		tests,
 		[&]([[maybe_unused]]const O1& l, [[maybe_unused]]const O2& r, const R& result, const R& expected, const std::string_view test_str) {
 			EXPECT_EQ(get_result_compare_value(result), get_result_compare_value(expected)) << test_str;
@@ -235,15 +244,11 @@ inline void testBinaryOp(
 template <class O1, class O2, class RT>
 inline void testIOp(
 	const std::function<O1&(O1&, const O2&)> operation,
-	const ResultSelector result_selector,
-	const ResultSelector rresult_selector, // reverse result_selector. select the result for e.g. right - left.
 	const std::function<RT(const O1&)> get_result_compare_value,
-	const std::vector<BinOpTest> &tests
+	const std::vector<BinOpTest>& tests
 ) {
 	testBinaryOpBase<O1, O2, O1&>(
 		operation,
-		result_selector,
-		rresult_selector,
 		tests,
 		[&](const O1& left, [[maybe_unused]]const O2& r, const O1& result, const O1& expected, const std::string_view test_str) {
 			EXPECT_EQ(static_cast<const void*>(&result), static_cast<const void*>(&left)) << "returned same reference? " << test_str;
@@ -251,6 +256,73 @@ inline void testIOp(
 		}
 	);
 }
+
+struct TriOpTest {
+	Value o1;
+	Value o2;
+	Value o3;
+	std::string expected;
+
+	TriOpTest(Value&& o1, Value&& o2, Value&& o3, std::string&& expected)
+		: o1{std::move(o1)}, o2{std::move(o2)}, o3{std::move(o3)}, expected{std::move(expected)} {}
+};
+
+template <class O1, class O2, class O3, class R>
+void testTrinaryOpSingle(
+	const std::function<R(const O1&, const O2&, const O3&)> operation,
+	const TriOpTest& test_vals,
+	const std::function<void(const O1&, const O2&, const O3&, const std::remove_cvref_t<R>&, const std::remove_cvref_t<R>&, const std::string_view)> test
+	) {
+	if (!(is_assignable(param_type<O1>(), test_vals.o1.type) && is_assignable(param_type<O2>(), test_vals.o2.type) && is_assignable(param_type<O3>(), test_vals.o3.type))) {
+		return; // skip
+	}
+
+	// std::cout << "retrieving values..." << std::endl;
+	// std::cout << "  o1 = " << test_vals.o1.val << std::endl;
+	// std::cout << "  o2 = " << test_vals.o2.val << std::endl;
+	// std::cout << "  o3 = " << test_vals.o3.val << std::endl;
+	// std::cout << "  res = " << test_vals.expected << std::endl;
+
+	const O1 o1 = str_to_int<O1>(test_vals.o1.val);
+	const O2 o2 = str_to_int<O2>(test_vals.o2.val);
+	const O3 o3 = str_to_int<O3>(test_vals.o3.val);
+	const auto expected = str_to_int<std::remove_cvref_t<R>>(test_vals.expected);
+
+	const auto& result = operation(o1, o2, o3);
+	const std::string test_str = std::string{test_vals.o1.val} + " . " + std::string{test_vals.o2.val} + " . " + std::string{test_vals.o3.val};
+	test(o1, o2, o3, result, expected, test_str);
+}
+
+template <class O1, class O2, class O3, class R>
+inline void testTrinaryOpBase(
+	const std::function<R(const O1&, const O2&, const O3&)> operation,
+	const std::vector<TriOpTest>& tests,
+	const std::function<void(const O1&, const O2&, const O3&, const std::remove_cvref_t<R>&, const std::remove_cvref_t<R>&, const std::string_view)> test_func
+	) {
+	for (const auto &test : tests) {
+		testTrinaryOpSingle(
+			operation,
+			test,
+			test_func
+			);
+	}
+}
+
+template <class O1, class O2, class O3, class R, class RT>
+inline void testTrinaryOp(
+	const std::function<R(const O1&, const O2&, const O3&)> operation,
+	const std::function<RT(const R&)> get_result_compare_value,
+	const std::vector<TriOpTest>& tests
+	) {
+	testTrinaryOpBase<O1, O2, O3, R>(
+		operation,
+		tests,
+		[&]([[maybe_unused]]const O1&, [[maybe_unused]]const O2&, [[maybe_unused]]const O3& l, const R& result, const R& expected, const std::string_view test_str) {
+			EXPECT_EQ(get_result_compare_value(result), get_result_compare_value(expected)) << test_str;
+		}
+		);
+}
+
 
 }
 
