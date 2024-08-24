@@ -74,7 +74,7 @@ Following operators are provided:
 * `divmod(...)`, `divmod1(...)`: to get both the quotient and the reminder with only one calculation.
 * `log2(const BigInt& x)`: calculates floor(log(x) / log(2)).
 * `pow(const BigInt& x, uin64_t y)`: calculates x<sup>y</sup>.
-* (upcoming `pow_mid(const BigInt& x, const BigInt& y, const BigInt& n)`: calculates x<sup>y</sup> mod n. This is way faster thsn doing `pow(x, y) % n`.
+* `pow_mod(const BigInt& x, const BigInt& y, const BigInt& n)`: calculates x<sup>y</sup> mod n. This is <i>way</i> faster than doing `pow(x, y) % n`; especially for large `x` and `y`.
 * `factorial(uin32_t x)`: calculates `x! = 1 * 2 * 3 * ... * x`.
 
 All arithmetic operators can be used with mixed BigInt and integral types.

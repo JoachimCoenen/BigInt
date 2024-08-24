@@ -246,6 +246,20 @@ TEST(HelloTest, TestI##NAME##_##O1##_##O2) {\
 TEST_ASSIGN_OPERATOR(NAME, BigInt, O2, OP, TEST_VALUES, std::vector<uint64_t>, res.__data_for_testing_only())
 
 
+
+#define TEST_TRINARY_OPERATOR(NAME, O1, O2, O3, R, OP, TEST_VALUES, RT, GET_RT) \
+TEST(HelloTest, Test##NAME##_##O1##_##O2##_##O3) {\
+	testTrinaryOp<O1, O2, O3, R, RT>(\
+		[](const auto& a, const auto& b, const auto& c) -> auto { return OP; },\
+		[](const auto& res) { return GET_RT; },\
+		TEST_VALUES\
+	);\
+}
+
+#define TEST_TRINARY_OPERATOR_BIGINT(NAME, O1, O2, O3, OP, TEST_VALUES) \
+TEST_TRINARY_OPERATOR(NAME, O1, O2, O3, BigInt, OP,TEST_VALUES, std::vector<uint64_t>, res.__data_for_testing_only())
+
+
 // Bitwise Shift
 namespace {
 
@@ -465,5 +479,7 @@ namespace {
 TEST_UNARY_OPERATOR(Log2, BigInt, uint64_t, log2(a), get_all_log2_test_values(), uint64_t, res)
 
 TEST_BINARY_OPERATOR_BIGINT(Pow, BigInt, uint64_t, pow(a, b), get_all_pow_test_values())
+
+TEST_TRINARY_OPERATOR_BIGINT(PowMod, BigInt, BigInt, BigInt, pow_mod(a, b, c), get_all_powmod_test_values())
 
 }

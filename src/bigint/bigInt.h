@@ -1819,6 +1819,42 @@ pow(const BASE& base, uint64_t exp) -> BigInt {
 	return result;
 }
 
+template<is_BigInt_like BASE, is_BigInt_like EXP, is_BigInt_like MOD>
+BIGINT_TRACY_CONSTEXPR_AUTO
+pow_mod(const BASE& base, const EXP& exp, const MOD& mod) -> BigInt {
+	BIGINT_TRACY_ZONE_SCOPED;
+	if (is_zero(exp)) {
+		if (is_zero(base)) {
+			throw std::domain_error{utils::error_msg("zero to the power of zero is undefined.")};
+		} else {
+			return BigInt{1};
+		}
+	} else if (is_neg(exp)) {
+		throw std::domain_error{utils::error_msg("exponent must not be negative.")};
+	} else if (is_zero(base)) {
+		return BigInt{0};
+	} else if (mod == 0) {
+		throw std::domain_error{utils::error_msg("modulo must not be zero.")};
+	} else if (mod == 1) {
+		return BigInt{0};
+	}
+
+	const uint64_t exp_bits = (exp.size() - 1) * 64 + (64 - utils::clzll(exp[exp.size()-1]));
+
+	BigInt result{1};
+	auto temp = base % mod;
+	for (uint64_t i = 0; i < exp_bits; ++i) {
+		const auto mask = 1ull << (i % 64);
+		if (exp[i/64] & mask) {
+			result = (result * temp) % mod;
+		}
+		if (i+1 < exp_bits) {
+			temp = (temp * temp) % mod;
+		}
+	}
+	return result;
+}
+
 }
 
 
