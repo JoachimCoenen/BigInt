@@ -1883,7 +1883,7 @@ pow_mod(const BASE& base, const EXP& exp, const MOD& mod) -> BigInt {
 
 namespace bigint::_private {
 
-consteval uint8_t calculate_base_power(uint32_t base) {
+consteval uint8_t calculate_base_power_64(uint32_t base) {
 	// formula: result =floor(64 / log2(base))
 	switch (base) {
 	case 2:
@@ -1927,42 +1927,101 @@ consteval uint8_t calculate_base_power(uint32_t base) {
 	}
 }
 
-struct base_conversion {
-	consteval base_conversion(uint32_t base) noexcept
-		: base_power(calculate_base_power(base)), //  = 19 for base 10;
+struct base_conversion_64 {
+	consteval base_conversion_64(uint32_t base) noexcept
+		: base_power(calculate_base_power_64(base)), //  = 19 for base 10;
 		division_base(utils::ipow(base, base_power)) {}
 	uint8_t base_power;
 	uint64_t division_base;
 };
 
-template <int base>
+consteval uint8_t calculate_base_power_32(uint32_t base) {
+	// formula: result =floor(64 / log2(base))
+	switch (base) {
+	case 2:
+		return 32;
+	case 3:
+		return 20;
+	case 4:
+		return 16;
+	case 5:
+		return 13;
+	case 6:
+		return 12;
+	case 7:
+		return 11;
+	case 8: case 9:
+		return 10;
+	case 10: case 11:
+		return 9;
+	case 12: case 13: case 14: case 15: case 16:
+		return 8;
+	case 17: case 18: case 19: case 20: case 21: case 22: case 23:
+		return 7;
+	case 24: case 25: case 26: case 27: case 28: case 29: case 30: case 31: case 32: case 33: case 34: case 35: case 36: case 37: case 38: case 39: case 40:
+		return 6;
+	case 41: case 42: case 43: case 44: case 45: case 46: case 47: case 48: case 49: case 50: case 51: case 52: case 53: case 54: case 55: case 56: case 57: case 58: case 59: case 60: case 61: case 62: case 63: case 64:
+		return 5;
+	default:
+		throw std::invalid_argument("illegal base! it must be between 2 and 64 (inclusive). Also, please use constexpr!");
+	}
+}
+
+struct base_conversion_32 {
+	consteval base_conversion_32(uint32_t base) noexcept
+		: base_power(calculate_base_power_32(base)), //  = 9 for base 10;
+		division_base(utils::ipow(base, base_power)) {}
+	uint8_t base_power;
+	uint32_t division_base;
+};
+
+CONSTEXPR_AUTO
+to_char(uint8_t d) -> char {
+	return (d > 9 ? 'a' - 10 : '0') + d;
+}
+
+template <int base, uint64_t len>
 BIGINT_TRACY_CONSTEXPR_AUTO
-to_string_padded_generic(uint64_t n, uint64_t len) -> std::string {
+to_string_padded_generic(uint64_t val) -> std::string {
 	std::string result(len, '0');
-	for (uint64_t val = n; len-->0 && val != 0; val/=base)
-		result[len] = '0' + val%base;
+	for (auto i = len; i --> 0;) {
+		auto d = (uint8_t)(val%base);
+		val/=base;
+		result[i] = to_char(d);
+	}
 	return result;
 }
 
 template <int base>
 BIGINT_TRACY_CONSTEXPR_AUTO
 to_string_generic(const BigInt &v) -> std::string {
-	constexpr auto conv = base_conversion(base);
-
-	DivModResult<BigInt, uint64_t> tempDig = { v, 0ull };
-	tempDig.d.cleanup();
-	tempDig.d.sign() = Sign::POS;
+	constexpr auto conv = base_conversion_32(base);
 
 	std::string result;
-	while (tempDig.d > 0) {
-		tempDig = _private::divmod_ignore_sign(tempDig.d, conv.division_base);
-		auto digs = tempDig.r;
-		result.insert(0, to_string_padded_generic<base>(digs, conv.base_power));
-		tempDig.d.cleanup();
+	if constexpr (conv.division_base != 0) {
+		DivModResult temp{v, (uint32_t)0};
+		temp.d.sign() = Sign::POS;
+
+		while (temp.d > 0) {
+			temp = divmod1(temp.d, conv.division_base);
+			auto& digs = temp.r;
+			result.insert(0, to_string_padded_generic<base, conv.base_power>(digs));
+			temp.d.cleanup();
+		}
+	} else { // special case for when base is a divider of 32.
+		constexpr auto base_power = _private::base_conversion_64{base}.base_power;
+		result.append(base_power * v.size(), '0');
+		for (size_t i = v.size(); i --> 0;) {
+			uint64_t digs = v[v.size() - i - 1];
+			for (uint8_t j = base_power; j --> 0;) {
+				auto d = (uint8_t)(digs%base);
+				digs /= base;
+				result.at((i) * base_power + j) = to_char(d);
+			}
+		}
 	}
-	//       15511210043330985984000000
-	// 25! = 1551121  43330985984000000
-	const auto index = result.find_first_of("123456789ABCDEF");
+
+	const auto index = result.find_first_of("123456789abcdefghijklmnopqrstuvwxyz");
 	result.erase(0, index);
 	if (result.size() == 0) {
 		result = "0";
@@ -1976,7 +2035,7 @@ to_string_generic(const BigInt &v) -> std::string {
 template <int base>
 BIGINT_TRACY_CONSTEXPR_AUTO
 from_string_generic(const std::string_view input) -> BigInt {
-	constexpr auto conv = base_conversion(base);
+	constexpr auto conv = base_conversion_64(base);
 
 	BigInt result{0};
 
@@ -2006,20 +2065,36 @@ template <int base = 10>
 BIGINT_TRACY_CONSTEXPR_AUTO
 digit_sum(const BigInt& v) -> uint64_t {
 	BIGINT_TRACY_ZONE_SCOPED;
-	constexpr auto division_base = _private::base_conversion{base}.division_base; // 19 is the larges value for n such that 10^n fits into 64 bits
-	DivModResult temp {v, (uint64_t)0};
+	constexpr auto division_base = _private::base_conversion_32{base}.division_base; // 9 is the larges value for n such that 10^n fits into 32 bits
 
-	uint64_t sum = 0ull;
-	while (!is_zero(temp.d)) {
-		temp = _private::divmod_ignore_sign(temp.d, division_base);
-		uint64_t digs = temp.r;
-		while (digs > 0) {
-			sum += digs % base;
-			digs /= base;
+	if constexpr (division_base != 0) {
+		DivModResult temp {v, (uint32_t)0};
+		temp.d.sign() = Sign::POS;
+
+		uint64_t sum = 0ull;
+		while (!is_zero(temp.d)) {
+			temp = divmod1(temp.d, division_base);
+			uint32_t& digs = temp.r;
+			while (digs > 0) {
+				sum += digs % base;
+				digs /= base;
+			}
+			temp.d.cleanup();
 		}
-		temp.d.cleanup();
+		return sum;
+
+	} else { // special case for when base is a divider of 32.
+		constexpr auto base_power = _private::base_conversion_64{base}.base_power;
+		uint64_t sum = 0ull;
+		for (size_t i = 0; i < v.size(); ++i) {
+			uint64_t digs = v[i];
+			for (size_t j = 0; j < base_power; ++j) {
+				sum += digs % base;
+				digs /= base;
+			}
+		}
+		return sum;
 	}
-	return sum;
 }
 
  // todo convert argument to BigIntLike

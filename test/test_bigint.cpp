@@ -473,7 +473,7 @@ TEST_DIVMOD(Divmod1, BigInt, int32_t, divmod1(a, b), int32_t, res.r)
 }
 
 
-// sqrt, log2, pow, pow_mod
+// sqrt, log2, pow, pow_mod, etc.
 namespace {
 
 TEST_UNARY_OPERATOR_BIGINT(Sqrt, BigInt, sqrt(a), get_all_sqrt_test_values())
@@ -484,6 +484,17 @@ TEST_BINARY_OPERATOR_BIGINT(Pow, BigInt, uint64_t, pow(a, b), get_all_pow_test_v
 
 TEST_TRINARY_OPERATOR_BIGINT(PowMod, BigInt, BigInt, BigInt, pow_mod(a, b, c), get_all_powmod_test_values())
 
-TEST_UNARY_OPERATOR(DigitSum_10, BigInt, uint64_t, digit_sum(a), get_all_digit_sum_10_test_values(), uint64_t, res)
+TEST_UNARY_OPERATOR(DigitSum_10, BigInt, uint64_t, digit_sum<10>(a), get_all_digit_sum_10_test_values(), uint64_t, res)
+
+TEST_UNARY_OPERATOR(DigitSum_16, BigInt, uint64_t, digit_sum<16>(a), get_all_digit_sum_16_test_values(), uint64_t, res)
+
+}
+
+// to_string
+namespace {
+
+TEST_UNARY_OPERATOR(to_string_10, BigInt, std::string, bigint::to_string_base10(a), get_all_to_string_10_test_values(), std::string, res)
+
+TEST_UNARY_OPERATOR(to_string_16, BigInt, std::string, bigint::to_string_base16(a), get_all_to_string_16_test_values(), std::string, res)
 
 }

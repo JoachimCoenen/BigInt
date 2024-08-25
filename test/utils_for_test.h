@@ -93,6 +93,8 @@ str_to_int(const std::string_view str_value) -> T {
 		return bigint::utils::stol(str_value);
 	} else if constexpr (std::is_same_v<T, bigint::BigInt>) {
 		return bigint::BigInt(str_value);
+	} else if constexpr (std::is_same_v<T, std::string>) {
+		return std::string{str_value};
 	} else if constexpr (std::is_same_v<T, bigint::DivModResult<typename T::_D, typename T::_R>>) {
 		auto delimiter = str_value.find("|");
 		auto d = str_value.substr(0, delimiter);

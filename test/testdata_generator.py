@@ -169,6 +169,27 @@ def sign(a: int) -> int:
 def digit_sum_10(a: int) -> int:
 	return sum(bytes(str(abs(a)), encoding='utf-8')) - len(str(abs(a)))*ord('0')
 
+def digit_sum_16(a: int) -> int:
+	mapp = {
+		ord('0'): 0,
+		ord('1'): 1,
+		ord('2'): 2,
+		ord('3'): 3,
+		ord('4'): 4,
+		ord('5'): 5,
+		ord('6'): 6,
+		ord('7'): 7,
+		ord('8'): 8,
+		ord('9'): 9,
+		ord('a'): 10,
+		ord('b'): 11,
+		ord('c'): 12,
+		ord('d'): 13,
+		ord('e'): 14,
+		ord('f'): 15,
+	}
+	return sum(map(mapp.__getitem__, bytes(f'{abs(a):x}', encoding='utf-8')))
+
 
 BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
 	BinOperation('lshift', lambda a, b:    a << b,                   lambda a, b:    0 <= b <= 1000),
@@ -179,14 +200,17 @@ BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
 	BinOperation('div',    lambda a, b:    a // b,                   lambda a, b:    b != 0),
 	BinOperation('mod',    lambda a, b:    a % b,                    lambda a, b:    b != 0),
 	BinOperation('divmod', lambda a, b:    f'{a // b}|{a % b}',      lambda a, b:    b != 0),
-	UnaOperation('sqrt',   lambda a:       math.isqrt(a),            lambda a:       a > 0),
-	BinOperation('pow',    lambda a, b:    a ** b,                   lambda a, b:    (a != 0 or b != 0) and (b > 0) and (a == 0 or math.log10(abs(a))*b <= 1000) ),
+	UnaOperation('sqrt',   lambda a:       math.isqrt(a),            lambda a:       a >= 0),
+	BinOperation('pow',    lambda a, b:    a ** b,                   lambda a, b:    (a != 0 or b != 0) and (b >= 0) and (a == 0 or math.log10(abs(a))*b <= 2000) ),
 	TriOperation('powmod', lambda a, b, c: pow(a, b, c),             lambda a, b, c: True and
 																			(a != 0 or b != 0) and (b > 0) and c != 0 and  # mathematical feasibility
 																			(abs(a) >= 97 or (b < 3 and abs(c) < 5)) and (abs(c) <= 97 or (abs(a) >= UINT64_MAX_P2 or b < UINT32_MAX_00))  # reduces the amount af test cases
 	),
 	UnaOperation('log2',   lambda a:       len(f'{a:b}') - 1,        lambda a:       (a > 0)),
 	UnaOperation('digit_sum_10', lambda a: digit_sum_10(a)),
+	UnaOperation('digit_sum_16', lambda a: digit_sum_16(a)),
+	UnaOperation('to_string_10', lambda a: a),
+	UnaOperation('to_string_16', lambda a: ('-' if a < 0 else '') + f'{abs(a):x}'),
 ]
 
 ALL_UNIQUE_VALUES: list[int] = [
