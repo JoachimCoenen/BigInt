@@ -738,7 +738,7 @@ abs(const TLHS& a) {
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
 abs(TLHS&& a) {
-	return _private::BigIntAbs<const TLHS>(std::move(a));
+	return _private::BigIntAbs<TLHS>(std::move(a));
 }
 
 template <is_BigInt_like TLHS>
@@ -750,7 +750,7 @@ operator-(const TLHS& a) {
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
 operator-(TLHS&& a) {
-	return _private::BigIntNeg<const TLHS>(std::move(a));
+	return _private::BigIntNeg<TLHS>(std::move(a));
 }
 
 }
@@ -1774,6 +1774,40 @@ factorial(uint32_t n) -> BigInt {
 		result *= i;
 	}
 	return result;
+}
+
+
+/**
+ * @brief calculates the integer quare root of y using Newton's method.
+ * @param y the value to get the quare root of.
+ * @return the integer quare root of y.
+ * @throws std::domain_error if y < 0
+ */
+template<is_BigInt_like T>
+BIGINT_TRACY_CONSTEXPR_AUTO
+sqrt(const T& y) -> BigInt {
+	BIGINT_TRACY_ZONE_SCOPED;
+
+	if (is_neg(y)) {
+		throw std::domain_error{utils::error_msg("integer sqare root of a negative number is undefined.")};
+	}
+
+	// sqrt(0) == 0; sqrt(1) == 1
+	if (y <= 1) {
+		return y;
+	}
+
+	// Initial estimate (must be too high)
+	BigInt x0 = y >> 1;
+
+	while (true)	{
+		auto x1 = (x0 + y / x0) >> 1;
+		if (!(x1 < x0))
+			return x0;
+		x0 = (x1 + y / x1) >> 1;
+		if (!(x0 < x1))
+			return x1;
+	}
 }
 
 

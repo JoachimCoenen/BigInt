@@ -72,7 +72,8 @@ Following operators are provided:
 * Negation, absolute value `-`, `abs(const BigInt&)`: Both operations return a view of the underlying BigInt with the sign changed.
 * `mult(uint64_t, uint64_t)`: multilpies both numbers and returns an entirely stack-allocated BigInt-like object.
 * `divmod(...)`, `divmod1(...)`: to get both the quotient and the reminder with only one calculation.
-* `log2(const BigInt& x)`: calculates floor(log(x) / log(2)).
+* `sqrt(const BigInt& x)`: calculates floor(sqrt(x)).
+* `log2(const BigInt& x)`: calculates floor(ln(x) / ln(2)). This is the same as counting the number of digits in binary representation.
 * `pow(const BigInt& x, uin64_t y)`: calculates x<sup>y</sup>.
 * `pow_mod(const BigInt& x, const BigInt& y, const BigInt& n)`: calculates x<sup>y</sup> mod n. This is <i>way</i> faster than doing `pow(x, y) % n`; especially for large `x` and `y`.
 * `factorial(uin32_t x)`: calculates `x! = 1 * 2 * 3 * ... * x`.
