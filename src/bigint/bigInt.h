@@ -1822,6 +1822,7 @@ log2(const T& y) -> uint64_t {
 template<is_BigInt_like BASE>
 BIGINT_TRACY_CONSTEXPR_AUTO
 pow(const BASE& base, uint64_t exp) -> BigInt {
+	BIGINT_TRACY_ZONE_SCOPED;
 	if (exp == 0) {
 		if (is_zero(base)) {
 			throw std::domain_error{utils::error_msg("zero to the power of zero is undefined.")};
