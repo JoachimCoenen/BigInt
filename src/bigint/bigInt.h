@@ -131,13 +131,6 @@ neg(Sign sign) -> Sign {
 // class BigInt:
 namespace bigint {
 
-class BigIntInternalError: public std::logic_error {
-public:
-	explicit BigIntInternalError(const std::string& message)
-		: std::logic_error{message} {}
-};
-
-
 class BigInt : public IBigIntLike
 {
 
@@ -218,7 +211,7 @@ class BigInt : public IBigIntLike
 			auto msg = utils::concat(
 				"index out of bound.",
 				" size(): ", size(), " index: ", index, ".");
-			throw BigIntInternalError(utils::error_msg(std::move(msg)));
+			throw std::invalid_argument(utils::error_msg(std::move(msg)));
 		}
 		_data.at(index) = digit;
 	}
@@ -450,7 +443,7 @@ class BigIntAdapter2 : public IBigIntLike
 			auto msg = utils::concat(
 				"index out of bound.",
 				" size(): ", size(), " index: ", index, ".");
-			throw BigIntInternalError(utils::error_msg(std::move(msg)));
+			throw std::invalid_argument(utils::error_msg(std::move(msg)));
 		}
 		switch (index) {
 		case 0:
@@ -588,7 +581,7 @@ public:
 			auto msg = utils::concat(
 				"index < 0.",
 				" index: ", index, ".");
-			throw BigIntInternalError(utils::error_msg(std::move(msg)));
+			throw std::invalid_argument(utils::error_msg(std::move(msg)));
 		}
 		return lhs()[index + _rhs];
 	}
@@ -599,7 +592,7 @@ public:
 			auto msg = utils::concat(
 				"index < 0.",
 				" index: ", index, ".");
-			throw BigIntInternalError(utils::error_msg(std::move(msg)));
+			throw std::invalid_argument(utils::error_msg(std::move(msg)));
 		}
 		lhs().set(index + _rhs, digit);
 	}
@@ -1041,9 +1034,9 @@ _sub_ignore_sign_no_gegative_result_private(TRES &result, TLHS &a, TRHS &b) {
 	}
 	if (c) { // should NEVER happen.
 		auto msg = utils::concat(
-			"leftover carry! this should not have happened.",
+			"leftover carry! abs(b) was greater than abs(a). This is not supported.",
 			" c: ", c, ".");
-		throw BigIntInternalError(utils::error_msg(std::move(msg)));
+		throw std::invalid_argument(utils::error_msg(std::move(msg)));
 	}
 }
 
