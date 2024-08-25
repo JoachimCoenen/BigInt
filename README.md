@@ -73,7 +73,7 @@ Following operators are provided:
 * `mult(uint64_t, uint64_t)`: multilpies both numbers and returns an entirely stack-allocated BigInt-like object.
 * `divmod(...)`, `divmod1(...)`: to get both the quotient and the reminder with only one calculation.
 * `sqrt(const BigInt& x)`: calculates floor(sqrt(x)).
-* `log2(const BigInt& x)`: calculates floor(ln(x) / ln(2)). This is the same as counting the number of digits in binary representation.
+* `log2(const BigInt& x)`: calculates floor(ln(x) / ln(2)). This is the same as counting the number of digits of a positive, non-zero integer in binary representation.
 * `pow(const BigInt& x, uin64_t y)`: calculates x<sup>y</sup>.
 * `pow_mod(const BigInt& x, const BigInt& y, const BigInt& n)`: calculates x<sup>y</sup> mod n. This is <i>way</i> faster than doing `pow(x, y) % n`; especially for large `x` and `y`.
 * `factorial(uin32_t x)`: calculates `x! = 1 * 2 * 3 * ... * x`.
@@ -96,11 +96,19 @@ std::cout << (a * 78) << std::endl;
 * Use `.size()` to get the number of digits in base 2<sup>64</sup>.
 
 
-### Warning
-A few methods will throw exceptions of type `bigint::BigIntError` in case an invalid operation is attempted:
-* `bigint::ZeroDivisionError` gets thrown when dividing by 0, or modulo operation by 0.
-* `std::invalid_argument` gets thrown when instantiating a BigInt from a non-number string.
-* `std::invalid_argument` gets thrown when calling `from_string(std::string_view)` or `from_string_baseXY(std::string_view)` with a non-number string argument.
+### Exceptions
+A few methods can throw exceptions:
+* `std::domain_error` will be thrown by some functions when inputs are outside of the domain on which an operation is defined.  
+  E.g. division by zero or sqare root of a negative number.
+  * `/`, `%`, `/=`, `divmod(a, b)`, etc.: when the divisor is zero.
+  * `sqrt(x)`: when `x` is negative.
+  * `log2(x)`: when `x` is zero or negative.
+  * `pow(base, exp)`: when `base` and `exp` are both zero. (`exp` is an unsigned integer, so negative values cannot be passed.) 
+  * `pow_mod(base, exp, mod)`: when `base` and `exp` are both zero or when `exp` is negative or when `mod` is zero.
+
+* `std::invalid_argument` will be thrown by some functions when some (non - mathematical) assumptions are not fulfilled.
+  * `BigInt(std::string_view)`, `from_string(std::string_view)`, `from_string_baseXY(std::string_view)`: when a non-number string is provided.
+  * `BigInt.set(index, digit)`: when `index` is greater than `BigInt.size() - 1`.
 
 ### Internals
 
