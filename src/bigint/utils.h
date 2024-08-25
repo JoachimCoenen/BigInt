@@ -278,64 +278,38 @@ uint32_t __inline clzll(uint64_t value) {
 #endif
 
 
-// udiv128
 #ifdef _MSC_VER
-// #include <immintrin.h>
-#include <intrin0.inl.h>
-
-namespace bigint::utils {
-
-uint64_t __inline udiv128(uint64_t high_dividend, uint64_t low_dividend, uint64_t divisor, uint64_t *remainder) {
-	return _udiv128(high_dividend, low_dividend, divisor, remainder);
+#include <__msvc_int128.hpp>
+namespace bigint::utils::_private {
+using uint128_t_ = std::_Unsigned128;
 }
-
-uint64_t __inline udiv128(uint64_t high_dividend, uint64_t low_dividend, uint64_t divisor) {
-	uint64_t ignored_rm = 0;
-	return _udiv128(high_dividend, low_dividend, divisor, &ignored_rm);
-}
-
-uint64_t __inline umul128(uint64_t multiplier, uint64_t multiplicand, uint64_t *high_product) {
-	return _umul128(multiplier, multiplicand, high_product);
-}
-
-}
-
 #else
 namespace bigint::utils::_private {
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wpedantic"
 #pragma GCC diagnostic ignored "-pedantic"
 using uint128_t_ = unsigned __int128;
 #pragma GCC diagnostic pop
-
-uint128_t_ __inline make_uint128(uint64_t high, uint64_t low) {
-	return (uint128_t_(high) << 64) | uint128_t_(low);
 }
+#endif
 
-}
 namespace bigint::utils {
 
-uint64_t __inline udiv128(uint64_t high_dividend, uint64_t low_dividend, uint64_t divisor, uint64_t *remainder) {
-	const auto dividend = _private::make_uint128(high_dividend, low_dividend);
-	*remainder = uint64_t(dividend % divisor);
-	return uint64_t(dividend / divisor); // maybe add overflow check?
-}
+uint64_t __inline div_u128_saturate(uint64_t high_dividend, uint64_t low_dividend, uint64_t divisor) {
+	if (high_dividend == 0) {
+		return low_dividend / divisor;
+	}
+	if (high_dividend < divisor) {
+		const auto a2 = (_private::uint128_t_(high_dividend) << 64) | _private::uint128_t_(low_dividend);
+		const auto q = a2 / divisor;
+		return (uint64_t)q;
+	}
 
-uint64_t __inline udiv128(uint64_t high_dividend, uint64_t low_dividend, uint64_t divisor) {
-	const auto dividend = _private::make_uint128(high_dividend, low_dividend);
-	return uint64_t(dividend / divisor); // maybe add overflow check?
-}
-
-uint64_t __inline umul128(uint64_t multiplier, uint64_t multiplicand, uint64_t *high_product) {
-	const auto result = _private::uint128_t_(multiplier) * _private::uint128_t_(multiplicand);
-	*high_product = uint64_t(result >> 64);
-	return uint64_t(result);
+	// overflow is clammped to 2^64 - 1
+	return (uint64_t)0 - (uint64_t)1;
 }
 
 }
-
-#endif
 
 #endif // UTILS_H

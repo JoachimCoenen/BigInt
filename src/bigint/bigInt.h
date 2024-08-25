@@ -1363,7 +1363,7 @@ _prefix(BigInt& d, const BigInt& s, size_t n) {
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
-correct_d_and_subtract(TLHS& x, const TRHS& b, uint64_t d) -> uint64_t {
+_correct_d_and_subtract(TLHS& x, const TRHS& b, uint64_t d) -> uint64_t {
 	// all values are guaranteed to be positive.
 	x -= b * d;
 	if (is_neg(x)) {
@@ -1411,20 +1411,15 @@ _divide_loop(const TLHS& a, const TRHS& b, uint64_t e) -> DivModResult<BigInt> {
 	for(auto m = nb; m <= na; ++m) {
 		x.insert_front(a[na - m]);
 
-		auto yz = BigIntAdapter2{x[nb-1], x[nb]};
+		const uint64_t yz_lo = x[nb-1];
+		const uint64_t yz_hi = x[nb];
 
-		// mul with carry because d might be 64^2, which does not fit.
-		if (yz[1] >= e) {
-			BigIntAdapter e_big{e};
-			_private::_sub_ignore_sign_no_gegative_result_private(yz, yz, e_big);
-			// the the fact that yz is now too small is handeled by correct_d_and_subtract().
-		}
-		uint64_t d = utils::udiv128(yz[1], yz[0], e); // yz/e;
+		uint64_t d = utils::div_u128_saturate(yz_hi, yz_lo, e); // yz/e;
 
 		if(is_single_digit_division) {
-			x = yz - mult(e, d); // remainder is less than e, so must be single digit
+			x = BigIntAdapter2{yz_lo, yz_hi} - mult(e, d); // remainder is less than e, so must be single digit
 		} else {
-			d = correct_d_and_subtract(x, b, d);
+			d = _correct_d_and_subtract(x, b, d);
 		}
 
 		if constexpr (!ignore_quotient) {
@@ -1470,7 +1465,7 @@ divmod_ignore_sign(const TLHS& aa, const TRHS& bb) -> DivModResult<BigInt> {
 	uint64_t e = bb[bb.size() - 1];
 	if((bb.size() > 1) && (e < 1ull<<63)) {
 		/* normalization */
-		uint64_t f = utils::udiv128(1ull, 0ull, e + 1); // 1^64/(e + 1);
+		uint64_t f = utils::div_u128_saturate(1ull, 0ull, e + 1); // 1^64/(e + 1);
 		const auto af = aa * f;
 		const auto bf = bb * f;
 		e = bf[bf.size() - 1];
