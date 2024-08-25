@@ -163,7 +163,11 @@ def make_ALL_TEST_VALUES(all_args: list[tuple[Arg, ...]], operation: Operation) 
 
 
 def sign(a: int) -> int:
-	return  -1 if a < 0 else (1 if a > 0 else 0)
+	return -1 if a < 0 else (1 if a > 0 else 0)
+
+
+def digit_sum_10(a: int) -> int:
+	return sum(bytes(str(abs(a)), encoding='utf-8')) - len(str(abs(a)))*ord('0')
 
 
 BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
@@ -182,6 +186,7 @@ BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
 																			(abs(a) >= 97 or (b < 3 and abs(c) < 5)) and (abs(c) <= 97 or (abs(a) >= UINT64_MAX_P2 or b < UINT32_MAX_00))  # reduces the amount af test cases
 	),
 	UnaOperation('log2',   lambda a:       len(f'{a:b}') - 1,        lambda a:       (a > 0)),
+	UnaOperation('digit_sum_10', lambda a: digit_sum_10(a)),
 ]
 
 ALL_UNIQUE_VALUES: list[int] = [

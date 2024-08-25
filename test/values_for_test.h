@@ -94,6 +94,11 @@ get_all_powmod_test_values() {
 	return load_testdata<TriOpTest>(test_data_dir + "values_for_powmod_test.csv", [](const auto& x) { return to_tri_op_test(x); });
 }
 
+[[nodiscard]] inline std::vector<UnaOpTest>
+get_all_digit_sum_10_test_values() {
+	return load_testdata<UnaOpTest>(test_data_dir + "values_for_digit_sum_10_test.csv", [](const auto& x) { return to_una_op_test(x); });
+}
+
 }
 
 #endif // VALUES_FOR_TEST_H

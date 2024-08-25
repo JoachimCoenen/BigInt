@@ -1477,7 +1477,7 @@ divmod_ignore_sign(const TLHS& aa, const TRHS& bb) -> DivModResult<BigInt> {
 template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod_ignore_sign(const TLHS &a, const uint64_t &b) -> DivModResult<BigInt, uint64_t> {
-	const auto res = divmod<TLHS, BigIntAdapter<uint64_t>, ignore_quotient, ignore_remainder>(a, BigIntAdapter{b});
+	const auto res = divmod_ignore_sign<TLHS, BigIntAdapter<uint64_t>, ignore_quotient, ignore_remainder>(a, BigIntAdapter{b});
 	return { res.d, res.r[0] };
 }
 
@@ -1935,7 +1935,7 @@ struct base_conversion {
 	uint64_t division_base;
 };
 
-template <int base = 10>
+template <int base>
 BIGINT_TRACY_CONSTEXPR_AUTO
 to_string_padded_generic(uint64_t n, uint64_t len) -> std::string {
 	std::string result(len, '0');
@@ -2002,28 +2002,22 @@ from_string_generic(const std::string_view input) -> BigInt {
 // to_string, from_string, & digit_sum:
 namespace bigint {
 
+template <int base = 10>
 BIGINT_TRACY_CONSTEXPR_AUTO
-digit_sum(const BigInt &v) -> uint64_t {
+digit_sum(const BigInt& v) -> uint64_t {
 	BIGINT_TRACY_ZONE_SCOPED;
-	// 4294967296 =>
-	// 1000000000
-	// 1111111110
-	// 18446744073709551616 =>
-	// 10000000000000000000
-	constexpr auto base = _private::base_conversion{10}.division_base; // 19 is the larges value for n such that 10^n fits into 64 bits
-	// constexpr auto base = uint64_t(10000000000000000000ull);
-	DivModResult<BigInt, uint64_t> tempDig = { v, 0ull };
-	tempDig.d.cleanup();
+	constexpr auto division_base = _private::base_conversion{base}.division_base; // 19 is the larges value for n such that 10^n fits into 64 bits
+	DivModResult temp {v, (uint64_t)0};
 
 	uint64_t sum = 0ull;
-	while (tempDig.d > 0) {
-		tempDig = _private::divmod_ignore_sign(tempDig.d, base);
-		auto digs = tempDig.r;
-		while (digs > 00) {
-			sum += digs % 10;
-			digs /= 10;
+	while (!is_zero(temp.d)) {
+		temp = _private::divmod_ignore_sign(temp.d, division_base);
+		uint64_t digs = temp.r;
+		while (digs > 0) {
+			sum += digs % base;
+			digs /= base;
 		}
-		tempDig.d.cleanup();
+		temp.d.cleanup();
 	}
 	return sum;
 }

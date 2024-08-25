@@ -77,6 +77,7 @@ Following operators are provided:
 * `pow(const BigInt& x, uin64_t y)`: calculates x<sup>y</sup>.
 * `pow_mod(const BigInt& x, const BigInt& y, const BigInt& n)`: calculates x<sup>y</sup> mod n. This is <i>way</i> faster than doing `pow(x, y) % n`; especially for large `x` and `y`.
 * `factorial(uin32_t x)`: calculates `x! = 1 * 2 * 3 * ... * x`.
+* `digit_sum(const BigInt& x)`: sums all digits in base 10. E.g.: `digit_sum(12955) == 1 + 2 + 9 + 5 + 5`.
 
 All arithmetic operators can be used with mixed BigInt and integral types.
 ```c++
