@@ -1698,7 +1698,7 @@ operator/(const TLHS &a, const TRHS &b) -> BigInt {
 
 
 template <one_of<uint32_t, int32_t> TRHS>
-BIGINT_TRACY_CONSTEXPR_AUTO
+BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
 operator/=(BigInt &a, TRHS b) -> BigInt& {
 	div(a, a, b);
 	a.cleanup();
@@ -1706,7 +1706,7 @@ operator/=(BigInt &a, TRHS b) -> BigInt& {
 }
 
 template <one_of<uint64_t, int64_t> TRHS>
-BIGINT_TRACY_CONSTEXPR_AUTO
+BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
 operator/=(BigInt &a, TRHS b) -> BigInt& {
 	const auto result = divmod<BigInt, BigIntAdapter<TRHS>, false, true>(a, BigIntAdapter(b)).d;
 	a = std::move(result);
@@ -1714,7 +1714,7 @@ operator/=(BigInt &a, TRHS b) -> BigInt& {
 }
 
 template <is_BigInt_like TRHS>
-BIGINT_TRACY_CONSTEXPR_AUTO
+BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
 operator/=(BigInt &a, const TRHS &b) -> BigInt& {
 	const auto result = divmod<BigInt, TRHS, false, true>(a, b).d;
 	a = std::move(result);
