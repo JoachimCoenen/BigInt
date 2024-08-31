@@ -1981,6 +1981,79 @@ pow_mod(const BASE& base, const EXP& exp, const MOD& mod) -> BigInt {
 }
 
 
+// combinatorics:
+namespace bigint {
+
+
+/**
+ * @brief Calculates the number of ways to choose `k` items from `n` items without repetition and with order.
+ *        Evaluates to `n! / (n - k)!` when `k <= n` and evaluates to zero otherwise.
+ * @param k the number of items to choose.
+ * @param n the size of the pool of items to choose from.
+ * @return n P k
+ */
+BIGINT_TRACY_CONSTEXPR_AUTO
+perm(uint32_t n, uint32_t k) -> BigInt {
+	BIGINT_TRACY_ZONE_SCOPED;
+	// factorial(n) / factorial(n-k);
+
+	if (k > n) {
+		return BigInt{0};
+	}
+
+	BigInt result(1);
+	for (uint32_t i = n-k+1; i <= n; ++i) {
+		result *= i;
+	}
+	return result;
+}
+
+
+/**
+ * @brief Calculates the number of ways to choose `k` items from `n` items without repetition and without order.
+ *        Evaluates to `n! / ((n - k)! * k!)` when `k <= n` and evaluates to zero otherwise.
+ * @param k the number of items to choose.
+ * @param n the size of the pool of items to choose from.
+ * @return n C k
+ */
+BIGINT_TRACY_CONSTEXPR_AUTO
+comb(uint32_t n, uint32_t k) -> BigInt {
+	BIGINT_TRACY_ZONE_SCOPED;
+	// factorial(n) / ( factorial(n-k) * factorial(k) );
+	//                 \_dividend 1_/   \_dividend 2_/
+
+	if (k > n) {
+		return BigInt{0};
+	}
+
+	if (k == 0 || k == n) {
+		return BigInt{1};
+	}
+
+	auto d1 = n-k > k ? n-k : k;
+	auto d2 = n-k > k ? k : n-k;
+	BigInt result(1);
+	uint32_t j = 1;
+	uint32_t i = d1+1;
+	while (j <= d2) {
+		result *= i;
+		result /= j; // division by 32 bit integer. is very fast compared to normal division.
+		++i;
+		++j;
+	}
+	if (i > 0) { // if i == 0 we had an overflow.
+		while (i <= n) {
+			result *= i;
+			++i;
+		}
+	}
+	return result;
+}
+
+
+}
+
+
 namespace bigint::_private {
 
 consteval uint8_t calculate_base_power_64(uint32_t base) {

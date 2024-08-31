@@ -80,6 +80,8 @@ Following operators are provided:
 * `pow_mod(const BigInt& base, const BigInt& exp, const BigInt& mod)`: calculates base<sup>exp</sup> % mod. This is <i>way</i> faster than doing `pow(base, exp) % mod`; especially for large `x` and `y`.
 * `factorial(uin32_t x)`: calculates `x! = 1 * 2 * 3 * ... * x`.
 * `digit_sum(const BigInt& x)`: sums all digits in base 10. E.g.: `digit_sum(12955) == 1 + 2 + 9 + 5 + 5`.
+* `perm(uint32_t n, uint32_t k)`: Calculates the number of ways to choose `k` items from `n` items without repetition and with order. Evaluates to `n! / (n - k)!` when `k <= n` and evaluates to zero otherwise.
+* `comb(uint32_t n, uint32_t k)`: Calculates the number of ways to choose `k` items from `n` items without repetition and without order. Evaluates to `n! / ((n - k)! * k!)` when `k <= n` and evaluates to zero otherwise.
 
 All arithmetic operators can be used with mixed BigInt and integral types.
 ```c++

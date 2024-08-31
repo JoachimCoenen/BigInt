@@ -232,6 +232,9 @@ BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
 	UnaOperation('log10',  lambda a:       log10(a),                 lambda a:       a > 0),
 	BinOperation('log',    lambda a, b:    log_checked(a, b),        lambda base, y: y > 0 and base > 1),
 
+	BinOperation('perm',    lambda a, b:    math.perm(a, b),         lambda a, b: 0 <= a <= INT32_MAX_M1 and 0 <= b <= INT32_MAX_M1),
+	BinOperation('comb',    lambda a, b:    math.comb(a, b),         lambda a, b: 0 <= a <= UINT32_MAX_P2 and 0 <= b <= UINT32_MAX_P2),
+
 	UnaOperation('digit_sum_10', lambda a: digit_sum_10(a)),
 	UnaOperation('digit_sum_16', lambda a: digit_sum_16(a)),
 	UnaOperation('to_string_10', lambda a: a),
@@ -249,6 +252,8 @@ ALL_UNIQUE_VALUES: list[int] = [
 		14,
 		15,
 		97,
+		150,
+		INT32_MAX_M1 // 5000000,
 		UINT32_MAX_M1,
 		UINT32_MAX_00,
 		UINT32_MAX_P1,
