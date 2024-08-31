@@ -1771,9 +1771,9 @@ factorial(uint32_t n) -> BigInt {
 
 
 /**
- * @brief calculates the integer quare root of y using Newton's method.
- * @param y the value to get the quare root of.
- * @return the integer quare root of y.
+ * @brief calculates the integer square root of y using Newton's method.
+ * @param y the value to get thes quare root of.
+ * @return the integer square root of y.
  * @throws std::domain_error if y < 0
  */
 template<is_BigInt_like T>
@@ -1896,6 +1896,13 @@ log2(const T& y) -> uint64_t {
 }
 
 
+/**
+ * @brief raises `base` to the power of `exp`. E.g.: `pow(10, 3) == 1000`. if you need to calculate `pow(a, b) % m` use `pow_mod()` instead.
+ * @param base the base.
+ * @param exp the exponent.
+ * @return base^exp.
+ * @throws std::domain_error if base == exp == 0
+ */
 template<is_BigInt_like BASE>
 BIGINT_TRACY_CONSTEXPR_AUTO
 pow(const BASE& base, uint64_t exp) -> BigInt {
@@ -1926,6 +1933,15 @@ pow(const BASE& base, uint64_t exp) -> BigInt {
 	return result;
 }
 
+
+/**
+ * @brief raises `base` to the power of `exp` modulo `mod`. E.g.: `pow_mod(10, 3, 12) == 4`.
+ * @param base the base.
+ * @param exp the exponent.
+ * @param mod the modulo.
+ * @return pow(base, exp) % mod.
+ * @throws std::domain_error if base == exp == 0 or if mod == 0
+ */
 template<is_BigInt_like BASE, is_BigInt_like EXP, is_BigInt_like MOD>
 BIGINT_TRACY_CONSTEXPR_AUTO
 pow_mod(const BASE& base, const EXP& exp, const MOD& mod) -> BigInt {
