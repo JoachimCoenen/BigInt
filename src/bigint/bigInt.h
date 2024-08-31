@@ -1953,7 +1953,7 @@ pow_mod(const BASE& base, const EXP& exp, const MOD& mod) -> BigInt {
 			return BigInt{1};
 		}
 	} else if (is_neg(exp)) {
-		throw std::domain_error{utils::error_msg("exponent must not be negative.")};
+		return BigInt{0};
 	} else if (is_zero(base)) {
 		return BigInt{0};
 	} else if (mod == 0) {
