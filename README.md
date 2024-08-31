@@ -74,8 +74,10 @@ Following operators are provided:
 * `divmod(...)`, `divmod1(...)`: to get both the quotient and the reminder with only one calculation.
 * `sqrt(const BigInt& x)`: calculates floor(sqrt(x)).
 * `log2(const BigInt& x)`: calculates floor(ln(x) / ln(2)). This is the same as counting the number of digits of a positive, non-zero integer in binary representation.
-* `pow(const BigInt& x, uin64_t y)`: calculates x<sup>y</sup>.
-* `pow_mod(const BigInt& x, const BigInt& y, const BigInt& n)`: calculates x<sup>y</sup> mod n. This is <i>way</i> faster than doing `pow(x, y) % n`; especially for large `x` and `y`.
+* `log10(const BigInt& x)`: calculates floor(ln(x) / ln(10)). This is the same as counting the number of digits of a positive, non-zero integer in decimal representation.
+* `log(const BigInt& base, const BigInt& y)`: calculates floor(ln(y) / ln(base)).
+* `pow(const BigInt& base, uin64_t exp)`: calculates base<sup>exp</sup>.
+* `pow_mod(const BigInt& base, const BigInt& exp, const BigInt& mod)`: calculates base<sup>exp</sup> % mod. This is <i>way</i> faster than doing `pow(base, exp) % mod`; especially for large `x` and `y`.
 * `factorial(uin32_t x)`: calculates `x! = 1 * 2 * 3 * ... * x`.
 * `digit_sum(const BigInt& x)`: sums all digits in base 10. E.g.: `digit_sum(12955) == 1 + 2 + 9 + 5 + 5`.
 

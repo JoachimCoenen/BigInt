@@ -84,6 +84,16 @@ get_all_log2_test_values() {
 	return load_testdata<UnaOpTest>(test_data_dir + "values_for_log2_test.csv", [](const auto& x) { return to_una_op_test(x); });
 }
 
+[[nodiscard]] inline std::vector<UnaOpTest>
+get_all_log10_test_values() {
+	return load_testdata<UnaOpTest>(test_data_dir + "values_for_log10_test.csv", [](const auto& x) { return to_una_op_test(x); });
+}
+
+[[nodiscard]] inline std::vector<BinOpTest>
+get_all_log_test_values() {
+	return load_testdata<BinOpTest>(test_data_dir + "values_for_log_test.csv", [](const auto& x) { return to_bin_op_test(x); });
+}
+
 [[nodiscard]] inline std::vector<BinOpTest>
 get_all_pow_test_values() {
 	return load_testdata<BinOpTest>(test_data_dir + "values_for_pow_test.csv", [](const auto& x) { return to_bin_op_test(x); });

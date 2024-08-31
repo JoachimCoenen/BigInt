@@ -191,6 +191,28 @@ def digit_sum_16(a: int) -> int:
 	return sum(map(mapp.__getitem__, bytes(f'{abs(a):x}', encoding='utf-8')))
 
 
+def log2(y: int) -> int:
+	return y.bit_length() - 1
+
+
+def log10(y: int) -> int:
+	return  len(f'{y}') - 1
+
+def logg(base: int, y: int) -> int:
+	exp = log2(y) // log2(base)
+	i = 0
+	while base ** exp > y:
+		i += 1
+		exp -= 1
+	return exp
+
+def log_checked(base: int, y: int) -> int:
+	exp = logg(base, y)
+	assert base ** exp <= y, f"got {base ** exp} but expected <= {y}; log({base}, {y}) = {exp}"
+	assert base ** (exp+1) >= y, f"got {base ** (exp+1)} but expected >= {y}; log({base}, {y}) = {exp}"
+	return exp
+
+
 BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
 	BinOperation('lshift', lambda a, b:    a << b,                   lambda a, b:    0 <= b <= 1000),
 	BinOperation('rshift', lambda a, b:    (abs(a) >> b) * sign(a),  lambda a, b:    0 <= b <= 1000),
@@ -206,7 +228,10 @@ BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
 																			(a != 0 or b != 0) and (b > 0) and c != 0 and  # mathematical feasibility
 																			(abs(a) >= 97 or (b < 3 and abs(c) < 5)) and (abs(c) <= 97 or (abs(a) >= UINT64_MAX_P2 or b < UINT32_MAX_00))  # reduces the amount af test cases
 	),
-	UnaOperation('log2',   lambda a:       len(f'{a:b}') - 1,        lambda a:       (a > 0)),
+	UnaOperation('log2',   lambda a:       log2(a),                  lambda a:       a > 0),
+	UnaOperation('log10',  lambda a:       log10(a),                 lambda a:       a > 0),
+	BinOperation('log',    lambda a, b:    log_checked(a, b),        lambda base, y: y > 0 and base > 1),
+
 	UnaOperation('digit_sum_10', lambda a: digit_sum_10(a)),
 	UnaOperation('digit_sum_16', lambda a: digit_sum_16(a)),
 	UnaOperation('to_string_10', lambda a: a),

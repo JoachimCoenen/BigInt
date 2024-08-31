@@ -1803,12 +1803,96 @@ sqrt(const T& y) -> BigInt {
 	}
 }
 
+namespace _private {
+template<is_BigInt_like BASE, is_BigInt_like T>
+BIGINT_TRACY_CONSTEXPR_AUTO
+calculate_squares(const BASE& base, const T& y) -> std::vector<BigInt> {
+	const uint8_t exp_bits_max = 64;
+	std::vector<BigInt> squares;
+	squares.push_back(base);
+	for (uint8_t i = 1; i < exp_bits_max; ++i) {
+		auto square = squares.back() * squares.back();
+		if (square > y) {
+			break;
+		}
+		squares.emplace_back(std::move(square));
+	}
+	return squares;
+}
+}
 
+
+/**
+ * @brief calculates the integer logarithm of `y` for the given `base`. E.g.: `log(10, 1000)` == 3.
+ * @param base the base of the logarithm
+ * @param y the value to get the logarithm of.
+ * @return the integer logarithm of y.
+ * @throws std::domain_error if base <= 1 or y <= 0
+ */
+template<is_BigInt_like BASE, is_BigInt_like T>
+BIGINT_TRACY_CONSTEXPR_AUTO
+log(const BASE& base, const T& y) -> uint64_t {
+	if (base <= 1) {
+		throw std::domain_error{utils::error_msg("integer log for a base less or equal to one is undefined.")};
+	}
+	if (!is_pos(y)) {
+		throw std::domain_error{utils::error_msg("integer log of a non-positive number is undefined.")};
+	}
+
+	if (base > y) {
+		return 0;
+	}
+
+	const auto squares = _private::calculate_squares(base, y);
+
+	uint64_t result = 0;
+	BigInt temp{y};
+
+	for (uint8_t i = squares.size(); i --> 0;) {
+		const auto& square = squares[i];
+		if (square <= temp) {
+			temp /= square;
+			uint64_t mask = 1ull << i;
+			result |= mask;
+		}
+	}
+	return result;
+}
+
+
+/**
+ * @brief calculates the integer logarithm of `y` for base 10. E.g.: `log10(1000) == 3`.
+ * @param y the value to get the logarithm of.
+ * @return the integer logarithm base 10 of y.
+ * @throws std::domain_error if y <= 0
+ */
+template<is_BigInt_like T>
+BIGINT_TRACY_CONSTEXPR_AUTO
+log10(const T& y) -> uint64_t {
+	BIGINT_TRACY_ZONE_SCOPED;
+	if (!is_pos(y)) {
+		throw std::domain_error{utils::error_msg("integer log of a non-positive number is undefined.")};
+	}
+
+	return log(BigInt{10}, y);
+}
+
+
+/**
+ * @brief calculates the integer logarithm of `y` for base 2. E.g.: `log2(7) == 3`. Runs in O(1) time.
+ * @param y the value to get the logarithm of.
+ * @return the integer logarithm base 2 of y.
+ * @throws std::domain_error if y <= 0
+ */
 template<is_BigInt_like T>
 BIGINT_TRACY_CONSTEXPR_AUTO
 log2(const T& y) -> uint64_t {
 	BIGINT_TRACY_ZONE_SCOPED;
-	return (64 - utils::clzll(y[y.size() - 1])) + 64 * (y.size() - 1) - 1;
+	if (!is_pos(y)) {
+		throw std::domain_error{utils::error_msg("integer log of a non-positive number is undefined.")};
+	}
+
+	return 64 * y.size() - utils::clzll(y[y.size() - 1]) - 1 ;
 }
 
 
