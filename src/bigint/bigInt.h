@@ -1759,17 +1759,6 @@ operator%=(const TLHS &a, const TRHS &b) -> BigInt& {
 // misc math:
 namespace bigint {
 
-BIGINT_TRACY_CONSTEXPR_AUTO
-factorial(uint32_t n) -> BigInt {
-	BIGINT_TRACY_ZONE_SCOPED;
-	BigInt result(1);
-	for (uint64_t i = 1; i <= n; ++i) {
-		result *= i;
-	}
-	return result;
-}
-
-
 /**
  * @brief calculates the integer square root of y using Newton's method.
  * @param y the value to get thes quare root of.
@@ -1984,6 +1973,16 @@ pow_mod(const BASE& base, const EXP& exp, const MOD& mod) -> BigInt {
 // combinatorics:
 namespace bigint {
 
+BIGINT_TRACY_CONSTEXPR_AUTO
+factorial(uint32_t n) -> BigInt {
+	BIGINT_TRACY_ZONE_SCOPED;
+	BigInt result(1);
+	for (uint64_t i = 1; i <= n; ++i) {
+		result *= i;
+	}
+	return result;
+}
+
 
 /**
  * @brief Calculates the number of ways to choose `k` items from `n` items without repetition and with order.
@@ -2050,6 +2049,103 @@ comb(uint32_t n, uint32_t k) -> BigInt {
 	return result;
 }
 
+}
+
+
+// number theory:
+namespace bigint {
+namespace _private {
+
+template<int k>
+BIGINT_TRACY_CONSTEXPR_AUTO
+lehmer_step(uint64_t& u_, uint64_t& v_, int64_t& x_im1, int64_t& x_i, int64_t& y_im1, int64_t& y_i) {
+	uint64_t q_i = u_ / v_;
+	const int64_t x_ip1 = x_im1 - q_i * x_i;
+	const int64_t y_ip1 = y_im1 - q_i * y_i;
+
+	uint64_t r_ = u_ - q_i * v_;
+	u_ = v_;
+	v_ = r_;
+
+	// Determine if q_i is correct (Jebelean’s condition).
+	if (v_ < utils::constexpr_abs(y_ip1) || u_ - v_ < utils::constexpr_abs(x_ip1 - x_i)) {
+		return false; // break
+	}
+
+	// swap x and y
+	x_im1 = y_i; y_im1 = x_i;
+	x_i = y_ip1; y_i = x_ip1;
+	return true; // continue
+}
+
+template<int k>
+BIGINT_TRACY_CONSTEXPR_VOID
+lehmer(BigInt& U, BigInt& V) {
+	BIGINT_TRACY_ZONE_SCOPED;
+
+	auto h = log2(U) < k-1 ? 0 : log2(U) + 1 - k;
+	uint64_t u_ = (U >> h)[0];
+	uint64_t v_ = (V >> h)[0];
+
+	int64_t x_im1 = 1, x_i = 0;
+	int64_t y_im1 = 0, y_i = 1;
+
+	bool swap_xy = false;
+	while (lehmer_step<k>(u_, v_, x_im1, x_i, y_im1, y_i)) {
+		swap_xy = !swap_xy;
+	}
+
+	if (swap_xy) {
+		std::swap(x_i, y_i);
+		std::swap(x_im1, y_im1);
+	}
+
+	// We know q,,..., qi-l were correct, qi as incorrect.
+	auto R = x_i * U + y_i * V;
+	U *= x_im1;
+	U += y_im1 * V;
+	V = std::move(R);
+
+	return;
+}
+
+BIGINT_TRACY_CONSTEXPR_AUTO
+gcd_internal(const BigInt& Uu, const BigInt& Vv) -> BigInt {
+	BIGINT_TRACY_ZONE_SCOPED;
+	// we require abs(Uu) >= abs(Vv)
+
+	constexpr auto k = 63;
+
+	BigInt U = Uu; U.sign() = Sign::POS;
+	BigInt V = Vv; V.sign() = Sign::POS;
+
+	while (!is_zero(V)) {
+		if (log2(U) - log2(V) <= k/2) {
+			_private::lehmer<k>(U, V);
+		}
+
+		auto R = U % V;
+		U = std::move(V);
+		V = std::move(R);
+	}
+
+	return U;
+}
+}
+
+/**
+ * @brief Calculates the greatest common divisor of the specified integer arguments. The result is never negative.
+ *        Adapted from Jonathan Sorenson, 1995, An Analysis of Lehmer’s Euclidean GCD Algorithm
+ * @return the greatest common divisor of the specified integer arguments.
+ */
+BIGINT_TRACY_CONSTEXPR_AUTO
+gcd(const BigInt& U, const BigInt& V) -> BigInt {
+	if (abs(U) < abs(V)) {
+		return _private::gcd_internal(V, U);
+	} else {
+		return _private::gcd_internal(U, V);
+	}
+}
 
 }
 

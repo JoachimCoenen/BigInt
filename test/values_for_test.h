@@ -114,6 +114,11 @@ get_all_comb_test_values() {
 	return load_testdata<BinOpTest>(test_data_dir + "values_for_comb_test.csv", [](const auto& x) { return to_bin_op_test(x); });
 }
 
+[[nodiscard]] inline std::vector<BinOpTest>
+get_all_gcd_test_values() {
+	return load_testdata<BinOpTest>(test_data_dir + "values_for_gcd_test.csv", [](const auto& x) { return to_bin_op_test(x); });
+}
+
 [[nodiscard]] inline std::vector<UnaOpTest>
 get_all_digit_sum_10_test_values() {
 	return load_testdata<UnaOpTest>(test_data_dir + "values_for_digit_sum_10_test.csv", [](const auto& x) { return to_una_op_test(x); });

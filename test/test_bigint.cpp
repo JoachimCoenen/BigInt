@@ -494,6 +494,24 @@ TEST_UNARY_OPERATOR(DigitSum_16, BigInt, uint64_t, digit_sum<16>(a), get_all_dig
 
 }
 
+
+// combinatorics
+namespace {
+
+TEST_BINARY_OPERATOR_BIGINT(Perm, uint32_t, uint32_t, perm(a, b), get_all_perm_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT(Comb, uint32_t, uint32_t, comb(a, b), get_all_comb_test_values())
+
+}
+
+
+// number theory
+namespace {
+
+TEST_BINARY_OPERATOR_BIGINT(Gcd, BigInt, BigInt, gcd(a, b), get_all_gcd_test_values())
+
+}
+
 // to_string
 namespace {
 
