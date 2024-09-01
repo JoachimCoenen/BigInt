@@ -61,7 +61,7 @@ BigInt G = "4561273837";  // BigInt(std::string_view) is an explicit contructor
 BigInt H = 2;  // BigInt(uint64_t) is also explicit
 ```
 
-### Operators and Basic Math Functions 
+### Basic Operators
 Following operators are provided: 
 * Basic arithmetic operators: `+`, `-`, `*`, `/`, `%`.
 * Bitwise shift operators: `<<`, `>>`.
@@ -69,9 +69,19 @@ Following operators are provided:
 	* `+=`, `-=`, `<<=`, `>>=` are always performed inline.
 	* `*=` is only performed inline if the second argument is an integral type (e.g. int32_t, or uint64_t).
 	* `/=` is never performed inline.
-* Negation, absolute value `-`, `abs(const BigInt&)`: Both operations return a view of the underlying BigInt with the sign changed.
+* Negation `-`, `abs(const BigInt&)`: Both operations return a view of the underlying BigInt with the sign changed.
 * `mult(uint64_t, uint64_t)`: multilpies both numbers and returns an entirely stack-allocated BigInt-like object.
 * `divmod(...)`, `divmod1(...)`: to get both the quotient and the reminder with only one calculation.
+
+All arithmetic operators can be used with mixed BigInt and integral types.
+```c++
+BigInt a{"1390824942691875931654"};
+std::cout << (a * 78) << std::endl;
+// Output: 108484345529966322669012
+```
+
+
+### Basic Math Functions 
 * `sqrt(const BigInt& x)`: calculates floor(sqrt(x)).
 * `log2(const BigInt& x)`: calculates floor(ln(x) / ln(2)). This is the same as counting the number of digits of a positive, non-zero integer in binary representation.
 * `log10(const BigInt& x)`: calculates floor(ln(x) / ln(10)). This is the same as counting the number of digits of a positive, non-zero integer in decimal representation.
@@ -85,12 +95,6 @@ Following operators are provided:
 * `gcd(const BigInt& u, const BigInt& v)`: Calculates the greatest common divisor of `u` and `v` using Lehmer’s Euclidean GCD Algorithm.
 * `lcm(const BigInt& u, const BigInt& v)`: Calculates the least common multiple of `u` and `v` using Lehmer’s Euclidean GCD Algorithm.
 
-All arithmetic operators can be used with mixed BigInt and integral types.
-```c++
-BigInt a{"1390824942691875931654"};
-std::cout << (a * 78) << std::endl;
-// Output: 108484345529966322669012
-```
 
 ### Additional Functions
 * A BigInt instance is printable, overloading `<<` for `std::ostream`.
@@ -101,6 +105,12 @@ std::cout << (a * 78) << std::endl;
 
 * Use `is_neg(const BigInt&)`, `is_zero(const BigInt&)`, `is_pos(const BigInt&)` to ccheck whether a BigInt is smaller than, equal to, or greater than zero respectively.
 * Use `.size()` to get the number of digits in base 2<sup>64</sup>.
+
+* Use `fits_u64(const BigInt&)` or `fits_i64(const BigInt&)` to check whether `value` would fit into a uint64_t or a int64_t respectively.
+* Use `fits_u32(const BigInt&)` or `fits_i32(const BigInt&)` to check whether `value` would fit into a uint32_t or a int32_t respectively.
+* Use `as_u64(const BigInt&)` or `as_i64(const BigInt&)` to convert the given `value` to uint64_t or int64_t respectively, assuming it fits.
+* Use `as_u32(const BigInt&)` or `as_i32(const BigInt&)` to convert the given `value` to uint32_t or int32_t respectively, assuming it fits.
+
 
 
 ### Exceptions

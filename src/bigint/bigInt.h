@@ -5,6 +5,7 @@
 
 // standard library
 #include <cstdint>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -33,7 +34,7 @@
 #endif
 
 #ifdef ZoneScoped
-# define BIGINT_TRACY_ZONE_SCOPED ZoneScoped
+#	define BIGINT_TRACY_ZONE_SCOPED ZoneScoped
 #else
 #	define BIGINT_TRACY_ZONE_SCOPED
 #endif
@@ -498,6 +499,105 @@ CONSTEXPR_AUTO
 is_pos(const T &value) -> bool {
 	return !is_zero(value) && value.sign() == Sign::POS;
 }
+
+
+/**
+ * @brief check whether `value` would fit into the given integral type `I`.
+ * @return `true` if `value` would fit into the given integral type `I`, `false` otherwise.
+ */
+template <std::integral I>
+CONSTEXPR_AUTO
+fits(const is_BigInt_like auto& value) -> bool {
+	if constexpr (std::is_unsigned_v<I>) {
+		return value.size() == 1 && value.sign() == Sign::POS && std::numeric_limits<I>::max() <= value[0];
+	} else {
+		return value.size() == 1 && (
+			(value.sign() == Sign::POS && std::numeric_limits<I>::max() <= value[0]) ||
+			(value.sign() == Sign::NEG && -std::numeric_limits<I>::min() <= value[0])
+		);
+	}
+}
+
+
+/**
+ * @brief check whether `value` would fit into a uint64_t.
+ * @return `true` if `value` would fit into a uint64_t, `false` otherwise.
+ */
+CONSTEXPR_AUTO
+fits_u64(const is_BigInt_like auto& value) -> bool { return fits<uint64_t>(value); }
+
+
+/**
+ * @brief check whether `value` would fit into a int64_t.
+ * @return `true` if `value` would fit into a int64_t, `false` otherwise.
+ */
+CONSTEXPR_AUTO
+fits_i64(const is_BigInt_like auto& value) -> bool { return fits<int64_t>(value); }
+
+
+/**
+ * @brief check whether `value` would fit into a uint32_t.
+ * @return `true` if `value` would fit into a uint32_t, `false` otherwise.
+ */
+CONSTEXPR_AUTO
+fits_u32(const is_BigInt_like auto& value) -> bool { return fits<uint32_t>(value); }
+
+
+/**
+ * @brief check whether `value` would fit into a int32_t.
+ * @return `true` if `value` would fit into a int32_t, `false` otherwise.
+ */
+CONSTEXPR_AUTO
+fits_i32(const is_BigInt_like auto& value) -> bool { return fits<int32_t>(value); }
+
+
+/**
+ * @brief converts the given `value` to the given integral type `I`., assuming it fits. If value is too big or small for `value` the result will be garbage.
+ * @return the given `value` converted to the given integral type `I`.
+ */
+template <std::integral I>
+CONSTEXPR_AUTO
+as_integral(const is_BigInt_like auto& value) -> bool {
+	if (value.sign() == Sign::POS) {
+		return static_cast<I>(value[0]);
+	} else {
+		return -static_cast<I>(value[0]);
+	}
+}
+
+
+/**
+ * @brief converts the given `value` to uint64_t, assuming it fits. If value is too big or small for `value` the result will be garbage.
+ * @return the given `value` as a uint64_t.
+ */
+CONSTEXPR_AUTO
+as_u64(const is_BigInt_like auto& value) -> uint64_t { return as_integral<uint64_t>(value); }
+
+
+/**
+ * @brief converts the given `value` to int64_t, assuming it fits. If value is too big or small for `value` the result will be garbage.
+ * @return the given `value` as a int64_t.
+ */
+CONSTEXPR_AUTO
+as_i64(const is_BigInt_like auto& value) -> int64_t { return as_integral<int64_t>(value); }
+
+
+/**
+ * @brief converts the given `value` to uint32_t, assuming it fits. If value is too big or small for `value` the result will be garbage.
+ * @return the given `value` as a uint32_t.
+ */
+CONSTEXPR_AUTO
+as_u32(const is_BigInt_like auto& value) -> uint32_t { return as_integral<uint32_t>(value); }
+
+
+/**
+ * @brief converts the given `value` to int32_t, assuming it fits. If value is too big or small for `value` the result will be garbage.
+ * @return the given `value` as a int32_t.
+ */
+CONSTEXPR_AUTO
+as_i32(const is_BigInt_like auto& value) -> int32_t { return as_integral<int32_t>(value); }
+
+
 
 }
 
