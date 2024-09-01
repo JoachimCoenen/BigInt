@@ -144,6 +144,11 @@ class BigInt : public IBigIntLike
 		: _data({v}), _sign(sign)
 	{ }
 
+	explicit constexpr
+		BigInt(std::signed_integral auto v)
+		: BigInt{utils::constexpr_abs(v), v < 0 ? Sign::NEG : Sign::POS}
+	{ }
+
 	explicit BIGINT_TRACY_CONSTEXPR
 	BigInt(const std::string_view v)
 		: BigInt(from_string(v))
@@ -170,6 +175,14 @@ class BigInt : public IBigIntLike
 	constexpr
 	BigInt(BigInt &&other) // move constructor
 		: _data(std::move(other._data)), _sign(other._sign) {
+	}
+
+	template<is_BigInt_like T>
+	CONSTEXPR_AUTO_DISCARD
+	operator=(const T &other) -> BigInt& {
+		BigInt tmp(other);
+		swap(*this, tmp);
+		return *this;
 	}
 
 	CONSTEXPR_AUTO_DISCARD

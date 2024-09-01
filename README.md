@@ -49,14 +49,13 @@ It is possible to instantiate a BigInt in multiple ways:
 ```c++
 BigInt A;  // will hold the value +0.
 BigInt B{100};  // B will hold the value +100.
-BigInt C{-50};  // !! Does not work currently !!
-BigInt D{50, Sign::NEG};  // C will hold the value -50.
-BigInt E{"-4561273837128312881"};  // D will hold the value -4561273837128312881.
+BigInt C{-50};  // C will hold the value -50.
+BigInt D{50, Sign::NEG};  // D will hold the value -50.
+BigInt E{"-4561273837128312881"};  // E will hold the value -4561273837128312881.
 ```
 
 But *not* like this:  
 ```c++
-BigInt F{-50};  // !! Does not work currently !!
 BigInt G = "4561273837";  // BigInt(std::string_view) is an explicit contructor
 BigInt H = 2;  // BigInt(uint64_t) is also explicit
 ```
