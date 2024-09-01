@@ -236,6 +236,7 @@ BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
 	BinOperation('comb',    lambda a, b:    math.comb(a, b),         lambda a, b: 0 <= a <= UINT32_MAX_P2 and 0 <= b <= UINT32_MAX_P2),
 
 	BinOperation('gcd',    lambda a, b:    math.gcd(a, b)),
+	BinOperation('lcm',    lambda a, b:    math.lcm(a, b)),
 
 	UnaOperation('digit_sum_10', lambda a: digit_sum_10(a)),
 	UnaOperation('digit_sum_16', lambda a: digit_sum_16(a)),

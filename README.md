@@ -83,6 +83,7 @@ Following operators are provided:
 * `perm(uint32_t n, uint32_t k)`: Calculates the number of ways to choose `k` items from `n` items without repetition and with order. Evaluates to `n! / (n - k)!` when `k <= n` and evaluates to zero otherwise.
 * `comb(uint32_t n, uint32_t k)`: Calculates the number of ways to choose `k` items from `n` items without repetition and without order. Evaluates to `n! / ((n - k)! * k!)` when `k <= n` and evaluates to zero otherwise.
 * `gcd(const BigInt& u, const BigInt& v)`: Calculates the greatest common divisor of `u` and `v` using Lehmer’s Euclidean GCD Algorithm.
+* `lcm(const BigInt& u, const BigInt& v)`: Calculates the least common multiple of `u` and `v` using Lehmer’s Euclidean GCD Algorithm.
 
 All arithmetic operators can be used with mixed BigInt and integral types.
 ```c++

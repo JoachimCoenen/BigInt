@@ -1348,8 +1348,9 @@ namespace bigint::_private {
  * @param s source
  * @param n number of digits
  */
+template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
-_prefix(BigInt& d, const BigInt& s, size_t n) {
+_prefix(TLHS& d, const TRHS& s, size_t n) {
 	d.resize(n);
 	_private::copy_digits_to_from(d, _private::rshifted(s, s.size() - n));
 }
@@ -2145,6 +2146,19 @@ gcd(const BigInt& U, const BigInt& V) -> BigInt {
 	} else {
 		return _private::gcd_internal(U, V);
 	}
+}
+
+/**
+ * @brief Calculates the least common multiple of the specified integer arguments. The result is never negative.
+ *        Adapted from Jonathan Sorenson, 1995, An Analysis of Lehmer’s Euclidean GCD Algorithm
+ * @return the least common multiple of the specified integer arguments.
+ */
+BIGINT_TRACY_CONSTEXPR_AUTO
+lcm(const BigInt& u, const BigInt& v) -> BigInt {
+	if (is_zero(u) || is_zero(v)) {
+		return BigInt{0};
+	}
+	return abs(u) / gcd(u, v) * abs(v);
 }
 
 }

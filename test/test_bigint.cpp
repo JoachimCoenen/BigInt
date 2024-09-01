@@ -510,6 +510,8 @@ namespace {
 
 TEST_BINARY_OPERATOR_BIGINT(Gcd, BigInt, BigInt, gcd(a, b), get_all_gcd_test_values())
 
+TEST_BINARY_OPERATOR_BIGINT(Lcm, BigInt, BigInt, lcm(a, b), get_all_lcm_test_values())
+
 }
 
 // to_string
