@@ -2038,7 +2038,7 @@ pow(const BASE& base, uint64_t exp) -> BigInt {
 
 
 /**
- * @brief raises `base` to the power of `exp` modulo `mod`. E.g.: `pow_mod(10, 3, 12) == 4`.
+ * @brief raises `base` to the power of `exp` modulo `mod`. E.g.: `pow_mod(10, 3, 12) == 4`. This is *way* faster than doing `pow(base, exp) % mod`; especially for large `base` and `exp`.
  * @param base the base.
  * @param exp the exponent.
  * @param mod the modulo.
