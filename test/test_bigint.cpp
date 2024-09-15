@@ -33,9 +33,9 @@ inline void test_operation(
 }
 
 template <size_t N, typename R, typename RT, typename... On>
-	requires std::same_as<R, utils::first_type_of<On...>>
+	requires std::same_as<R, first_type_of<On...>>
 			 && (!std::is_const_v<R>)
-			 && (!std::is_const_v<utils::first_type_of<On...>>)
+			 && (!std::is_const_v<first_type_of<On...>>)
 inline void test_assignment_operation(
 	const Operation<R&, On...> operation,
 	const std::function<RT(const R&)> get_result_compare_value,
@@ -43,7 +43,7 @@ inline void test_assignment_operation(
 ) {
 	const std::function<void(const R&, const R&, const std::string&, const On&...)>
 		test_func = [&](const R& result, const R& expected, const std::string& test_str, [[maybe_unused]] const On&... on) -> void {
-		const auto& o1 = utils::get<0>(on...);
+		const auto& o1 = get<0>(on...);
 		EXPECT_EQ((&result), (&o1)) << "return value & first operand expected to be same reference." << test_str;
 		EXPECT_EQ(get_result_compare_value(result), get_result_compare_value(expected)) << test_str;
 	};

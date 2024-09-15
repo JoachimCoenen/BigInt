@@ -7,8 +7,130 @@
 #include <functional>
 #include <ranges>
 #include <string_view>
+#include <vector>
+
+#ifndef DO_PRINT_TEST_INFO
+#  define DO_PRINT_TEST_INFO 0
+#endif
+
+#if DO_PRINT_TEST_INFO
+#  include <iostream>
+#endif
+
+// General purpose tooling
+namespace test_utils {
+
+struct to_vector_adapter { /* just a marker */ };
+
+/**
+ * @brief creates a range adaptor that converts the range to a vector.
+ * @return A range adaptor that converts the range to a vector.
+ */
+CONSTEXPR_AUTO
+to_vector() {
+	return to_vector_adapter{};
+}
+
+/**
+ * @brief A range pipe that results in a vector.
+ */
+template<std::ranges::range R>
+CONSTEXPR_AUTO
+operator|(R&& r, [[maybe_unused]] const to_vector_adapter a) {
+	std::vector<std::ranges::range_value_t<R>> v;
+
+	// if we can get a size, reserve that much
+	if constexpr (requires { std::ranges::size(r); }) {
+		v.reserve(std::ranges::size(r));
+	}
+
+	v.insert(v.begin(), r.begin(), r.end());
+
+	return v;
+}
+
+struct join_str_adapter {
+	std::string separator;
+};
+
+/**
+ * @brief creates a range adaptor that converts the range to a vector.
+ * @return A range adaptor that converts the range to a vector.
+ */
+CONSTEXPR_AUTO
+join_str(const std::string& separator) {
+	return join_str_adapter{separator};
+}
+
+/**
+ * @brief A range pipe that results in a string.
+ */
+template<std::ranges::range R>
+	requires std::same_as<std::ranges::range_value_t<R>, std::string>
+CONSTEXPR_AUTO
+operator|(R&& r, [[maybe_unused]] const join_str_adapter& a) {
+	auto iter = r.begin();
+
+	if (iter == r.end()) {
+		return std::string{};
+	}
+
+	std::string str = *iter;
+	++iter;
+	for (; iter != r.end(); ++iter) {
+		str += a.separator;
+		str += *iter;
+	}
+
+	return str;
+}
 
 
+namespace _private {
+
+template <class T, T... Vs, class Op>
+CONSTEXPR_VOID
+consteval_for (std::integer_sequence<T, Vs...> const &, const Op& op) {
+	using unused = int[]; // just a trick to provide an environment where to unpack the Vs... values
+	(void)unused { 0, (op.template operator()<Vs>(), 0)... };
+}
+
+}
+
+template <size_t N, class Op>
+CONSTEXPR_VOID
+consteval_for (const Op& op) {
+	_private::consteval_for(std::make_index_sequence<N>{}, op);
+}
+
+
+/**
+ * Returns the Nth type in the given template parameter pack.
+ */
+template<int N, typename... Ts>
+using nth_type_of = std::tuple_element_t<N, std::tuple<Ts...>>;
+
+/**
+ * returns the first type in the given template parameter pack.
+ */
+template<typename... Ts>
+using first_type_of = std::tuple_element_t<0, std::tuple<Ts...>>;
+
+
+/**
+ * @brief Extracts the Ith element from the tuple. I must be an integer value in [​0​, sizeof...(Ts)).
+ * @param ts the parameter pack.
+ */
+template <int I, class... Ts>
+const auto& get(const Ts&... ts) {
+	return std::get<I>(std::tie(ts...));
+}
+
+
+}
+
+
+// Test related tooling
 namespace test_utils {
 /**
  * minimum integer size required to fit value
@@ -141,8 +263,8 @@ template <size_t N, class... On>
 CONSTEXPR_AUTO
 is_valid_test_for_op(const std::array<Value, N>& operands) -> bool {
 	bool is_valid = true;
-	bigint::utils::consteval_for<N>(
-		[&]<size_t I>() { is_valid &= is_assignable(param_type<bigint::utils::nth_type_of<I, On...>>(), operands[I].type); }
+	consteval_for<N>(
+		[&]<size_t I>() { is_valid &= is_assignable(param_type<nth_type_of<I, On...>>(), operands[I].type); }
 	);
 	return is_valid;
 }
@@ -151,10 +273,22 @@ template <size_t N, class... On>
 CONSTEXPR_AUTO
 transform_to_tuple(const std::array<Value, N>& operands) -> std::tuple<On...> {
 	std::tuple<On...> result{};
-	bigint::utils::consteval_for<N>(
-		[&]<size_t I>() -> void { std::get<I>(result) = str_to_int<bigint::utils::nth_type_of<I, On...>>(operands[I].val); }
+	consteval_for<N>(
+		[&]<size_t I>() -> void { std::get<I>(result) = str_to_int<nth_type_of<I, On...>>(operands[I].val); }
 	);
 	return result;
+}
+
+template <size_t N>
+void
+print_test_info([[maybe_unused]]const OperationTest<N>& test) {
+#if DO_PRINT_TEST_INFO
+	std::cout << "retrieving values..." << std::endl;
+	for (int i = 0; i < test.operands.size(); ++i) {
+		std::cout << "  op[" << i << "] = " << test.operands[i].val << std::endl;
+	}
+	std::cout << "  res = " << test.expected << std::endl;
+#endif
 }
 
 template <size_t N>
@@ -162,7 +296,7 @@ CONSTEXPR_AUTO
 build_test_str(const std::array<Value, N> operands) -> std::string {
 	return operands
 		   | std::views::transform([](const auto& v) { return v.val; })
-		   | bigint::utils::join_str(" . ");
+		   | join_str(" . ");
 }
 
 template <size_t N, class R, class... On>
@@ -176,10 +310,7 @@ void testOperationSingle(
 		return; // skip
 	}
 
-	// std::cout << "retrieving values..." << std::endl;
-	// std::cout << "  lhs = " << left_param.val << std::endl;
-	// std::cout << "  rhs = " << right_param.val << std::endl;
-	// std::cout << "  res = " << expected_str << std::endl;
+	print_test_info(test);
 
 	std::tuple<On...> operands = transform_to_tuple<N, On...>(test.operands);
 	std::tuple<On&...> operand_refs = std::apply(std::tie<On...>, operands);

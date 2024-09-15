@@ -112,7 +112,7 @@ load_testdata(const std::string& path, const std::function<R(const std::string&)
 	auto lines = load_lines(path);
 	return lines
 		   | std::views::transform(parse_test)
-		   | bigint::utils::to_vector();
+		   | to_vector();
 }
 
 template<size_t N>
