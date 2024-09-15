@@ -1629,7 +1629,7 @@ divmod(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
 
 template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
-divmod(const TLHS &a, const int64_t &b) -> DivModResult<BigInt, int64_t> {
+divmod(const TLHS &a, int64_t b) -> DivModResult<BigInt, int64_t> {
 	const auto res = divmod<TLHS, BigIntAdapter<int64_t>, ignore_quotient, ignore_remainder>(a, BigIntAdapter{b});
 
 	if constexpr (ignore_remainder) {
@@ -1645,7 +1645,7 @@ divmod(const TLHS &a, const int64_t &b) -> DivModResult<BigInt, int64_t> {
 
 template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
-divmod(const TLHS &a, const uint64_t &b) -> DivModResult<BigInt, uint64_t> {
+divmod(const TLHS &a, uint64_t b) -> DivModResult<BigInt, uint64_t> {
 	const auto res = divmod<TLHS, BigIntAdapter<uint64_t>, ignore_quotient, ignore_remainder>(a, BigIntAdapter{b});
 	return { res.d, res.r[0] };
 }
@@ -1861,7 +1861,7 @@ operator%(const TLHS &a, const TRHS &b) -> BigInt {
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
-operator%=(const TLHS &a, const TRHS &b) -> BigInt& {
+operator%=(TLHS &a, const TRHS &b) -> BigInt& {
 	const auto result = divmod<TLHS, TRHS, true>(a, b).r;
 	a = std::move(result);
 	return a;
@@ -1951,7 +1951,7 @@ log(const BASE& base, const T& y) -> uint64_t {
 	uint64_t result = 0;
 	BigInt temp{y};
 
-	for (uint8_t i = squares.size(); i --> 0;) {
+	for (uint8_t i = (uint8_t)squares.size(); i --> 0;) {
 		const auto& square = squares[i];
 		if (square <= temp) {
 			temp /= square;
@@ -2134,6 +2134,7 @@ comb(uint32_t n, uint32_t k) -> BigInt {
 	BIGINT_TRACY_ZONE_SCOPED;
 	// factorial(n) / ( factorial(n-k) * factorial(k) );
 	//                 \_dividend 1_/   \_dividend 2_/
+	// notice the symmetry between (n-k) and (k). We'll exploit that.
 
 	if (k > n) {
 		return BigInt{0};
@@ -2143,12 +2144,12 @@ comb(uint32_t n, uint32_t k) -> BigInt {
 		return BigInt{1};
 	}
 
-	auto d1 = n-k > k ? n-k : k;
+	auto d1 = n-k > k ? n-k : k; // exploit the symetry to skip as many unnecessary division as possible.
 	auto d2 = n-k > k ? k : n-k;
 	BigInt result(1);
 	uint32_t j = 1;
 	uint32_t i = d1+1;
-	while (j <= d2) {
+	while (j <= d2) { // do division & multiplication in one to keep the intermediate values small.
 		result *= i;
 		result /= j; // division by 32 bit integer. is very fast compared to normal division.
 		++i;
@@ -2366,7 +2367,7 @@ consteval uint8_t calculate_base_power_32(uint32_t base) {
 struct base_conversion_32 {
 	consteval base_conversion_32(uint32_t base) noexcept
 		: base_power(calculate_base_power_32(base)), //  = 9 for base 10;
-		division_base(utils::ipow(base, base_power)) {}
+		division_base((uint32_t)utils::ipow(base, base_power)) {}
 	uint8_t base_power;
 	uint32_t division_base;
 };
