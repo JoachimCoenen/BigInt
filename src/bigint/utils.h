@@ -29,64 +29,123 @@
 
 namespace bigint::utils {
 
-/**
- * \brief Creates a to_vector_closure for operator()
- */
-struct to_vector_adapter
-{
-	/**
-	 * \brief Gets a vector of a given range.
-	 * \tparam R type of range that gets converted to a vector.
-	 * \param r range that gets converted to a vector.
-	 * \return vector from the given range.
-	 */
-	template<std::ranges::range R>
-	constexpr auto operator()(R&& r) const
-	{
-		std::vector<std::ranges::range_value_t<R>> v;
-
-		// if we can get a size, reserve that much
-		if constexpr (requires { std::ranges::size(r); }) {
-			v.reserve(std::ranges::size(r));
-		}
-
-		v.insert(v.begin(), r.begin(), r.end());
-
-		return v;
-	}
-};
 
 /**
- * \brief Gets a closure to convert the range to a vector.
- * \return A to_vector_closure that will convert the range to a vector.
+ * @brief A range adaptor that converts the range to a vector.
  */
-constexpr auto to_vector() -> to_vector_adapter
-{
+struct to_vector_adapter { /* just a marker */ };
+
+/**
+ * @brief creates a range adaptor that converts the range to a vector.
+ * @return A range adaptor that converts the range to a vector.
+ */
+CONSTEXPR_AUTO
+to_vector() {
 	return to_vector_adapter{};
 }
 
 /**
- * \brief Gets a closure to convert the range to a vector.
- * \return A to_vector_closure that will convert the range to a vector.
+ * @brief A range pipe that results in a vector.
+ * @param r range that gets converted to a vector.
+ * @param a used to create the vector.
+ * @return a vector from the given range.
  */
 template<std::ranges::range R>
-constexpr auto to_vector(R&& r)
-{
-	return to_vector_adapter{}(r);
+CONSTEXPR_AUTO
+operator|(R&& r, [[maybe_unused]] const to_vector_adapter a) {
+	std::vector<std::ranges::range_value_t<R>> v;
+
+	// if we can get a size, reserve that much
+	if constexpr (requires { std::ranges::size(r); }) {
+		v.reserve(std::ranges::size(r));
+	}
+
+	v.insert(v.begin(), r.begin(), r.end());
+
+	return v;
+}
+
+/**
+ * @brief A range adaptor that converts the range to a vector.
+ */
+struct join_str_adapter {
+	std::string separator;
+};
+
+/**
+ * @brief creates a range adaptor that converts the range to a vector.
+ * @return A range adaptor that converts the range to a vector.
+ */
+CONSTEXPR_AUTO
+join_str(const std::string& separator) {
+	return join_str_adapter{separator};
+}
+
+/**
+ * @brief A range pipe that results in a string.
+ * @param r range that gets converted to a string.
+ * @param a used to create the string.
+ * @return a string from the given range.
+ */
+template<std::ranges::range R>
+	requires std::same_as<std::ranges::range_value_t<R>, std::string>
+CONSTEXPR_AUTO
+operator|(R&& r, [[maybe_unused]] const join_str_adapter& a) {
+	auto iter = r.begin();
+	auto end = r.end();
+
+	if (iter == end) {
+		return std::string{};
+	}
+
+	std::string str = *iter;
+	++iter;
+	for (; iter != end; ++iter) {
+		str += a.separator + *iter;
+	}
+
+	return str;
+}
+
+
+namespace _private {
+
+template <class T, T... Vs, class Op>
+CONSTEXPR_VOID
+consteval_for (std::integer_sequence<T, Vs...> const &, const Op& op) {
+	using unused = int[]; // just a trick to provide an environment where to unpack the Vs... values
+	(void)unused { 0, (op.template operator()<Vs>(), 0)... };
+}
+
+}
+
+template <size_t N, class Op>
+CONSTEXPR_VOID
+consteval_for (const Op& op) {
+	_private::consteval_for(std::make_index_sequence<N>{}, op);
 }
 
 
 /**
- * \brief A range pipe that results in a vector.
- * \tparam R type of range that gets converted to a vector.
- * \param r range that gets converted to a vector.
- * \param a used to create the vector.
- * \return a vector from the given range.
+ * Returns the Nth type in the given template parameter pack.
  */
-template<std::ranges::range R>
-constexpr auto operator|(R&& r, const to_vector_adapter& a)
-{
-	return a(std::forward<R>(r));
+template<int N, typename... Ts>
+using nth_type_of = std::tuple_element_t<N, std::tuple<Ts...>>;
+
+/**
+ * returns the first type in the given template parameter pack.
+ */
+template<typename... Ts>
+using first_type_of = std::tuple_element_t<0, std::tuple<Ts...>>;
+
+
+/**
+ * @brief Extracts the Ith element from the tuple. I must be an integer value in [​0​, sizeof...(Ts)).
+ * @param ts the parameter pack.
+ */
+template <int I, class... Ts>
+const auto& get(const Ts&... ts) {
+	return std::get<I>(std::tie(ts...));
 }
 
 
@@ -156,30 +215,30 @@ void __from_chars_throws(const std::string_view input, T &result, int base) {
 }
 
 
-[[nodiscard]] inline unsigned long
+[[nodiscard]] inline uint32_t
 stoul(const std::string_view input, int base = 10) {
-	unsigned long result;
+	uint32_t result;
 	__from_chars_throws(input, result, base);
 	return result;
 }
 
-[[nodiscard]] inline long
+[[nodiscard]] inline int32_t
 stol(const std::string_view input, int base = 10) {
-	long result;
+	int32_t result;
 	__from_chars_throws(input, result, base);
 	return result;
 }
 
-[[nodiscard]] inline unsigned long long
+[[nodiscard]] inline uint64_t
 stoull(const std::string_view input, int base = 10) {
-	unsigned long long result;
+	uint64_t result;
 	__from_chars_throws(input, result, base);
 	return result;
 }
 
-[[nodiscard]] inline long long
+[[nodiscard]] inline int64_t
 stoll(const std::string_view input, int base = 10) {
-	long long result;
+	int64_t result;
 	__from_chars_throws(input, result, base);
 	return result;
 }

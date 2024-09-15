@@ -10,9 +10,46 @@
 #include <gtest/gtest.h>
 
 namespace {
-
 using namespace bigint;
 using namespace test_data;
+}
+
+namespace test_utils {
+
+template <size_t N, typename R, typename RT, typename... On>
+inline void test_operation(
+	const Operation<R, On...> operation,
+	const std::function<RT(const R&)> get_result_compare_value,
+	const std::vector<OperationTest<N>>& tests
+) {
+	const std::function<void(const R&, const R&, const std::string&, const On&...)>
+	test_func = [&](const R& result, const R& expected, const std::string& test_str, [[maybe_unused]] const On&... on) -> void {
+		// const auto& o1 = utils::get<0>(on...);
+		// EXPECT_NE(&result, &o1) << "return value & first operand expected to be different reference." << test_str;
+		EXPECT_EQ(get_result_compare_value(result), get_result_compare_value(expected)) << test_str;
+	};
+
+	testOperationBase<N, R, On...>(operation, tests, test_func);
+}
+
+template <size_t N, typename R, typename RT, typename... On>
+	requires std::same_as<R, utils::first_type_of<On...>>
+			 && (!std::is_const_v<R>)
+			 && (!std::is_const_v<utils::first_type_of<On...>>)
+inline void test_assignment_operation(
+	const Operation<R&, On...> operation,
+	const std::function<RT(const R&)> get_result_compare_value,
+	const std::vector<OperationTest<N>>& tests
+) {
+	const std::function<void(const R&, const R&, const std::string&, const On&...)>
+		test_func = [&](const R& result, const R& expected, const std::string& test_str, [[maybe_unused]] const On&... on) -> void {
+		const auto& o1 = utils::get<0>(on...);
+		EXPECT_EQ((&result), (&o1)) << "return value & first operand expected to be same reference." << test_str;
+		EXPECT_EQ(get_result_compare_value(result), get_result_compare_value(expected)) << test_str;
+	};
+
+	testOperationBase<N, R&, On...>(operation, tests, test_func);
+}
 
 }
 
@@ -208,36 +245,36 @@ TEST(HelloTest, TestCreateFromString) {
 
 #define TEST_UNARY_OPERATOR(NAME, O1, R, OP, TEST_VALUES, RT, GET_RT) \
 TEST(HelloTest, Test##NAME##_##O1) {\
-	testUnaryOp<O1, R, RT>(\
-		[](const auto& a) -> auto { return OP; },\
-		[](const auto& res) { return GET_RT; },\
+	test_operation<1, R, RT, O1>(\
+		[](const O1& a) -> R { return OP; },\
+		[](const R& res) -> RT { return GET_RT; },\
 		TEST_VALUES\
 	);\
 }
 
 #define TEST_UNARY_OPERATOR_BIGINT(NAME, O1, OP, TEST_VALUES) \
-TEST_UNARY_OPERATOR(NAME, O1, BigInt, OP,TEST_VALUES, std::vector<uint64_t>, res.__data_for_testing_only())
+TEST_UNARY_OPERATOR(NAME, O1, BigInt, OP, TEST_VALUES, std::vector<uint64_t>, res.__data_for_testing_only())
 
 
 
 #define TEST_BINARY_OPERATOR(NAME, O1, O2, R, OP, TEST_VALUES, RT, GET_RT) \
 TEST(HelloTest, Test##NAME##_##O1##_##O2) {\
-	testBinaryOp<O1, O2, R, RT>(\
-		[](auto& a, const auto& b) -> auto { return OP; },\
-		[](const auto& res) { return GET_RT; },\
+	test_operation<2, R, RT, O1, O2>(\
+		[](const O1& a, const O2& b) -> R { return OP; },\
+		[](const R& res) -> RT { return GET_RT; },\
 		TEST_VALUES\
 	);\
 }
 
 #define TEST_BINARY_OPERATOR_BIGINT(NAME, O1, O2, OP, TEST_VALUES) \
-TEST_BINARY_OPERATOR(NAME, O1, O2, BigInt, OP,TEST_VALUES, std::vector<uint64_t>, res.__data_for_testing_only())
+TEST_BINARY_OPERATOR(NAME, O1, O2, BigInt, OP, TEST_VALUES, std::vector<uint64_t>, res.__data_for_testing_only())
 
 
 #define TEST_ASSIGN_OPERATOR(NAME, O1, O2, OP, TEST_VALUES, RT, GET_RT) \
 TEST(HelloTest, TestI##NAME##_##O1##_##O2) {\
-	testIOp<O1, O2, RT>(\
-		[](auto& a, const auto& b) -> auto& { return OP; },\
-		[](const auto& res) { return GET_RT; },\
+	test_assignment_operation<2, O1, RT, O1, O2>(\
+		[](O1& a, const O2& b) -> O1& { return OP; },\
+		[](const O1& res) -> RT { return GET_RT; },\
 		TEST_VALUES\
 	);\
 }
@@ -249,9 +286,9 @@ TEST_ASSIGN_OPERATOR(NAME, BigInt, O2, OP, TEST_VALUES, std::vector<uint64_t>, r
 
 #define TEST_TRINARY_OPERATOR(NAME, O1, O2, O3, R, OP, TEST_VALUES, RT, GET_RT) \
 TEST(HelloTest, Test##NAME##_##O1##_##O2##_##O3) {\
-	testTrinaryOp<O1, O2, O3, R, RT>(\
-		[](const auto& a, const auto& b, const auto& c) -> auto { return OP; },\
-		[](const auto& res) { return GET_RT; },\
+	test_operation<3, R, RT, O1, O2, O3>(\
+		[](const O1& a, const O2& b, const O3& c) -> R { return OP; },\
+		[](const R& res) -> RT { return GET_RT; },\
 		TEST_VALUES\
 	);\
 }
@@ -443,7 +480,7 @@ TEST_DIV_OPERATOR(Mod, BigInt, uint32_t, uint32_t, a % b, get_all_mod_test_value
 
 TEST_DIV_OPERATOR(Mod, BigInt, int32_t, int32_t, a % b, get_all_mod_test_values(), int32_t, res)
 
-// TEST_ASSIGN_OPERATOR_BIGINT(Mod, BigInt, a %= b, get_all_mod_test_values())
+TEST_DIV_ASSIGN_OPERATOR_BIGINT(Mod, BigInt, a %= b, get_all_mod_test_values())
 
 }
 

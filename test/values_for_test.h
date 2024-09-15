@@ -1,9 +1,6 @@
 #ifndef VALUES_FOR_TEST_H
 #define VALUES_FOR_TEST_H
 
-#include <vector>
-
-#include "utils_for_test.h"
 #include "data_loader.h"
 
 namespace test_data {
@@ -34,115 +31,32 @@ using namespace test_utils;
 
 inline const std::string test_data_dir = "../../test/test_data/";
 
-[[nodiscard]] inline std::vector<BinOpTest>
-get_all_lshift_test_values() {
-	return load_testdata<BinOpTest>(test_data_dir + "values_for_lshift_test.csv", [](const auto& x) { return to_bin_op_test(x); });
-}
+#define DECLARE_LOAD_TESTDATA_FUNC(OP_NAME, N) \
+NODISCARD_AUTO \
+get_all_##OP_NAME##_test_values() { return load_testdata<N>(test_data_dir + "values_for_"#OP_NAME"_test.csv"); }
 
-[[nodiscard]] inline std::vector<BinOpTest>
-get_all_rshift_test_values() {
-	return load_testdata<BinOpTest>(test_data_dir + "values_for_rshift_test.csv", [](const auto& x) { return to_bin_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<BinOpTest>
-get_all_add_test_values() {
-	return load_testdata<BinOpTest>(test_data_dir + "values_for_add_test.csv", [](const auto& x) { return to_bin_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<BinOpTest>
-get_all_sub_test_values() {
-	return load_testdata<BinOpTest>(test_data_dir + "values_for_sub_test.csv", [](const auto& x) { return to_bin_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<BinOpTest>
-get_all_mul_test_values() {
-	return load_testdata<BinOpTest>(test_data_dir + "values_for_mul_test.csv", [](const auto& x) { return to_bin_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<BinOpTest>
-get_all_div_test_values() {
-	return load_testdata<BinOpTest>(test_data_dir + "values_for_div_test.csv", [](const auto& x) { return to_bin_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<BinOpTest>
-get_all_mod_test_values() {
-	return load_testdata<BinOpTest>(test_data_dir + "values_for_mod_test.csv", [](const auto& x) { return to_bin_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<BinOpTest>
-get_all_divmod_test_values() {
-	return load_testdata<BinOpTest>(test_data_dir + "values_for_divmod_test.csv", [](const auto& x) { return to_bin_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<UnaOpTest>
-get_all_sqrt_test_values() {
-	return load_testdata<UnaOpTest>(test_data_dir + "values_for_sqrt_test.csv", [](const auto& x) { return to_una_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<UnaOpTest>
-get_all_log2_test_values() {
-	return load_testdata<UnaOpTest>(test_data_dir + "values_for_log2_test.csv", [](const auto& x) { return to_una_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<UnaOpTest>
-get_all_log10_test_values() {
-	return load_testdata<UnaOpTest>(test_data_dir + "values_for_log10_test.csv", [](const auto& x) { return to_una_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<BinOpTest>
-get_all_log_test_values() {
-	return load_testdata<BinOpTest>(test_data_dir + "values_for_log_test.csv", [](const auto& x) { return to_bin_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<BinOpTest>
-get_all_pow_test_values() {
-	return load_testdata<BinOpTest>(test_data_dir + "values_for_pow_test.csv", [](const auto& x) { return to_bin_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<TriOpTest>
-get_all_powmod_test_values() {
-	return load_testdata<TriOpTest>(test_data_dir + "values_for_powmod_test.csv", [](const auto& x) { return to_tri_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<BinOpTest>
-get_all_perm_test_values() {
-	return load_testdata<BinOpTest>(test_data_dir + "values_for_perm_test.csv", [](const auto& x) { return to_bin_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<BinOpTest>
-get_all_comb_test_values() {
-	return load_testdata<BinOpTest>(test_data_dir + "values_for_comb_test.csv", [](const auto& x) { return to_bin_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<BinOpTest>
-get_all_gcd_test_values() {
-	return load_testdata<BinOpTest>(test_data_dir + "values_for_gcd_test.csv", [](const auto& x) { return to_bin_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<BinOpTest>
-get_all_lcm_test_values() {
-	return load_testdata<BinOpTest>(test_data_dir + "values_for_lcm_test.csv", [](const auto& x) { return to_bin_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<UnaOpTest>
-get_all_digit_sum_10_test_values() {
-	return load_testdata<UnaOpTest>(test_data_dir + "values_for_digit_sum_10_test.csv", [](const auto& x) { return to_una_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<UnaOpTest>
-get_all_digit_sum_16_test_values() {
-	return load_testdata<UnaOpTest>(test_data_dir + "values_for_digit_sum_16_test.csv", [](const auto& x) { return to_una_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<UnaOpTest>
-get_all_to_string_10_test_values() {
-	return load_testdata<UnaOpTest>(test_data_dir + "values_for_to_string_10_test.csv", [](const auto& x) { return to_una_op_test(x); });
-}
-
-[[nodiscard]] inline std::vector<UnaOpTest>
-get_all_to_string_16_test_values() {
-	return load_testdata<UnaOpTest>(test_data_dir + "values_for_to_string_16_test.csv", [](const auto& x) { return to_una_op_test(x); });
-}
+DECLARE_LOAD_TESTDATA_FUNC(lshift, 2)
+DECLARE_LOAD_TESTDATA_FUNC(rshift, 2)
+DECLARE_LOAD_TESTDATA_FUNC(add, 2)
+DECLARE_LOAD_TESTDATA_FUNC(sub, 2)
+DECLARE_LOAD_TESTDATA_FUNC(mul, 2)
+DECLARE_LOAD_TESTDATA_FUNC(div, 2)
+DECLARE_LOAD_TESTDATA_FUNC(mod, 2)
+DECLARE_LOAD_TESTDATA_FUNC(divmod, 2)
+DECLARE_LOAD_TESTDATA_FUNC(sqrt, 1)
+DECLARE_LOAD_TESTDATA_FUNC(log2, 1)
+DECLARE_LOAD_TESTDATA_FUNC(log10, 1)
+DECLARE_LOAD_TESTDATA_FUNC(log, 2)
+DECLARE_LOAD_TESTDATA_FUNC(pow, 2)
+DECLARE_LOAD_TESTDATA_FUNC(powmod, 3)
+DECLARE_LOAD_TESTDATA_FUNC(perm, 2)
+DECLARE_LOAD_TESTDATA_FUNC(comb, 2)
+DECLARE_LOAD_TESTDATA_FUNC(gcd, 2)
+DECLARE_LOAD_TESTDATA_FUNC(lcm, 2)
+DECLARE_LOAD_TESTDATA_FUNC(digit_sum_10, 1)
+DECLARE_LOAD_TESTDATA_FUNC(digit_sum_16, 1)
+DECLARE_LOAD_TESTDATA_FUNC(to_string_10, 1)
+DECLARE_LOAD_TESTDATA_FUNC(to_string_16, 1)
 
 }
 

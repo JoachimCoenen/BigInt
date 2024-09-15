@@ -36,7 +36,7 @@ load_lines(const std::string& path) {
 
 template<size_t N>
 [[nodiscard]] inline auto
-split_line(const std::string& line, const std::string_view delimiter) {
+split_line(const std::string& line, const std::string_view delimiter) -> std::array<std::string, N> {
 	std::array<std::string, N> result;
 
 	size_t i = 0;
@@ -94,37 +94,17 @@ to_value(const std::string& line) -> Value {
 }
 
 
+template <size_t N>
 [[nodiscard]] inline auto
-to_una_op_test(const std::string& line) -> UnaOpTest{
-	auto split = split_line<2>(line, ";");
-	auto left = to_value(split[0]);
-	auto& result = split[1];
-	return UnaOpTest{std::move(left), std::move(result)};
+to_op_test(const std::string& line) -> OperationTest<N>{
+	auto split = split_line<N+1>(line, ";");
+	std::array<Value, N> operands{};
+	for (size_t i = 0; i < N; ++i) {
+		operands[i] = to_value(split[i]);
+	}
+	auto& result = split[N];
+	return OperationTest<N>{std::move(operands), std::move(result)};
 }
-
-
-[[nodiscard]] inline auto
-to_bin_op_test(const std::string& line) -> BinOpTest{
-	auto split = split_line<3>(line, ";");
-	auto left = to_value(split[0]);
-	auto right = to_value(split[1]);
-	auto& result = split[2];
-	return BinOpTest{std::move(left), std::move(right), std::move(result)};
-}
-
-
-[[nodiscard]] inline auto
-to_tri_op_test(const std::string& line) -> TriOpTest{
-	auto split = split_line<4>(line, ";");
-	auto o1 = to_value(split[0]);
-	auto o2 = to_value(split[1]);
-	auto o3 = to_value(split[2]);
-	auto result = split[3];
-	return TriOpTest{std::move(o1), std::move(o2), std::move(o3), std::move(result)};
-}
-
-
-
 
 template<typename R>
 [[nodiscard]] auto
@@ -133,6 +113,12 @@ load_testdata(const std::string& path, const std::function<R(const std::string&)
 	return lines
 		   | std::views::transform(parse_test)
 		   | bigint::utils::to_vector();
+}
+
+template<size_t N>
+[[nodiscard]] auto
+load_testdata(const std::string& path) -> std::vector<OperationTest<N>> {
+	return load_testdata<OperationTest<N>>(path, to_op_test<N>);
 }
 
 
