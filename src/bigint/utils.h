@@ -71,6 +71,18 @@ std::string error_msg(std::string&& msg, const std::source_location& location = 
 	);
 }
 
+/**
+ * @brief removes any character in `chars_to_remove` from the given `str`.
+ * @param str string to remove characters from
+ * @param chars_to_remove the characters to remove.
+ */
+CONSTEXPR_VOID
+remove_chars_from_string(std::string& str, std::string_view chars_to_remove) {
+	for (const auto char_to_remove : chars_to_remove) {
+		str.erase(remove(str.begin(), str.end(), char_to_remove), str.end());
+	}
+}
+
 }
 
 // string_view to int

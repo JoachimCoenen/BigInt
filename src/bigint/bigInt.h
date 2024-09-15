@@ -2598,6 +2598,25 @@ inline std::ostream & operator<<(std::ostream &ostream, const BigInt &val) {
 	return ostream << to_string(val);
 }
 
+//template<char...>
+BIGINT_TRACY_CONSTEXPR_AUTO
+operator ""_big(const char* literal) -> BigInt {
+	std::string literal_string{literal};
+	const bool is_hex = literal_string.starts_with("0x") || literal_string.starts_with("0X");
+	const bool is_bin = literal_string.starts_with("0b") || literal_string.starts_with("0B");
+	const bool is_oct = literal_string.starts_with("0");
+	utils::remove_chars_from_string(literal_string, "'");
+	if (is_hex) {
+		return from_string_base16(std::string_view{literal_string}.substr(2));
+	} else if (is_bin) {
+		return from_string_base2(std::string_view{literal_string}.substr(2));
+	} else if (is_oct) {
+		return from_string_base8(literal_string);
+	} else {
+		return from_string_base10(literal_string);
+	}
+}
+
 }
 
 #undef BIGINT_TRACY_CONSTEXPR_AUTO
