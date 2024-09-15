@@ -2442,14 +2442,29 @@ from_string_generic(const std::string_view input) -> BigInt {
 
 	const size_t i0 = input[0] == '-' or input[0] == '+' ? 1 : 0;
 
-	for (size_t i = i0; i < input.size(); i += conv.base_power) {
-		auto substr = std::string_view(input).substr(i, conv.base_power);
-		auto mul = substr.size() == conv.base_power ? conv.division_base : utils::ipow(base, (uint8_t)substr.size());
-		auto add = utils::stoull(substr, base);
-		result *= mul;
-		result += add;
+	if constexpr (conv.division_base != 0) {
+		for (size_t i = i0; i < input.size(); i += conv.base_power) {
+			auto substr = std::string_view(input).substr(i, conv.base_power);
+			auto mul = substr.size() == conv.base_power ? conv.division_base : utils::ipow(base, (uint8_t)substr.size());
+			auto add = utils::stoull(substr, base);
+			result *= mul;
+			result += add;
+		}
+		result.sign() = input[0] == '-' ? Sign::NEG : Sign::POS;
+	} else { // special case for when base is a divider of 32.
+
+		const auto digit_count = input.size() - i0;
+		const auto big_int_digit_count = std::max(0ull, digit_count / conv.base_power + (digit_count % conv.base_power > 0 ? 1 : 0));
+		result.resize(big_int_digit_count);
+
+		size_t i = input.size();
+		for (size_t k = 0; k < result.size(); k += 1, i -= conv.base_power) {
+			const auto window_size = std::min(i - i0, (size_t)conv.base_power);
+			auto substr = std::string_view(input).substr(i - window_size, window_size);
+			auto add = utils::stoull(substr, base);
+			result.set(k, add);
+		}
 	}
-	result.sign() = input[0] == '-' ? Sign::NEG : Sign::POS;
 	return result;
 }
 
