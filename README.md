@@ -2,12 +2,11 @@
 
 Integers without a size limit.
 ```c++
-std::cout << -1 + pow(BigInt{3}, 300) << std::endl;
+std::cout << -1 + pow(3_big, 300) << std::endl;
 // Outputs: 136891479058588375991326027382088315966463695625337436471480190078368997177499076593800206155688941388250484440597994042813512732765695774566000
 
-BigInt a{"1390824942691875931654"};
-std::cout << (a * 78) << std::endl;
-// Output: 108484345529966322669012
+std::cout << (1390824942691875931654000_big * 78) << std::endl;
+// Output: 108484345529966322669012000
 ```
 
 If you experience problems, found a bug, or have suggestions, Feel free to create a new issue or make a pull request.
@@ -19,6 +18,7 @@ If you experience problems, found a bug, or have suggestions, Feel free to creat
 * [Requirements](#requirements)
 * [Installing](#installing)
 * [Overview](#overview)
+  * [Features](#features)
   * [Instantiation](#instantiation)
   * [Basic Operators](#basic-operators)
   * [Basic Math Functions](#basic-math-functions)
@@ -26,17 +26,18 @@ If you experience problems, found a bug, or have suggestions, Feel free to creat
   * [Exceptions](#exceptions)
   * [Internals](#internals)
 * [Examples](#examples)
-  * [Factorial](#factorial)
+  * [Factorial](#factorial-1)
   * [Digit Sum](#digit-sum)
 * [Contributing](#contributing)
 * [License](#license)
 <!-- TOC -->
 
-## Overview
+## Summary
 BigInt is a header only library for working with integers values bigger than the hardware limit.  
 BigInt has no additional dependencies and is designed to be easy to use without unnecessary performance compromises.  
-The numbers a represented in base 18446744073709551616 = 2<sup>64</sup> to maximize memory efficiency.
-It is fully `constexpr'd` and therefore partial result and constants can be created a compile time. 
+The numbers a represented in base 18446744073709551616 = 2<sup>64</sup> to maximize memory efficiency.  
+It is fully `constexpr'd` and therefore partial result and constants can be calculated at compile time.  
+
 
 ## Requirements
 BigInt requires **C++20** or higher and a compatible GCC (or MinGW), Clang, or MSVC compiler.
@@ -57,6 +58,48 @@ depending on where you put the folder.
 
 ## Overview
 For simplicity reasons, this overview will use `using bigint;`. If you prefer not to do so, you can access the BigInt class as `bigint::BigInt`.  
+
+### Features
+
+* numbers a represented in base 18446744073709551616 = 2<sup>64</sup> to maximize memory efficiency (64 bit per digit).
+* BigInt provides support for literals using `_big`:  
+  ```c++
+  auto a = 100_big;
+  auto b = 123'456'789_big;  // with digit separators
+  auto c = -0x5abcDEF1_big;  // hexadecimal literal
+  auto d = 0b10101010110_big;  // binaryliteral
+  auto e = 0777777_big;  // octal literal
+  ```
+* BigInt is fully `constexpr'd` and therefore partial results and constants can be calculated at compile time:  
+  ```c++
+  constexpr auto a = -1 + pow(3_big, 300) * 5;
+  constexpr auto b = gdc(12368464545159878212501232471351513542431_big, 0x1385a5347761f71414247342dda76655535_big);
+  constexpr auto c = 12368464545159878212501232471351513542431_big / 0; // compile time error division by zero
+  ```
+* Conversion from / to different bases:  
+  ```c++
+  constexpr auto a = from_string_base16("-0xabc057");
+  constexpr std::string b = to_string<17>(-0xabc057_big)
+  constexpr auto c = from_string<7>("123456777") // compile time error because '7' is not a valid digit in base 7
+  ```
+* EasyConversion from / to integral types:  
+  ```c++
+  fits_u32(-1234_big); // false
+  fits<int16_t>(-1234_big); // true
+  
+  int64_t a = as_i64(-1234_big);
+  uint16_t b = as_integral<uint16_t>(-1234_big);
+  BigInt c = BigInt{-99LL);
+  ```
+* many math functions:  
+  ```c++
+  pow_mod(123456789_big, 987654321_big, 5555555555_big); // efficient modular exponentiation
+  log(factorial(100), pow(3, 100));
+  lcm(factorial(100), pow(3, 100)); // least commin multiple
+  divmod(factorial(100), pow(3, 50)); // combined division and modulo
+  digit_sum<13>(factorial(100)); // digit sum in base 13
+  ...
+  ```
 
 ### Instantiation
 It is possible to instantiate a BigInt in multiple ways:  
