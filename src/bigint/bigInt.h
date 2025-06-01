@@ -163,37 +163,10 @@ class BigInt : public IBigIntLike
 
 	}
 
-	constexpr
-	~BigInt() = default;
-
-	constexpr
-	BigInt(const BigInt &other) // copy constructor
-		: _data(other._data), _sign(other._sign) {
-	}
-
-	constexpr
-	BigInt(BigInt &&other) noexcept // move constructor
-		: _data(std::move(other._data)), _sign(other._sign) {
-	}
-
 	template<is_BigInt_like T>
 	CONSTEXPR_AUTO_DISCARD
 	operator=(const T &other) -> BigInt& {
 		BigInt tmp(other);
-		swap(*this, tmp);
-		return *this;
-	}
-
-	CONSTEXPR_AUTO_DISCARD
-	operator=(const BigInt &other) -> BigInt& { // copy assignment
-		BigInt tmp(other);
-		swap(*this, tmp);
-		return *this;
-	}
-
-	CONSTEXPR_AUTO_DISCARD
-	operator=(BigInt &&other) noexcept -> BigInt& { // move assignment
-		BigInt tmp(std::move(other));
 		swap(*this, tmp);
 		return *this;
 	}
@@ -322,32 +295,6 @@ class BigIntAdapter : public IBigIntLike
 		: _data(v)
 	{ }
 
-	constexpr
-	~BigIntAdapter() noexcept = default;
-
-	constexpr
-	BigIntAdapter(const BigIntAdapter &other) noexcept // copy constructor
-		: _data(other._data)
-	{ }
-
-	constexpr
-	BigIntAdapter(BigIntAdapter &&other) noexcept // copy constructor
-		: _data(std::move(other._data))
-	{ }
-
-	CONSTEXPR_AUTO_DISCARD
-	operator=(const BigIntAdapter &other) noexcept -> BigIntAdapter& { // copy assignment
-		_data = other._data;
-		return *this;
-	}
-
-	CONSTEXPR_AUTO_DISCARD
-	operator=(BigIntAdapter &&other) noexcept -> BigIntAdapter& { // move assignment
-		_data = other._data;
-		other._data = 0; // maybe?
-		return *this;
-	}
-
 	CONSTEXPR_AUTO
 	sign() const noexcept -> Sign {
 		if constexpr (std::is_signed_v<T>) {
@@ -398,35 +345,6 @@ class BigIntAdapter2 : public IBigIntLike
 	BigIntAdapter2(uint64_t lo, uint64_t hi, Sign sign=Sign::POS) noexcept
 		 : _lo(lo), _hi(hi), _sign(sign)
 	{ }
-
-	constexpr
-	~BigIntAdapter2() noexcept = default;
-
-	constexpr
-	BigIntAdapter2(const BigIntAdapter2 &other) noexcept // copy constructor
-		: _lo(other._lo), _hi(other._hi)
-	{ }
-
-	constexpr
-	BigIntAdapter2(BigIntAdapter2 &&other) noexcept // copy constructor
-		: _lo(std::move(other._lo)), _hi(std::move(other._hi))
-	{ }
-
-	CONSTEXPR_AUTO_DISCARD
-	operator=(const BigIntAdapter2 &other) noexcept -> BigIntAdapter2& { // copy assignment
-		_lo = other._lo;
-		_hi = other._hi;
-		return *this;
-	}
-
-	CONSTEXPR_AUTO_DISCARD
-	operator=(BigIntAdapter2 &&other) noexcept -> BigIntAdapter2& { // move assignment
-		_lo = other._lo;
-		_hi = other._hi;
-		other._lo = 0; // maybe?
-		other._hi = 0; // maybe?
-		return *this;
-	}
 
 	CONSTEXPR_AUTO
 	sign() const noexcept -> Sign {
