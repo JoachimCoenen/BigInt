@@ -29,11 +29,22 @@ using namespace test_utils;
 #define UINT64_MAX_P1 "18446744073709551616"
 #define UINT64_MAX_P2 "18446744073709551617"
 
-inline const std::string test_data_dir = "../../test/test_data/";
+inline const std::string test_data_dir = BIGINT_TEST_DATA_DIR;
+
+inline auto join_path(const std::string& left, const std::string& right) -> std::string {
+    auto tst = ((!left.empty() && left.back() == '/') ? 1 : 0) | ((!right.empty() && right.front() == '/') ? 2 : 0);
+    switch (tst) {
+        case 0: return left + '/' + right;
+        case 1: // fallthrough
+        case 2: return left + right;
+        case 3: return left + right.substr(1);
+        default: return ""; // unreachable
+    }
+}
 
 #define DECLARE_LOAD_TESTDATA_FUNC(OP_NAME, N) \
 NODISCARD_AUTO \
-get_all_##OP_NAME##_test_values() { return load_testdata<N>(test_data_dir + "values_for_"#OP_NAME"_test.csv"); }
+get_all_##OP_NAME##_test_values() { return load_testdata<N>(join_path(test_data_dir, "values_for_"#OP_NAME"_test.csv")); }
 
 DECLARE_LOAD_TESTDATA_FUNC(lshift, 2)
 DECLARE_LOAD_TESTDATA_FUNC(rshift, 2)
