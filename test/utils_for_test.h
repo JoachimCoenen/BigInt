@@ -1,5 +1,4 @@
-#ifndef UTILS_FOR_TEST_H
-#define UTILS_FOR_TEST_H
+#pragma once
 
 #include "../src/bigint/bigInt.h"
 #include "../src/bigint/utils.h"
@@ -216,11 +215,11 @@ str_to_int(const std::string_view str_value) {
 		return bigint::BigInt(str_value);
 	} else if constexpr (std::is_same_v<T, std::string>) {
 		return std::string{str_value};
-	} else if constexpr (std::is_same_v<T, bigint::DivModResult<typename T::_D, typename T::_R>>) {
-		auto delimiter = str_value.find("|");
+	} else if constexpr (std::is_same_v<T, bigint::DivModResult<typename T::DD, typename T::RR>>) {
+		auto delimiter = str_value.find('|');
 		auto d = str_value.substr(0, delimiter);
 		auto r = str_value.substr(delimiter + 1);
-		return bigint::DivModResult{str_to_int<typename T::_D>(d), str_to_int<typename T::_R>(r)};
+		return bigint::DivModResult{str_to_int<typename T::DD>(d), str_to_int<typename T::RR>(r)};
 	} else {
 		static_assert(false, "unhandeled type provided");
 	}
@@ -256,7 +255,7 @@ template<typename R, typename O1>
 struct Operation_<R, O1> { using type = std::function<R(O1&)>; };
 
 template<typename R, typename... On>
-using Operation = Operation_<R, On...>::type;
+using Operation = typename Operation_<R, On...>::type;
 
 
 template <size_t N, class... On>
@@ -342,6 +341,3 @@ inline void testOperationBase(
 }
 
 }
-
-
-#endif // UTILS_FOR_TEST_H

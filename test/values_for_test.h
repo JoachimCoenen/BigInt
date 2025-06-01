@@ -1,13 +1,13 @@
-#ifndef VALUES_FOR_TEST_H
-#define VALUES_FOR_TEST_H
+#pragma once
 
 #include "data_loader.h"
+
 
 namespace test_data {
 
 using namespace test_utils;
 
-// usefull constants
+    // useful constants
 #define INT32_MAX_00 "2147483647"
 #define INT32_MAX_M2 "2147483645"
 #define INT32_MAX_M1 "2147483646"
@@ -59,5 +59,3 @@ DECLARE_LOAD_TESTDATA_FUNC(to_string_10, 1)
 DECLARE_LOAD_TESTDATA_FUNC(to_string_16, 1)
 
 }
-
-#endif // VALUES_FOR_TEST_H

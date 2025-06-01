@@ -18,7 +18,7 @@ namespace test_utils {
 
 template <size_t N, typename R, typename RT, typename... On>
 inline void test_operation(
-	const Operation<R, On...> operation,
+	const Operation<R, On...>& operation,
 	const std::function<RT(const R&)> get_result_compare_value,
 	const std::vector<OperationTest<N>>& tests
 ) {
@@ -37,7 +37,7 @@ template <size_t N, typename R, typename RT, typename... On>
 			 && (!std::is_const_v<R>)
 			 && (!std::is_const_v<first_type_of<On...>>)
 inline void test_assignment_operation(
-	const Operation<R&, On...> operation,
+	const Operation<R&, On...>& operation,
 	const std::function<RT(const R&)> get_result_compare_value,
 	const std::vector<OperationTest<N>>& tests
 ) {

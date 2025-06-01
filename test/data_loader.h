@@ -1,15 +1,12 @@
-#ifndef DATA_LOADER_H
-#define DATA_LOADER_H
+#pragma once
 
 #include <array>
-#include <iostream>
 #include <fstream>
 #include <ranges>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include "../src/bigint/utils.h"
 #include "utils_for_test.h"
 
 
@@ -124,6 +121,3 @@ load_testdata(const std::string& path) -> std::vector<OperationTest<N>> {
 
 
 }
-
-
-#endif // DATA_LOADER_H

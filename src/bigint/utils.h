@@ -1,5 +1,4 @@
-#ifndef UTILS_H
-#define UTILS_H
+#pragma once
 
 #include <charconv>
 #include <stdexcept>
@@ -7,7 +6,7 @@
 #include <string_view>
 #include <source_location>
 #include <type_traits>
-#include <stdint.h>
+#include <cstdint>
 
 //      [[nodiscard]] conseval auto
 #define CONSTEVAL_AUTO [[nodiscard]] consteval auto
@@ -62,7 +61,7 @@ std::string concat(Args&&... args) {
 	return (_to_string(std::forward<Args>(args)) + ...);
 }
 
-std::string error_msg(std::string&& msg, const std::source_location& location = std::source_location::current()) {
+inline std::string error_msg(std::string&& msg, const std::source_location& location = std::source_location::current()) {
 	return concat(
 		"{", location.file_name(),
 		":", location.line(),
@@ -79,7 +78,7 @@ std::string error_msg(std::string&& msg, const std::source_location& location = 
 CONSTEXPR_VOID
 remove_chars_from_string(std::string& str, std::string_view chars_to_remove) {
 	for (const auto char_to_remove : chars_to_remove) {
-		str.erase(remove(str.begin(), str.end(), char_to_remove), str.end());
+		str.erase(std::ranges::remove(str, char_to_remove).begin(), str.end());
 	}
 }
 
@@ -89,7 +88,7 @@ remove_chars_from_string(std::string& str, std::string_view chars_to_remove) {
 namespace bigint::utils {
 
 template <class T>
-void __from_chars_throws(const std::string_view input, T &result, int base) {
+void _from_chars_throws(const std::string_view input, T &result, int base) {
 	const char* first = input.data();
 	const char* last = input.data() + input.size();
 
@@ -108,28 +107,28 @@ void __from_chars_throws(const std::string_view input, T &result, int base) {
 [[nodiscard]] inline uint32_t
 stoul(const std::string_view input, int base = 10) {
 	uint32_t result;
-	__from_chars_throws(input, result, base);
+	_from_chars_throws(input, result, base);
 	return result;
 }
 
 [[nodiscard]] inline int32_t
 stol(const std::string_view input, int base = 10) {
 	int32_t result;
-	__from_chars_throws(input, result, base);
+	_from_chars_throws(input, result, base);
 	return result;
 }
 
 [[nodiscard]] inline uint64_t
 stoull(const std::string_view input, int base = 10) {
 	uint64_t result;
-	__from_chars_throws(input, result, base);
+	_from_chars_throws(input, result, base);
 	return result;
 }
 
 [[nodiscard]] inline int64_t
 stoll(const std::string_view input, int base = 10) {
 	int64_t result;
-	__from_chars_throws(input, result, base);
+	_from_chars_throws(input, result, base);
 	return result;
 }
 
@@ -160,9 +159,6 @@ ipow(uint32_t base, uint8_t exponent) -> uint64_t {
 
 /**
  * @brief like std::abs(), but constexpr. (std::abs() is only constexpr since c++23.)
- * @param base
- * @param exponent
- * @return
  */
 template <std::integral T>
 CONSTEXPR_AUTO
@@ -254,15 +250,13 @@ uint64_t __inline div_u128_saturate(uint64_t high_dividend, uint64_t low_dividen
 		return low_dividend / divisor;
 	}
 	if (high_dividend < divisor) {
-		const auto a2 = (_private::uint128_t_(high_dividend) << 64) | _private::uint128_t_(low_dividend);
+		const auto a2 = (static_cast<_private::uint128_t_>(high_dividend) << 64) | static_cast<_private::uint128_t_>(low_dividend);
 		const auto q = a2 / divisor;
-		return (uint64_t)q;
+		return static_cast<uint64_t>(q);
 	} else {
-		// overflow is clammped to 2^64 - 1
-		return (uint64_t)0 - (uint64_t)1;
+		// overflow is clamped to 2^64 - 1
+		return static_cast<uint64_t>(0) - static_cast<uint64_t>(1);
 	}
 }
 
 }
-
-#endif // UTILS_H
