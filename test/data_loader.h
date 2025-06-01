@@ -12,6 +12,17 @@
 
 namespace test_utils {
 
+/**
+ * @brief trim from end (in place) https://stackoverflow.com/a/217605
+ * @param s
+ */
+inline void rtrim(std::string &s) {
+	s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+				// unsign char required to avoid undefined behavior. see https://en.cppreference.com/w/cpp/string/byte/isspace
+				return !std::isspace(ch);
+		}).base(), s.end());
+}
+
 
 [[nodiscard]] inline auto
 load_lines(const std::string& path) {
@@ -27,6 +38,11 @@ load_lines(const std::string& path) {
 	} else {
 		throw std::runtime_error(std::string("Cannot open file '") + path + "'.");
 	}
+
+	for (auto& line : result) {
+		rtrim(line);
+	}
+
 	return result;
 }
 
