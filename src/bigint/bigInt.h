@@ -339,8 +339,7 @@ namespace bigint {
 
 class BigIntAdapter2 : public IBigIntLike
 { // maybe use SSO instead? (SSO = Small String Optimization)
-
- public:
+public:
 	explicit constexpr
 	BigIntAdapter2(uint64_t lo, uint64_t hi, Sign sign=Sign::POS) noexcept
 		 : _lo(lo), _hi(hi), _sign(sign)
@@ -788,12 +787,12 @@ namespace bigint {
 namespace _private {
 CONSTEXPR_AUTO
 lshift_safe(uint64_t a, uint64_t b) {
-	return (b >= 64) ? 0 : a << b; // shifting by 64 bits for 64 bit int is undfined.
+	return (b >= 64) ? 0 : a << b; // shifting by 64 bits for 64 bit int is undefined.
 }
 
 CONSTEXPR_AUTO
 rshift_safe(uint64_t a, uint64_t b) {
-	return (b >= 64) ? 0 : a >> b; // shifting by 64 bits for 64 bit int is undfined.
+	return (b >= 64) ? 0 : a >> b; // shifting by 64 bits for 64 bit int is undefined.
 }
 
 }
@@ -929,7 +928,7 @@ operator<=>(const TLHS &a, const TRHS &b) -> std::strong_ordering {
 	if (!is_zero(a) && !is_zero(b) && a.sign() == b.sign()) {
 		std::size_t i;
 		for (i = std::max(a.size(), b.size()); i-->1 && a[i] == b[i];) {
-			// do nothin'
+			// do nothing
 		}
 		return a[i] <=> b[i];
 	}
@@ -1058,7 +1057,7 @@ add_ignore_sign(TRES &result, TLHS &a, TRHS &b) {
  */
 template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_VOID
-_sub_ignore_sign_no_gegative_result_private(TRES &result, TLHS &a, TRHS &b) {
+_sub_ignore_sign_no_negative_result_private(TRES &result, TLHS &a, TRHS &b) {
 	uint8_t c = 0; // carry
 	for (auto i = 0ull; i < result.size(); i++) {
 		const auto ai = a[i];
@@ -1086,10 +1085,10 @@ sub_ignore_sign(TRES &result, TLHS &a, TRHS &b) {
 	BIGINT_TRACY_ZONE_SCOPED;
 	const bool isNegative = abs(b) > abs(a);
 	if (isNegative) {
-		_sub_ignore_sign_no_gegative_result_private(result, b, a);
+		_sub_ignore_sign_no_negative_result_private(result, b, a);
 		result.sign() = Sign::NEG;
 	} else {
-		_sub_ignore_sign_no_gegative_result_private(result, a, b);
+		_sub_ignore_sign_no_negative_result_private(result, a, b);
 		result.sign() = Sign::POS;
 	}
 }
@@ -1262,10 +1261,8 @@ mult(uint64_t a, uint64_t b) -> BigIntAdapter2 {
 	c += (r < (r_01 << 32)) ? 1 : 0;
 	r += r_10 << 32;
 	c += (r < (r_10 << 32)) ? 1 : 0;
-	if (c != 0)
-		return BigIntAdapter2{r, c};
-	else
-		return BigIntAdapter2{r, 0};
+
+	return BigIntAdapter2{r, c};
 }
 
 template <is_BigInt_like TRES, is_BigInt_like TLHS>
@@ -1484,7 +1481,7 @@ divmod_ignore_sign(const TLHS& aa, const TRHS& bb) -> DivModResult<BigInt> {
 		if constexpr (!ignore_remainder) {
 			return {BigInt{0}, BigInt{aa}};
 		} else {
-			return {BigInt{0}, BigInt{1}}; // remainder could be any positive number. it is only used to signify that the remiander is non-zero.
+			return {BigInt{0}, BigInt{1}}; // remainder could be any positive number. it is only used to signify that the remainder is non-zero.
 		}
 	}
 
@@ -1699,7 +1696,7 @@ template <is_BigInt_like TLHS>
 BIGINT_TRACY_CONSTEXPR_VOID
 div(BigInt &result, TLHS &a, int32_t bb) {
 	if (bb < 0) {
-		auto neg_a = -a; // todo check undefined behavior with -a if result === a, because operator-() const-ifys a?
+		auto neg_a = -a; // todo check undefined behavior with -a if result === a, because operator-() const-ifies a?
 		div(result, neg_a, static_cast<uint32_t>(-bb));
 	} else {
 		div(result, a, static_cast<uint32_t>(bb));
@@ -1763,7 +1760,7 @@ namespace bigint {
 template <is_BigInt_like TLHS, one_of<uint32_t, int32_t> TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator%(const TLHS &a, TRHS b) -> TRHS {
-	return divmod1<TLHS, true>(a, b).r; // we can trunccate safely because the divisor only also is uint32_t.
+	return divmod1<TLHS, true>(a, b).r; // we can truncate safely because the divisor only also is uint32_t.
 }
 
 template <is_BigInt_like TLHS, one_of<uint64_t, int64_t> TRHS>
@@ -1794,7 +1791,7 @@ namespace bigint {
 
 /**
  * @brief calculates the integer square root of y using Newton's method.
- * @param y the value to get thes quare root of.
+ * @param y the value to get the quare root of.
  * @return the integer square root of y.
  * @throws std::domain_error if y < 0
  */
@@ -1804,7 +1801,7 @@ sqrt(const T& y) -> BigInt {
 	BIGINT_TRACY_ZONE_SCOPED;
 
 	if (is_neg(y)) {
-		throw std::domain_error{utils::error_msg("integer sqare root of a negative number is undefined.")};
+		throw std::domain_error{utils::error_msg("integer square root of a negative number is undefined.")};
 	}
 
 	// sqrt(0) == 0; sqrt(1) == 1
