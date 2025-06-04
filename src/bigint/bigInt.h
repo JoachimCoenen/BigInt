@@ -173,7 +173,7 @@ class BigInt : public IBigIntLike
 	CONSTEXPR_AUTO_DISCARD
 	operator=(const T &other) -> BigInt& {
 		BigInt tmp(other);
-		swap(*this, tmp);
+		std::swap(*this, tmp);
 		return *this;
 	}
 
@@ -242,9 +242,6 @@ class BigInt : public IBigIntLike
 		}
 	}
 
-	friend CONSTEXPR_VOID
-	swap(BigInt& a, BigInt& b) noexcept;
-
 public:
 	[[nodiscard]] auto
 	__data_for_testing_only() const -> std::vector<uint64_t>{
@@ -257,13 +254,6 @@ private:
 	std::vector<uint64_t> _data;
 	Sign _sign; // adds another 8 bytes :(
 };
-
-
-CONSTEXPR_VOID
-swap(BigInt& a, BigInt& b) noexcept {
-	std::swap(a._data, b._data);
-	std::swap(a._sign, b._sign);
-}
 
 }
 
@@ -322,21 +312,8 @@ class BigIntAdapter : public IBigIntLike
 	}
 
 private:
-	template<std::integral TT>
-	friend CONSTEXPR_VOID
-	swap(BigIntAdapter<TT>& a, BigIntAdapter<TT>& b) noexcept;
-
-private:
 	T _data;
 };
-
-
-template<std::integral T>
-CONSTEXPR_VOID
-swap(BigIntAdapter<T>& a, BigIntAdapter<T>& b) noexcept {
-	std::swap(a._data, b._data);
-}
-
 
 }
 
@@ -390,23 +367,10 @@ public:
 	}
 
 private:
-	friend CONSTEXPR_VOID
-	swap(BigIntAdapter2& a, BigIntAdapter2& b) noexcept;
-
-private:
 	uint64_t _lo;
 	uint64_t _hi;
 	Sign _sign;
 };
-
-
-CONSTEXPR_VOID
-swap(BigIntAdapter2& a, BigIntAdapter2& b) noexcept {
-	std::swap(a._lo, b._lo);
-	std::swap(a._hi, b._hi);
-	std::swap(a._sign, b._sign);
-}
-
 
 }
 
