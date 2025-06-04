@@ -160,6 +160,9 @@ class BigInt : public IBigIntLike
 		for (size_t i = 0; i < v.size(); ++i) {
 			_data[i] = v[i];
 		}
+		if (_data.empty()) {
+			_data.push_back(0);
+		}
 
 	}
 
@@ -232,7 +235,11 @@ class BigInt : public IBigIntLike
 	BIGINT_TRACY_CONSTEXPR_VOID
 	resize(std::size_t size) {
 		BIGINT_TRACY_ZONE_SCOPED;
-		_data.resize(size, 0);
+		// size 0 clears the BigInt and sets its value to 0.
+		_data.resize(std::max<size_t>(1, size), 0);
+		if (size == 0) {
+			_data[0] = 0;
+		}
 	}
 
 	friend CONSTEXPR_VOID
