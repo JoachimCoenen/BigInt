@@ -10,6 +10,9 @@
 #include <type_traits>
 #include <vector>
 
+#ifndef BIGINT_ENABLE_BOUNDS_CHECKS
+#	define BIGINT_ENABLE_BOUNDS_CHECKS 1
+#endif
 
 #ifdef BIGINT_TRACY_ENABLE
 //      [[nodiscard]] constexpr auto
@@ -191,18 +194,15 @@ class BigInt : public IBigIntLike
 
 	CONSTEXPR_AUTO
 	operator[](std::size_t index) const noexcept -> uint64_t {
-		return (index >= size()) ? 0ull : _data.at(index);
+		return index >= size() ? 0 : _data[index];
 	}
 
 	CONSTEXPR_VOID
 	set(std::size_t index, uint64_t digit) {
-		if (index >= _data.size()) {
-			auto msg = utils::concat(
-				"index out of bound.",
-				" size(): ", size(), " index: ", index, ".");
-			throw std::invalid_argument(utils::error_msg(std::move(msg)));
-		}
-		_data.at(index) = digit;
+#if BIGINT_ENABLE_BOUNDS_CHECKS
+		utils::check_bounds(index, size());
+#endif
+		_data[index] = digit;
 	}
 
 	CONSTEXPR_VOID
@@ -318,7 +318,7 @@ class BigIntAdapter : public IBigIntLike
 
 	CONSTEXPR_AUTO
 	operator[](std::size_t index) const noexcept -> std::make_unsigned_t<T> {
-		return (index >= size()) ? 0 : utils::constexpr_abs(_data);
+		return index >= size() ? 0 : utils::constexpr_abs(_data);
 	}
 
 private:
@@ -376,18 +376,17 @@ public:
 
 	CONSTEXPR_VOID
 	set(std::size_t index, uint64_t digit) {
+#if BIGINT_ENABLE_BOUNDS_CHECKS
+		utils::check_bounds(index, 2);
+#endif
 		switch (index) {
 		case 0:
 			_lo = digit; return;
 		case 1:
 			_hi = digit; return;
 		default:
-			auto msg = utils::concat(
-				"index out of bound.",
-				" size(): ", size(), " index: ", index, ".");
-			throw std::invalid_argument(utils::error_msg(std::move(msg)));
+			// we cannot get here if BIGINT_ENABLE_BOUNDS_CHECKS is enabled
 		}
-		// we cannot get here
 	}
 
 private:
@@ -567,7 +566,7 @@ public:
 
 	CONSTEXPR_AUTO
 	operator[](std::size_t index) const -> uint64_t {
-		return (index < _rhs) ? 0 : lhs()[index - _rhs];
+		return index < _rhs ? 0 : lhs()[index - _rhs];
 	}
 
 	BIGINT_TRACY_CONSTEXPR_VOID
@@ -612,23 +611,14 @@ public:
 
 	CONSTEXPR_AUTO
 	operator[](std::size_t index) const -> uint64_t {
-		if (index < 0) {
-			auto msg = utils::concat(
-				"index < 0.",
-				" index: ", index, ".");
-			throw std::invalid_argument(utils::error_msg(std::move(msg)));
-		}
 		return lhs()[index + _rhs];
 	}
 
 	CONSTEXPR_VOID
 	set(std::size_t index, uint64_t digit) {
-		if (index < 0) {
-			auto msg = utils::concat(
-				"index < 0.",
-				" index: ", index, ".");
-			throw std::invalid_argument(utils::error_msg(std::move(msg)));
-		}
+#if BIGINT_ENABLE_BOUNDS_CHECKS
+		utils::check_bounds(index, size());
+#endif
 		lhs().set(index + _rhs, digit);
 	}
 

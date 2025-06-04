@@ -261,3 +261,24 @@ uint64_t __inline div_u128_saturate(uint64_t high_dividend, uint64_t low_dividen
 }
 
 }
+
+// check_bounds
+namespace bigint::utils {
+
+/**
+ * Checks whether `index` is smaller than `size`.
+ * @param index the value to check
+ * @param size size of the array/vector/span/etc. to be indexed
+ * @throw std::invalid_argument if `index` is out of bounds.
+ */
+CONSTEXPR_AUTO
+check_bounds(size_t index, size_t size) {
+	if (index >= size) {
+		auto msg = concat(
+			"index out of bound.",
+			" size(): ", size, " index: ", index, ".");
+		throw std::invalid_argument(error_msg(std::move(msg)));
+	}
+}
+
+}
