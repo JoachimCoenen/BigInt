@@ -595,6 +595,46 @@ private:
 	lhs() -> T_Plain& { return _lhs; }
 };
 
+template <typename T>
+class BigIntRMasked : IBigIntLike {
+	using T_Plain = std::remove_cvref_t<T>;
+public:
+	constexpr BigIntRMasked(T_Plain&& lhs, const uint64_t shifted, const uint64_t mask_size) :
+		_lhs(std::move(lhs)), _shifted(shifted), _mask_size(mask_size) {}
+
+	constexpr BigIntRMasked(std::remove_reference_t<T>& lhs, const uint64_t shifted, const uint64_t mask_size) :
+		_lhs(lhs), _shifted(shifted), _mask_size(mask_size) {}
+
+	CONSTEXPR_AUTO
+	sign() const noexcept -> Sign {
+		return lhs().sign();
+	}
+
+	CONSTEXPR_AUTO
+	size() const -> std::size_t {
+		return _mask_size;
+	}
+
+	CONSTEXPR_AUTO
+	operator[](std::size_t index) const -> uint64_t {
+		return index >= size() ? 0 : lhs()[index + _shifted];
+	}
+
+	CONSTEXPR_AUTO
+	shifted() const -> uint64_t { return _shifted; }
+
+	CONSTEXPR_AUTO
+	mask_size() const -> uint64_t { return _mask_size; }
+
+	CONSTEXPR_AUTO
+	lhs() const -> const T_Plain& { return _lhs; }
+
+private:
+	T _lhs;
+	uint64_t _shifted;
+	uint64_t _mask_size;
+};
+
 
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
@@ -624,6 +664,42 @@ template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
 rshifted(TLHS&& a, uint64_t b) {
 	return BigIntRShifted<TLHS>(std::forward<TLHS>(a), b);
+}
+
+template <is_BigInt_like TLHS>
+CONSTEXPR_AUTO
+rmasked(const BigIntRMasked<const TLHS&>& a, uint64_t shifted, uint64_t mask_size) {
+	auto old_size = a.size();
+	auto old_size_shifted = old_size > shifted ? old_size - shifted : 0;
+	return BigIntRMasked<const TLHS&>(a.lhs(), a.shifted() + shifted, std::min(old_size_shifted, mask_size));
+}
+
+template <is_BigInt_like TLHS>
+CONSTEXPR_AUTO
+rmasked(const TLHS& a, uint64_t shifted, uint64_t mask_size) {
+	auto old_size = a.size();
+	auto old_size_shifted = old_size > shifted ? old_size - shifted : 0;
+	return BigIntRMasked<const TLHS&>(a, shifted, std::min(old_size_shifted, mask_size));
+}
+
+/**
+ * Convenience function to convert any IBigIntLike to a BigIntRMasked i order to reduce the amount of
+ * template specializations needed.
+ */
+template <is_BigInt_like TLHS>
+CONSTEXPR_AUTO
+rmasked(const BigIntRMasked<const TLHS&>& a) {
+	return BigIntRMasked<const TLHS&>(a.lhs(), a.shifted() , a.mask_size());
+}
+
+/**
+ * Convenience function to convert any IBigIntLike to a BigIntRMasked i order to reduce the amount of
+ * template specializations needed.
+ */
+template <is_BigInt_like TLHS>
+CONSTEXPR_AUTO
+rmasked(const TLHS& a) {
+	return BigIntRMasked<const TLHS&>(a, 0, a.size());
 }
 
 }
@@ -1251,7 +1327,7 @@ mult(TRES &result, TLHS &a, int64_t b) {
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
-mult(const TLHS &a, const TRHS &b) -> BigInt {
+_mult_naive_ignore_sign(const TLHS &a, const TRHS &b) -> BigInt {
 	BIGINT_TRACY_ZONE_SCOPED;
 	if (is_zero(a) || is_zero(b)) {
 		return BigInt{};
@@ -1267,6 +1343,80 @@ mult(const TLHS &a, const TRHS &b) -> BigInt {
 	result.sign() = _private::mult_sign(a.sign(), b.sign());
 	result.cleanup();
 	return result;
+}
+
+constexpr size_t MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA = 64;
+
+template <is_BigInt_like TLHS, is_BigInt_like TRHS>
+BIGINT_TRACY_CONSTEXPR_AUTO
+_mult_karatsuba_ignore_sign(const TLHS &lhs, const TRHS &rhs) -> BigInt {
+	BIGINT_TRACY_ZONE_SCOPED;
+	// xx = mm(ac) + m((a+b) * (c+d) - ac - bd) + (bd)
+	if (is_zero(lhs) || is_zero(rhs)) {
+		return  BigInt{};
+	}
+	if (lhs.size() + rhs.size() <= MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA) {
+		return _mult_naive_ignore_sign(rhs, lhs);
+	}
+	if (rhs.size() == 1) {
+		BigInt result;
+		mult(result, lhs, rhs[0]);
+		return result;
+	}
+	if (lhs.size() == 1) {
+		BigInt result;
+		mult(result, rhs, lhs[0]);
+		return result;
+	}
+
+	auto n = std::max(lhs.size(), rhs.size());
+
+	const auto mid = n >> 1;
+
+	const auto a = _private::rmasked(lhs, mid, lhs.size());
+	const auto b = _private::rmasked(lhs, 0, mid);
+	const auto c = _private::rmasked(rhs, mid, rhs.size());
+	const auto d = _private::rmasked(rhs, 0, mid);
+
+	const auto ac = _mult_karatsuba_ignore_sign(a, c);
+	const auto bd = _mult_karatsuba_ignore_sign(b, d);
+	auto ab_cd = _mult_karatsuba_ignore_sign(_private::rmasked(a+b), _private::rmasked(c+d));
+	ab_cd -= ac;
+	ab_cd -= bd;
+
+	auto result = _private::lshifted(ac, mid << 1) + _private::lshifted(ab_cd, mid);
+	result += bd;
+	return result;
+}
+
+template <is_BigInt_like TLHS, is_BigInt_like TRHS>
+BIGINT_TRACY_CONSTEXPR_AUTO
+mult_naive(const TLHS &lhs, const TRHS &rhs) -> BigInt {
+	auto result = rhs.size() > lhs.size() // put the number with more digits first.
+		? _mult_naive_ignore_sign(rhs, lhs)
+		: _mult_naive_ignore_sign(lhs, rhs);
+	result.sign() = _private::mult_sign(lhs.sign(), rhs.sign());
+
+	return result;
+}
+
+template <is_BigInt_like TLHS, is_BigInt_like TRHS>
+BIGINT_TRACY_CONSTEXPR_AUTO
+mult_karatsuba(const TLHS &lhs, const TRHS &rhs) -> BigInt {
+	auto result = rhs.size() > lhs.size() // put the number with more digits first.
+		? _mult_karatsuba_ignore_sign(_private::rmasked(lhs), _private::rmasked(rhs))
+		: _mult_karatsuba_ignore_sign(_private::rmasked(rhs), _private::rmasked(lhs));
+	result.sign() = _private::mult_sign(lhs.sign(), rhs.sign());
+
+	return result;
+}
+
+template <is_BigInt_like TLHS, is_BigInt_like TRHS>
+BIGINT_TRACY_CONSTEXPR_AUTO
+mult(const TLHS &a, const TRHS &b) -> BigInt {
+	return a.size() + b.size() <= MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA
+		? mult_naive(a, b)
+		: mult_karatsuba(a, b);
 }
 
 template <is_BigInt_like TLHS, std::integral TRHS>
