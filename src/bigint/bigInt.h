@@ -3,6 +3,7 @@
 #include "utils.h"
 
 // standard library
+#include <array>
 #include <cstdint>
 #include <limits>
 #include <sstream>
@@ -326,7 +327,7 @@ class BigIntAdapter2 : public IBigIntLike
 public:
 	explicit constexpr
 	BigIntAdapter2(uint64_t lo, uint64_t hi, Sign sign=Sign::POS) noexcept
-		 : _lo(lo), _hi(hi), _sign(sign)
+		 : _data({lo, hi}), _sign(sign)
 	{ }
 
 	CONSTEXPR_AUTO
@@ -335,20 +336,18 @@ public:
 	}
 
 	CONSTEXPR_AUTO
+	sign() noexcept -> Sign& {
+		return _sign;
+	}
+
+	CONSTEXPR_AUTO
 	size() const noexcept -> std::size_t {
-		return _hi != 0 ? 2 : 1;
+		return _data.back() != 0 ? 2 : 1;
 	}
 
 	CONSTEXPR_AUTO
 	operator[](std::size_t index) const noexcept -> uint64_t {
-		switch (index) {
-		case 0:
-			return _lo;
-		case 1:
-			return _hi;
-		default:
-			return 0;
-		}
+		return index >= 2 ? 0 : _data[index];
 	}
 
 	CONSTEXPR_VOID
@@ -356,19 +355,11 @@ public:
 #if BIGINT_ENABLE_BOUNDS_CHECKS
 		utils::check_bounds(index, 2);
 #endif
-		switch (index) {
-		case 0:
-			_lo = digit; return;
-		case 1:
-			_hi = digit; return;
-		default:
-			// we cannot get here if BIGINT_ENABLE_BOUNDS_CHECKS is enabled
-		}
+		_data[index] = digit;
 	}
 
 private:
-	uint64_t _lo;
-	uint64_t _hi;
+	std::array<uint64_t, 2> _data;
 	Sign _sign;
 };
 
