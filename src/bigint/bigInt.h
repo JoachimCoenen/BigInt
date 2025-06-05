@@ -646,6 +646,14 @@ public:
 		return index >= size() ? 0 : lhs()[index + _shifted];
 	}
 
+	CONSTEXPR_VOID
+	set(std::size_t index, uint64_t digit) {
+#if BIGINT_ENABLE_BOUNDS_CHECKS
+		utils::check_bounds(index, size());
+#endif
+		lhs().set(index + _shifted, digit);
+	}
+
 	CONSTEXPR_AUTO
 	shifted() const -> uint64_t { return _shifted; }
 
@@ -654,6 +662,8 @@ public:
 
 	CONSTEXPR_AUTO
 	lhs() const -> const T_Plain& { return _lhs; }
+	CONSTEXPR_AUTO
+	lhs() -> T_Plain& { return _lhs; }
 
 private:
 	T _lhs;
@@ -712,6 +722,22 @@ rmasked(const TLHS& a, uint64_t shifted, uint64_t mask_size) {
 	auto old_size = a.size();
 	auto old_size_shifted = old_size > shifted ? old_size - shifted : 0;
 	return BigIntRMasked<const TLHS&>(a, shifted, std::min(old_size_shifted, mask_size));
+}
+
+template <is_BigInt_like TLHS>
+CONSTEXPR_AUTO
+rmasked(BigIntRMasked<TLHS&>& a, uint64_t shifted, uint64_t mask_size) {
+	auto old_size = a.size();
+	auto old_size_shifted = old_size > shifted ? old_size - shifted : 0;
+	return BigIntRMasked<const TLHS&>(a.lhs(), a.shifted() + shifted, std::min(old_size_shifted, mask_size));
+}
+
+template <is_BigInt_like TLHS>
+CONSTEXPR_AUTO
+rmasked(TLHS& a, uint64_t shifted, uint64_t mask_size) {
+	auto old_size = a.size();
+	auto old_size_shifted = old_size > shifted ? old_size - shifted : 0;
+	return BigIntRMasked<TLHS&>(a, shifted, std::min(old_size_shifted, mask_size));
 }
 
 /**
@@ -1088,41 +1114,63 @@ operator!=(const TLHS &a, const TRHS &b) -> bool {
 namespace bigint::_private {
 
 /**
- * @brief add Ignores the sign of both operands
- * @param result
- * @param a
- * @param b
+ * @brief adds two integers ignoring their sign. `a.size()` *must* be equal or greater than `b.size()`.
+ * @param result the result will be put in here.
+ * @param a the operand with the most digits.
+ * @param b the operand with the least digits.
+ * @return carry
  */
 template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
-BIGINT_TRACY_CONSTEXPR_VOID
-add_ignore_sign(TRES &result, TLHS &a, TRHS &b) {
+BIGINT_TRACY_CONSTEXPR_AUTO
+_add_ignore_sign(TRES &result, TLHS &a, TRHS &b) -> bool {
 	BIGINT_TRACY_ZONE_SCOPED;
-	uint8_t c = 0; // carry
-	for (auto i = 0ull; i < result.size(); i++) {
+	assert(a.size() >= b.size());
+
+	bool c = false; // carry
+	size_t i = 0;
+	for (; i < b.size(); i++) {
 		const auto ai = a[i];
-		result.set(i, ai + b[i] + c);
-		c = (result[i] < ai || (c && result[i] == ai)) ? 1: 0;
+		auto result_i = ai + b[i];
+		if (c) { ++result_i; }
+		c = result_i < ai || (c && result_i == ai);
+		result.set(i, result_i);
 	}
-	if (c) {
-		result.append(c);
+
+	for (; i < result.size(); i++) {
+		const auto ai = a[i];
+		result.set(i, ai + (c ? 1 : 0));
+		c = ai == std::numeric_limits<decltype(ai)>::max() && c;
 	}
+
+	return c;
 }
 
-
 /**
- * @brief sub Ignores the sign of both operands
- * @param result
- * @param a
- * @param b
+ * @brief subtracts `b` from `a` ignoring their sign. `abs(a)` *must* be equal or greater than `abs(b)`.
+* @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
  */
 template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
 CONSTEXPR_VOID
-_sub_ignore_sign_no_negative_result_private(TRES &result, TLHS &a, TRHS &b) {
-	uint8_t c = 0; // carry
-	for (auto i = 0ull; i < result.size(); i++) {
+_sub_ignore_sign_no_negative_result(TRES &result, TLHS &a, TRHS &b) {
+	BIGINT_TRACY_ZONE_SCOPED;
+	assert(a.size() >= b.size());
+
+	bool c = false; // carry
+	size_t i = 0;
+	for (; i < b.size(); i++) {
 		const auto ai = a[i];
-		result.set(i, ai - b[i] - c);
-		c = (result[i] > ai || (c && result[i] == ai)) ? 1: 0;
+		auto result_i = ai - b[i];
+		if (c) { --result_i; }
+		c = result_i > ai || (c && result_i == ai);
+		result.set(i, result_i);
+	}
+
+	for (; i < result.size(); i++) {
+		const auto ai = a[i];
+		result.set(i, ai - (c ? 1 : 0));
+		c = ai == 0 && c;
 	}
 	if (c) { // should NEVER happen.
 		auto msg = utils::concat(
@@ -1132,12 +1180,32 @@ _sub_ignore_sign_no_negative_result_private(TRES &result, TLHS &a, TRHS &b) {
 	}
 }
 
+/**
+ * @brief adds two integers ignoring their sign.
+ * @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
+ * @return carry
+ */
+template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
+BIGINT_TRACY_CONSTEXPR_VOID
+add_ignore_sign(TRES &result, TLHS &a, TRHS &b) {
+	if (b.size() > a.size()) { // put the number with more digits first.
+		if (_add_ignore_sign(result, b, a)) {
+			result.append(1);
+		}
+	} else {
+		if (_add_ignore_sign(result, a, b)) {
+			result.append(1);
+		}
+	}
+}
 
 /**
- * @brief sub Ignores the sign of both operands
- * @param result
- * @param a
- * @param b
+ * @brief subtracts `b` from `a` ignoring their sign.
+ * @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
  */
 template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_VOID
@@ -1145,10 +1213,10 @@ sub_ignore_sign(TRES &result, TLHS &a, TRHS &b) {
 	BIGINT_TRACY_ZONE_SCOPED;
 	const bool isNegative = abs(b) > abs(a);
 	if (isNegative) {
-		_sub_ignore_sign_no_negative_result_private(result, b, a);
+		_sub_ignore_sign_no_negative_result(result, b, a);
 		result.sign() = Sign::NEG;
 	} else {
-		_sub_ignore_sign_no_negative_result_private(result, a, b);
+		_sub_ignore_sign_no_negative_result(result, a, b);
 		result.sign() = Sign::POS;
 	}
 }
@@ -1336,10 +1404,11 @@ mult(TRES &result, TLHS &a, uint64_t b) {
 	result.resize(a.size());
 
 	uint64_t c = 0; // carry
-	for (auto i = 0ull; i < a.size(); i++) {
+	for (size_t i = 0; i < a.size(); i++) {
 		const auto rc = mult(a[i], b);
-		result.set(i, rc[0] + c);
-		c = rc[1] + (result[i] < c ? 1 : 0); // account for addition overflow
+		auto result_i = rc[0] + c;
+		result.set(i, result_i);
+		c = rc[1] + (result_i < c ? 1 : 0); // account for addition overflow
 	}
 	if (c){
 		result.append(c);
@@ -1367,10 +1436,16 @@ _mult_naive_ignore_sign(const TLHS &a, const TRHS &b) -> BigInt {
 	BigInt result;
 	result.resize(a.size() + b.size());
 
-	for (auto i = 0ull; i < b.size(); i++) {
-		auto temp = a * b[i];
-		auto lshifted_temp = _private::lshifted(temp, i);
-		_private::add_ignore_sign(result, result, lshifted_temp);
+	BigInt temp;
+	for (size_t i = 0; i < b.size(); i++) {
+		mult(temp, a, b[i]);
+		auto rshifted_result = _private::rmasked(result, i, temp.size() + 1);
+		if (_private::_add_ignore_sign(rshifted_result, rshifted_result, temp)) {
+			auto msg = utils::concat(
+				"leftover carry! rshifted_result was not big enough. This is not supported."
+				" rshifted_result.size(): ", rshifted_result.size(), " temp.size(): ", temp.size(), ".");
+			throw std::invalid_argument(utils::error_msg(std::move(msg)));
+		}
 	}
 
 	result.cleanup();
