@@ -1548,7 +1548,7 @@ divmod_ignore_sign(const TLHS& aa, const TRHS& bb) -> DivModResult<BigInt>;
  * @param e estimator (?) for the divisor
  * @return
  */
-template <is_BigInt_like TLHS, is_BigInt_like TRHS, bool ignore_quotient, bool ignore_remainder>
+template <is_BigInt_like TLHS, is_BigInt_like TRHS, bool ignore_quotient>
 BIGINT_TRACY_CONSTEXPR_AUTO
 _divide_loop(const TLHS& a, const TRHS& b, uint64_t e) -> DivModResult<BigInt> {
 	const auto na = a.size();
@@ -1614,7 +1614,9 @@ divmod_ignore_sign(const TLHS& aa, const TRHS& bb) -> DivModResult<BigInt> {
 		if constexpr (!ignore_remainder) {
 			return {BigInt{0}, BigInt{aa}};
 		} else {
-			return {BigInt{0}, BigInt{1}}; // remainder could be any positive number. it is only used to signify that the remainder is non-zero.
+			return {BigInt{0}, BigInt{1}}; // remainder could be any positive number. It is only used to
+			                                            // signify that the remainder is non-zero. Used for correcting a
+			                                            // negative quotient in divmod(...)
 		}
 	}
 
@@ -1625,23 +1627,15 @@ divmod_ignore_sign(const TLHS& aa, const TRHS& bb) -> DivModResult<BigInt> {
 		const auto af = aa * f;
 		const auto bf = bb * f;
 		e = bf[bf.size() - 1];
-		auto result = _divide_loop<BigInt, _private::BigIntAbs<const BigInt&>, ignore_quotient, ignore_remainder>(af, abs(bf), e);
+		auto result = _divide_loop<BigInt, _private::BigIntAbs<const BigInt&>, ignore_quotient>(af, abs(bf), e);
 
 		if constexpr (!ignore_remainder) {
 			result.r = std::move(divmod_ignore_sign<BigInt, BigIntAdapter<uint64_t>, false, true>(result.r, BigIntAdapter{f}).d);
 		}
 		return result;
 	} else {
-		return _divide_loop<TLHS, _private::BigIntAbs<const TRHS&>, ignore_quotient, ignore_remainder>(aa, abs(bb), e);
+		return _divide_loop<TLHS, _private::BigIntAbs<const TRHS&>, ignore_quotient>(aa, abs(bb), e);
 	}
-}
-
-
-template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
-BIGINT_TRACY_CONSTEXPR_AUTO
-divmod_ignore_sign(const TLHS &a, const uint64_t &b) -> DivModResult<BigInt, uint64_t> {
-	const auto res = divmod_ignore_sign<TLHS, BigIntAdapter<uint64_t>, ignore_quotient, ignore_remainder>(a, BigIntAdapter{b});
-	return { res.d, res.r[0] };
 }
 
 }
@@ -1680,16 +1674,8 @@ template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remaind
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod(const TLHS &a, int64_t b) -> DivModResult<BigInt, int64_t> {
 	const auto res = divmod<TLHS, BigIntAdapter<int64_t>, ignore_quotient, ignore_remainder>(a, BigIntAdapter{b});
-
-	if constexpr (ignore_remainder) {
-		return { res.d, 0 };
-	} else {
-		auto r = static_cast<int64_t>(res.r[0]);
-		if (is_neg(res.r)) {
-			r = -r;
-		}
-		return { res.d, r };
-	}
+	auto r = static_cast<int64_t>(res.r[0]);
+	return { res.d, is_neg(res.r) ? -r : r };
 }
 
 template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
@@ -1911,8 +1897,7 @@ operator%(const TLHS &a, const TRHS &b) -> BigInt {
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator%=(TLHS &a, const TRHS &b) -> BigInt& {
-	const auto result = divmod<TLHS, TRHS, true>(a, b).r;
-	a = std::move(result);
+	a = divmod<TLHS, TRHS, true>(a, b).r;
 	return a;
 }
 
