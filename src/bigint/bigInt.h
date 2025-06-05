@@ -1426,14 +1426,15 @@ mult(TRES &result, TLHS &a, int64_t b) {
 	}
 }
 
-template <is_BigInt_like TLHS, is_BigInt_like TRHS>
-BIGINT_TRACY_CONSTEXPR_AUTO
-_mult_naive_ignore_sign(const TLHS &a, const TRHS &b) -> BigInt {
+template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
+BIGINT_TRACY_CONSTEXPR_VOID
+_mult_naive_ignore_sign(TRES &result, const TLHS &a, const TRHS &b) {
 	BIGINT_TRACY_ZONE_SCOPED;
 	if (is_zero(a) || is_zero(b)) {
-		return BigInt{};
+		result = BigInt{};
+		return;
 	}
-	BigInt result;
+
 	result.resize(a.size() + b.size());
 
 	BigInt temp;
@@ -1449,32 +1450,30 @@ _mult_naive_ignore_sign(const TLHS &a, const TRHS &b) -> BigInt {
 	}
 
 	result.cleanup();
-	return result;
 }
 
-
-template <is_BigInt_like TLHS, is_BigInt_like TRHS>
-BIGINT_TRACY_CONSTEXPR_AUTO
-_mult_karatsuba_ignore_sign(const TLHS &lhs, const TRHS &rhs) -> BigInt {
+template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
+BIGINT_TRACY_CONSTEXPR_VOID
+_mult_karatsuba_ignore_sign(TRES &result, const TLHS &lhs, const TRHS &rhs) {
 	BIGINT_TRACY_ZONE_SCOPED;
 	// xx = mm(ac) + m((a+b) * (c+d) - ac - bd) + (bd)
 	if (is_zero(lhs) || is_zero(rhs)) {
-		return  BigInt{};
+		result = BigInt{};
+		return;
 	}
 	if (lhs.size() + rhs.size() < _private::MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA) {
-		return _mult_naive_ignore_sign(rhs, lhs);
+		_mult_naive_ignore_sign(result, rhs, lhs);
+		return;
 	}
 	if (rhs.size() == 1) {
-		BigInt result;
 		mult(result, lhs, rhs[0]);
 		result.sign() = Sign::POS;
-		return result;
+		return;
 	}
 	if (lhs.size() == 1) {
-		BigInt result;
 		mult(result, rhs, lhs[0]);
 		result.sign() = Sign::POS;
-		return result;
+		return;
 	}
 
 	auto n = std::max(lhs.size(), rhs.size());
@@ -1486,8 +1485,11 @@ _mult_karatsuba_ignore_sign(const TLHS &lhs, const TRHS &rhs) -> BigInt {
 	const auto c = _private::rmasked(rhs, mid, rhs.size());
 	const auto d = _private::rmasked(rhs, 0, mid);
 
-	const auto ac = _mult_karatsuba_ignore_sign(a, c);
-	const auto bd = _mult_karatsuba_ignore_sign(b, d);
+	BigInt ac;
+	_mult_karatsuba_ignore_sign(ac, a, c);
+
+	BigInt bd;
+	_mult_karatsuba_ignore_sign(bd, b, d);
 
 	BigInt ab_cd;
 	{
@@ -1499,45 +1501,51 @@ _mult_karatsuba_ignore_sign(const TLHS &lhs, const TRHS &rhs) -> BigInt {
 		c_d.resize(std::max(c.size(), d.size()));
 		_private::add_ignore_sign(c_d, c, d);
 
-		ab_cd = _mult_karatsuba_ignore_sign(_private::rmasked(a_b), _private::rmasked(c_d));
+		_mult_karatsuba_ignore_sign(ab_cd, _private::rmasked(a_b), _private::rmasked(c_d));
 	}
 
 	ab_cd -= ac;
 	ab_cd -= bd;
 
-	auto result = _private::lshifted(ac, mid << 1) + _private::lshifted(ab_cd, mid);
+	result = _private::lshifted(ac, mid << 1);
+	result.resize(lhs.size() + rhs.size());
+	auto result_shifted = _private::rshifted(result, mid);
+	_private::_add_ignore_sign(result_shifted, result_shifted, ab_cd);
 	result += bd;
-	return result;
+
+	result.cleanup();
 }
 
-template <is_BigInt_like TLHS, is_BigInt_like TRHS>
-BIGINT_TRACY_CONSTEXPR_AUTO
-mult_naive(const TLHS &lhs, const TRHS &rhs) -> BigInt {
-	auto result = rhs.size() > lhs.size() // put the number with more digits first.
-		? _mult_naive_ignore_sign(rhs, lhs)
-		: _mult_naive_ignore_sign(lhs, rhs);
+template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
+BIGINT_TRACY_CONSTEXPR_VOID
+mult_naive(TRES &result, const TLHS &lhs, const TRHS &rhs) {
+	if (rhs.size() > lhs.size()) { // put the number with more digits first.
+		_mult_naive_ignore_sign(result, rhs, lhs);
+	} else {
+		_mult_naive_ignore_sign(result, lhs, rhs);
+	}
 	result.sign() = _private::mult_sign(lhs.sign(), rhs.sign());
-
-	return result;
 }
 
-template <is_BigInt_like TLHS, is_BigInt_like TRHS>
-BIGINT_TRACY_CONSTEXPR_AUTO
-mult_karatsuba(const TLHS &lhs, const TRHS &rhs) -> BigInt {
-	auto result = rhs.size() > lhs.size() // put the number with more digits first.
-		? _mult_karatsuba_ignore_sign(_private::rmasked(lhs), _private::rmasked(rhs))
-		: _mult_karatsuba_ignore_sign(_private::rmasked(rhs), _private::rmasked(lhs));
+template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
+BIGINT_TRACY_CONSTEXPR_VOID
+mult_karatsuba(TRES &result, const TLHS &lhs, const TRHS &rhs) {
+	if (rhs.size() > lhs.size()) { // put the number with more digits first.
+		_mult_karatsuba_ignore_sign(result, _private::rmasked(lhs), _private::rmasked(rhs));
+	} else {
+		_mult_karatsuba_ignore_sign(result, _private::rmasked(rhs), _private::rmasked(lhs));
+	}
 	result.sign() = _private::mult_sign(lhs.sign(), rhs.sign());
-
-	return result;
 }
 
-template <is_BigInt_like TLHS, is_BigInt_like TRHS>
-BIGINT_TRACY_CONSTEXPR_AUTO
-mult(const TLHS &a, const TRHS &b) -> BigInt {
-	return a.size() + b.size() <= _private::MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA
-		? mult_naive(a, b)
-		: mult_karatsuba(a, b);
+template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
+BIGINT_TRACY_CONSTEXPR_VOID
+mult(TRES &result, const TLHS &a, const TRHS &b) {
+	if (a.size() + b.size() < _private::MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA) {
+		mult_naive(result, a, b);
+	} else {
+		mult_karatsuba(result, a, b);
+	}
 }
 
 template <is_BigInt_like TLHS, std::integral TRHS>
@@ -1558,7 +1566,9 @@ operator*(TLHS a, const TRHS &b) -> BigInt {
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator*(const TLHS &a, const TRHS &b) -> BigInt {
-	return mult(a, b);
+	BigInt result;
+	mult(result, a, b);
+	return result;
 }
 
 template <is_BigInt_like TLHS, std::integral TRHS>
@@ -1572,7 +1582,9 @@ operator*=(TLHS &a, TRHS b) -> TLHS& {
 template <is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
 operator*=(BigInt &a, const TRHS &b) -> BigInt& {
-	a = std::move(mult(a, b));
+	BigInt result;
+	mult(result, a, b);
+	a = std::move(result);
 	return a;
 }
 
