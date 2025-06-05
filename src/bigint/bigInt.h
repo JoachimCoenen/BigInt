@@ -1372,7 +1372,7 @@ _mult_naive_ignore_sign(const TLHS &a, const TRHS &b) -> BigInt {
 		auto lshifted_temp = _private::lshifted(temp, i);
 		_private::add_ignore_sign(result, result, lshifted_temp);
 	}
-	result.sign() = _private::mult_sign(a.sign(), b.sign());
+
 	result.cleanup();
 	return result;
 }
@@ -1392,11 +1392,13 @@ _mult_karatsuba_ignore_sign(const TLHS &lhs, const TRHS &rhs) -> BigInt {
 	if (rhs.size() == 1) {
 		BigInt result;
 		mult(result, lhs, rhs[0]);
+		result.sign() = Sign::POS;
 		return result;
 	}
 	if (lhs.size() == 1) {
 		BigInt result;
 		mult(result, rhs, lhs[0]);
+		result.sign() = Sign::POS;
 		return result;
 	}
 
@@ -1411,7 +1413,20 @@ _mult_karatsuba_ignore_sign(const TLHS &lhs, const TRHS &rhs) -> BigInt {
 
 	const auto ac = _mult_karatsuba_ignore_sign(a, c);
 	const auto bd = _mult_karatsuba_ignore_sign(b, d);
-	auto ab_cd = _mult_karatsuba_ignore_sign(_private::rmasked(a+b), _private::rmasked(c+d));
+
+	BigInt ab_cd;
+	{
+		BigInt a_b;
+		a_b.resize(std::max(a.size(), b.size()));
+		_private::add_ignore_sign(a_b, a, b);
+
+		BigInt c_d;
+		c_d.resize(std::max(c.size(), d.size()));
+		_private::add_ignore_sign(c_d, c, d);
+
+		ab_cd = _mult_karatsuba_ignore_sign(_private::rmasked(a_b), _private::rmasked(c_d));
+	}
+
 	ab_cd -= ac;
 	ab_cd -= bd;
 
