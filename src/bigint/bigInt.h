@@ -4,6 +4,7 @@
 
 // standard library
 #include <array>
+#include <cassert>
 #include <cstdint>
 #include <limits>
 #include <sstream>
@@ -372,7 +373,7 @@ namespace bigint {
 template <is_BigInt_like T>
 CONSTEXPR_AUTO
 is_zero(const T &value) -> bool {
-	return value.size() == 1 && value[0] == 0;
+	return value.size() == 0 || (value.size() == 1 && value[0] == 0);
 }
 
 
@@ -498,11 +499,11 @@ template <typename T>
 class BigIntLShifted : IBigIntLike {
 	using T_Plain = std::remove_cvref_t<T>;
 public:
-	constexpr BigIntLShifted(T_Plain&& lhs, const uint64_t rhs) :
-		_lhs(std::move(lhs)), _rhs(rhs) {}
+	constexpr BigIntLShifted(T_Plain&& lhs, const uint64_t shifted) :
+		_lhs(std::move(lhs)), _shifted(shifted) {}
 
-	constexpr BigIntLShifted(std::remove_reference_t<T>& lhs, const uint64_t rhs) :
-		_lhs(lhs), _rhs(rhs) {}
+	constexpr BigIntLShifted(std::remove_reference_t<T>& lhs, const uint64_t shifted) :
+		_lhs(lhs), _shifted(shifted) {}
 
 	CONSTEXPR_AUTO
 	sign() const noexcept -> Sign {
@@ -516,12 +517,12 @@ public:
 
 	CONSTEXPR_AUTO
 	size() const -> std::size_t {
-		return lhs().size() + _rhs;
+		return lhs().size() + _shifted;
 	}
 
 	CONSTEXPR_AUTO
 	operator[](std::size_t index) const -> uint64_t {
-		return index < _rhs ? 0 : lhs()[index - _rhs];
+		return index < _shifted ? 0 : lhs()[index - _shifted];
 	}
 
 	BIGINT_TRACY_CONSTEXPR_VOID
@@ -531,7 +532,7 @@ public:
 
 private:
 	T _lhs;
-	uint64_t _rhs;
+	uint64_t _shifted;
 
 	CONSTEXPR_AUTO
 	lhs() const -> const T_Plain& { return _lhs; }
@@ -543,11 +544,11 @@ template <typename T>
 class BigIntRShifted : IBigIntLike {
 	using T_Plain = std::remove_cvref_t<T>;
 public:
-	constexpr BigIntRShifted(T_Plain&& lhs, const uint64_t rhs) :
-		_lhs(std::move(lhs)), _rhs(rhs) {}
+	constexpr BigIntRShifted(T_Plain&& lhs, const uint64_t _shifted) :
+		_lhs(std::move(lhs)), _shifted(_shifted) {}
 
-	constexpr BigIntRShifted(std::remove_reference_t<T>& lhs, const uint64_t rhs) :
-		_lhs(lhs), _rhs(rhs) {}
+	constexpr BigIntRShifted(std::remove_reference_t<T>& lhs, const uint64_t shifted) :
+		_lhs(lhs), _shifted(shifted) {}
 
 	CONSTEXPR_AUTO
 	sign() const noexcept -> Sign {
@@ -561,12 +562,13 @@ public:
 
 	CONSTEXPR_AUTO
 	size() const -> std::size_t {
-		return lhs().size() - _rhs;
+		assert(lhs().size() >= _shifted);
+		return lhs().size() - _shifted;
 	}
 
 	CONSTEXPR_AUTO
 	operator[](std::size_t index) const -> uint64_t {
-		return lhs()[index + _rhs];
+		return lhs()[index + _shifted];
 	}
 
 	CONSTEXPR_VOID
@@ -574,7 +576,7 @@ public:
 #if BIGINT_ENABLE_BOUNDS_CHECKS
 		utils::check_bounds(index, size());
 #endif
-		lhs().set(index + _rhs, digit);
+		lhs().set(index + _shifted, digit);
 	}
 
 	CONSTEXPR_VOID
@@ -587,7 +589,7 @@ public:
 
 private:
 	T _lhs;
-	uint64_t _rhs;
+	uint64_t _shifted;
 
 	CONSTEXPR_AUTO
 	lhs() const -> const T_Plain& { return _lhs; }
@@ -600,10 +602,14 @@ class BigIntRMasked : IBigIntLike {
 	using T_Plain = std::remove_cvref_t<T>;
 public:
 	constexpr BigIntRMasked(T_Plain&& lhs, const uint64_t shifted, const uint64_t mask_size) :
-		_lhs(std::move(lhs)), _shifted(shifted), _mask_size(mask_size) {}
+		_lhs(std::move(lhs)), _shifted(shifted), _mask_size(mask_size) {
+		assert(_lhs.size() - _shifted >= mask_size);
+	}
 
 	constexpr BigIntRMasked(std::remove_reference_t<T>& lhs, const uint64_t shifted, const uint64_t mask_size) :
-		_lhs(lhs), _shifted(shifted), _mask_size(mask_size) {}
+		_lhs(lhs), _shifted(shifted), _mask_size(mask_size) {
+		assert(_lhs.size() - _shifted >= mask_size);
+	}
 
 	CONSTEXPR_AUTO
 	sign() const noexcept -> Sign {
@@ -638,32 +644,38 @@ private:
 
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-lshifted(const TLHS& a, uint64_t b) {
-	return BigIntLShifted<const TLHS&>(a, b);
+lshifted(const TLHS& a, uint64_t shifted) {
+	return BigIntLShifted<const TLHS&>(a, is_zero(a) ? 0 : shifted);
 }
 
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-lshifted(TLHS&& a, uint64_t b) {
-	return BigIntLShifted<TLHS>(std::forward<TLHS>(a), b);
+lshifted(TLHS&& a, uint64_t shifted) {
+	return BigIntLShifted<TLHS>(std::forward<TLHS>(a), is_zero(a) ? 0 : shifted);
 }
 
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-rshifted(const TLHS& a, uint64_t b) {
-	return BigIntRShifted<const TLHS&>(a, b);
+rshifted(const TLHS& a, uint64_t shifted) {
+	auto old_size = a.size();
+	auto shifted_new = old_size > shifted ? shifted : old_size;
+	return BigIntRShifted<const TLHS&>(a, shifted_new);
 }
 
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-rshifted(TLHS& a, uint64_t b) {
-	return BigIntRShifted<TLHS&>(a, b);
+rshifted(TLHS& a, uint64_t shifted) {
+	auto old_size = a.size();
+	auto shifted_new = old_size > shifted ? shifted : old_size;
+	return BigIntRShifted<TLHS&>(a, shifted_new);
 }
 
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-rshifted(TLHS&& a, uint64_t b) {
-	return BigIntRShifted<TLHS>(std::forward<TLHS>(a), b);
+rshifted(TLHS&& a, uint64_t shifted) {
+	auto old_size = a.size();
+	auto shifted_new = old_size > shifted ? shifted_new : old_size;
+	return BigIntRShifted<TLHS>(std::forward<TLHS>(a), shifted);
 }
 
 template <is_BigInt_like TLHS>
