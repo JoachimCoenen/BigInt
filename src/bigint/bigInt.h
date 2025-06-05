@@ -44,6 +44,26 @@
 #endif
 
 
+namespace bigint::_private {
+/**
+ * When Multiplying two BigInts A and B, the Karatsuba multiplication algorithm gets chosen if the total number of
+ * digits in A and B together is equal to or exceeds this threshold.
+ *
+ * E.g.:
+ * | digits ...          |                        |
+ * | in A | in B | total | Algorithm used         |
+ * | ==== | ==== | ===== | ====================== |
+ * | 2    | 3    | 5     | naive (Big * Big)      |
+ * | 31   | 32   | 63    | naive (Big * Big)      |
+ * | 32   | 32   | 64    | Karatsuba              |
+ * | 96   | 2    | 98    | Karatsuba              |
+ * | 96   | 1    | 97    | naive (Big * uint64_t) |
+ *
+ * The optimal value seems to lie somewhere between 60 and 80, based on some basic testing.
+ */
+constexpr size_t MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA = 64;
+}
+
 namespace bigint {
 
 class IBigIntLike { };
@@ -1357,7 +1377,6 @@ _mult_naive_ignore_sign(const TLHS &a, const TRHS &b) -> BigInt {
 	return result;
 }
 
-constexpr size_t MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA = 64;
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
@@ -1367,7 +1386,7 @@ _mult_karatsuba_ignore_sign(const TLHS &lhs, const TRHS &rhs) -> BigInt {
 	if (is_zero(lhs) || is_zero(rhs)) {
 		return  BigInt{};
 	}
-	if (lhs.size() + rhs.size() <= MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA) {
+	if (lhs.size() + rhs.size() < _private::MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA) {
 		return _mult_naive_ignore_sign(rhs, lhs);
 	}
 	if (rhs.size() == 1) {
@@ -1426,7 +1445,7 @@ mult_karatsuba(const TLHS &lhs, const TRHS &rhs) -> BigInt {
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
 mult(const TLHS &a, const TRHS &b) -> BigInt {
-	return a.size() + b.size() <= MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA
+	return a.size() + b.size() <= _private::MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA
 		? mult_naive(a, b)
 		: mult_karatsuba(a, b);
 }
