@@ -146,8 +146,18 @@ enum class Sign: bool {
 namespace bigint::_private {
 
 CONSTEXPR_AUTO
-neg(Sign sign) -> Sign {
+neg(Sign sign) noexcept  -> Sign {
 	return (sign == Sign::POS) ? Sign::NEG : Sign::POS;
+}
+
+template<std::integral T>
+CONSTEXPR_AUTO
+get_sign(T v) noexcept -> Sign {
+	if constexpr (std::is_signed_v<T>) {
+		return v < 0 ? Sign::NEG : Sign::POS;
+	} else {
+		return Sign::POS;
+	}
 }
 
 }
@@ -264,6 +274,16 @@ class BigInt : public IBigIntLike
 		}
 	}
 
+	CONSTEXPR_AUTO
+	_span() noexcept -> utils::Span<uint64_t> {
+		return utils::Span{_data};
+	}
+
+	CONSTEXPR_AUTO
+	_span() const noexcept -> utils::Span<const uint64_t> {
+		return utils::Span{_data.data(), _data.size()};
+	}
+
 public:
 	[[nodiscard]] auto
 	__data_for_testing_only() const -> std::vector<uint64_t>{
@@ -280,47 +300,22 @@ private:
 }
 
 
-// copy_digits_to_from
-namespace bigint::_private {
-
-template <is_BigInt_like TLHS, is_BigInt_like TRHS>
-BIGINT_TRACY_CONSTEXPR_VOID
-copy_digits_to_from(TLHS &to, const TRHS& from) {
-	if (to.size() < from.size()) {
-		auto msg = utils::concat(
-			"Param 'to' must not have less digits than 'from'.",
-			" to.size(): ", to.size(), " from.size(): ", from.size(), ".");
-		throw std::invalid_argument(utils::error_msg(std::move(msg)));
-	}
-
-	for(auto i = from.size(); i --> 0;) {
-		to.set(i, from[i]);
-	}
-}
-
-}
-
-
 // class BigIntAdapter:
 namespace bigint {
 
-template<std::integral T>
 class BigIntAdapter : public IBigIntLike
 { // maybe use SSO instead? (SSO = Small String Optimization)
 
  public:
+	template<std::integral T>
 	explicit constexpr
 	BigIntAdapter(T v) noexcept
-		: _data(v)
+		: _data(utils::constexpr_abs(v)), _sign(_private::get_sign(v))
 	{ }
 
 	CONSTEXPR_AUTO
 	sign() const noexcept -> Sign {
-		if constexpr (std::is_signed_v<T>) {
-			return _data < 0 ? Sign::NEG : Sign::POS;
-		} else {
-			return Sign::POS;
-		}
+		return _sign;
 	}
 
 	CONSTEXPR_AUTO
@@ -329,12 +324,23 @@ class BigIntAdapter : public IBigIntLike
 	}
 
 	CONSTEXPR_AUTO
-	operator[](std::size_t index) const noexcept -> std::make_unsigned_t<T> {
+	operator[](std::size_t index) const noexcept -> uint64_t {
 		return index >= size() ? 0 : utils::constexpr_abs(_data);
 	}
 
+	CONSTEXPR_AUTO
+	_span() -> utils::Span<uint64_t> {
+		return utils::Span{&_data, 1};
+	}
+
+	CONSTEXPR_AUTO
+	_span() const noexcept -> utils::Span<const uint64_t> {
+		return utils::Span{&_data, 1};
+	}
+
 private:
-	T _data;
+	uint64_t _data;
+	Sign _sign;
 };
 
 }
@@ -379,6 +385,16 @@ public:
 		_data[index] = digit;
 	}
 
+	CONSTEXPR_AUTO
+	_span() -> utils::Span<uint64_t> {
+		return utils::Span{_data};
+	}
+
+	CONSTEXPR_AUTO
+	_span() const noexcept -> utils::Span<const uint64_t> {
+		return utils::Span<const uint64_t>{_data};
+	}
+
 private:
 	std::array<uint64_t, 2> _data;
 	Sign _sign;
@@ -390,10 +406,22 @@ private:
 // is_zero(), is_neg(), ...:
 namespace bigint {
 
+CONSTEXPR_AUTO
+is_zero(const utils::Span<const uint64_t> &value) -> bool {
+	if (value.empty() || value.size() == 1 && value[0] == 0)
+		return true;
+
+	for (size_t i = value.size(); i --> 0;) {
+		if (value[i])
+			return false;
+	}
+	return true;
+}
+
 template <is_BigInt_like T>
 CONSTEXPR_AUTO
 is_zero(const T &value) -> bool {
-	return value.size() == 0 || (value.size() == 1 && value[0] == 0);
+	return is_zero(value._span());
 }
 
 
@@ -560,118 +588,6 @@ private:
 	lhs() -> T_Plain& { return _lhs; }
 };
 
-template <typename T>
-class BigIntRShifted : IBigIntLike {
-	using T_Plain = std::remove_cvref_t<T>;
-public:
-	constexpr BigIntRShifted(T_Plain&& lhs, const uint64_t _shifted) :
-		_lhs(std::move(lhs)), _shifted(_shifted) {}
-
-	constexpr BigIntRShifted(std::remove_reference_t<T>& lhs, const uint64_t shifted) :
-		_lhs(lhs), _shifted(shifted) {}
-
-	CONSTEXPR_AUTO
-	sign() const noexcept -> Sign {
-		return lhs().sign();
-	}
-
-	CONSTEXPR_AUTO
-	sign() noexcept -> Sign& {
-		return lhs().sign();
-	}
-
-	CONSTEXPR_AUTO
-	size() const -> std::size_t {
-		assert(lhs().size() >= _shifted);
-		return lhs().size() - _shifted;
-	}
-
-	CONSTEXPR_AUTO
-	operator[](std::size_t index) const -> uint64_t {
-		return lhs()[index + _shifted];
-	}
-
-	CONSTEXPR_VOID
-	set(std::size_t index, uint64_t digit) {
-#if BIGINT_ENABLE_BOUNDS_CHECKS
-		utils::check_bounds(index, size());
-#endif
-		lhs().set(index + _shifted, digit);
-	}
-
-	CONSTEXPR_VOID
-	append(uint64_t v) { lhs().append(v); }
-
-	BIGINT_TRACY_CONSTEXPR_VOID
-	cleanup() {
-		lhs().cleanup();
-	}
-
-private:
-	T _lhs;
-	uint64_t _shifted;
-
-	CONSTEXPR_AUTO
-	lhs() const -> const T_Plain& { return _lhs; }
-	CONSTEXPR_AUTO
-	lhs() -> T_Plain& { return _lhs; }
-};
-
-template <typename T>
-class BigIntRMasked : IBigIntLike {
-	using T_Plain = std::remove_cvref_t<T>;
-public:
-	constexpr BigIntRMasked(T_Plain&& lhs, const uint64_t shifted, const uint64_t mask_size) :
-		_lhs(std::move(lhs)), _shifted(shifted), _mask_size(mask_size) {
-		assert(_lhs.size() - _shifted >= mask_size);
-	}
-
-	constexpr BigIntRMasked(std::remove_reference_t<T>& lhs, const uint64_t shifted, const uint64_t mask_size) :
-		_lhs(lhs), _shifted(shifted), _mask_size(mask_size) {
-		assert(_lhs.size() - _shifted >= mask_size);
-	}
-
-	CONSTEXPR_AUTO
-	sign() const noexcept -> Sign {
-		return lhs().sign();
-	}
-
-	CONSTEXPR_AUTO
-	size() const -> std::size_t {
-		return _mask_size;
-	}
-
-	CONSTEXPR_AUTO
-	operator[](std::size_t index) const -> uint64_t {
-		return index >= size() ? 0 : lhs()[index + _shifted];
-	}
-
-	CONSTEXPR_VOID
-	set(std::size_t index, uint64_t digit) {
-#if BIGINT_ENABLE_BOUNDS_CHECKS
-		utils::check_bounds(index, size());
-#endif
-		lhs().set(index + _shifted, digit);
-	}
-
-	CONSTEXPR_AUTO
-	shifted() const -> uint64_t { return _shifted; }
-
-	CONSTEXPR_AUTO
-	mask_size() const -> uint64_t { return _mask_size; }
-
-	CONSTEXPR_AUTO
-	lhs() const -> const T_Plain& { return _lhs; }
-	CONSTEXPR_AUTO
-	lhs() -> T_Plain& { return _lhs; }
-
-private:
-	T _lhs;
-	uint64_t _shifted;
-	uint64_t _mask_size;
-};
-
-
 template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
 lshifted(const TLHS& a, uint64_t shifted) {
@@ -684,80 +600,26 @@ lshifted(TLHS&& a, uint64_t shifted) {
 	return BigIntLShifted<TLHS>(std::forward<TLHS>(a), is_zero(a) ? 0 : shifted);
 }
 
-template <is_BigInt_like TLHS>
+
 CONSTEXPR_AUTO
-rshifted(const TLHS& a, uint64_t shifted) {
-	auto old_size = a.size();
-	auto shifted_new = old_size > shifted ? shifted : old_size;
-	return BigIntRShifted<const TLHS&>(a, shifted_new);
+rshifted(const utils::Span<const uint64_t>& a, uint64_t shifted) {
+	return a.subspan_trunc(shifted);
 }
 
-template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-rshifted(TLHS& a, uint64_t shifted) {
-	auto old_size = a.size();
-	auto shifted_new = old_size > shifted ? shifted : old_size;
-	return BigIntRShifted<TLHS&>(a, shifted_new);
+rshifted(const utils::Span<uint64_t>& a, uint64_t shifted) {
+	return a.subspan_trunc(shifted);
 }
 
-template <is_BigInt_like TLHS>
+
 CONSTEXPR_AUTO
-rshifted(TLHS&& a, uint64_t shifted) {
-	auto old_size = a.size();
-	auto shifted_new = old_size > shifted ? shifted_new : old_size;
-	return BigIntRShifted<TLHS>(std::forward<TLHS>(a), shifted);
+rmasked(const utils::Span<const uint64_t>& a, uint64_t shifted, uint64_t mask_size) {
+	return a.subspan_trunc(shifted, mask_size);
 }
 
-template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-rmasked(const BigIntRMasked<const TLHS&>& a, uint64_t shifted, uint64_t mask_size) {
-	auto old_size = a.size();
-	auto old_size_shifted = old_size > shifted ? old_size - shifted : 0;
-	return BigIntRMasked<const TLHS&>(a.lhs(), a.shifted() + shifted, std::min(old_size_shifted, mask_size));
-}
-
-template <is_BigInt_like TLHS>
-CONSTEXPR_AUTO
-rmasked(const TLHS& a, uint64_t shifted, uint64_t mask_size) {
-	auto old_size = a.size();
-	auto old_size_shifted = old_size > shifted ? old_size - shifted : 0;
-	return BigIntRMasked<const TLHS&>(a, shifted, std::min(old_size_shifted, mask_size));
-}
-
-template <is_BigInt_like TLHS>
-CONSTEXPR_AUTO
-rmasked(BigIntRMasked<TLHS&>& a, uint64_t shifted, uint64_t mask_size) {
-	auto old_size = a.size();
-	auto old_size_shifted = old_size > shifted ? old_size - shifted : 0;
-	return BigIntRMasked<const TLHS&>(a.lhs(), a.shifted() + shifted, std::min(old_size_shifted, mask_size));
-}
-
-template <is_BigInt_like TLHS>
-CONSTEXPR_AUTO
-rmasked(TLHS& a, uint64_t shifted, uint64_t mask_size) {
-	auto old_size = a.size();
-	auto old_size_shifted = old_size > shifted ? old_size - shifted : 0;
-	return BigIntRMasked<TLHS&>(a, shifted, std::min(old_size_shifted, mask_size));
-}
-
-/**
- * Convenience function to convert any IBigIntLike to a BigIntRMasked i order to reduce the amount of
- * template specializations needed.
- */
-template <is_BigInt_like TLHS>
-CONSTEXPR_AUTO
-rmasked(const BigIntRMasked<const TLHS&>& a) {
-	return BigIntRMasked<const TLHS&>(a.lhs(), a.shifted() , a.mask_size());
-}
-
-/**
- * Convenience function to convert any IBigIntLike to a BigIntRMasked i order to reduce the amount of
- * template specializations needed.
- */
-template <is_BigInt_like TLHS>
-CONSTEXPR_AUTO
-rmasked(const TLHS& a) {
-	return BigIntRMasked<const TLHS&>(a, 0, a.size());
+rmasked(const utils::Span<uint64_t>& a, uint64_t shifted, uint64_t mask_size) {
+	return a.subspan_trunc(shifted, mask_size);
 }
 
 }
@@ -793,6 +655,16 @@ public:
 		return lhs()[index];
 	}
 
+	CONSTEXPR_AUTO
+	_span() noexcept -> utils::Span<const uint64_t> {
+		return _lhs._span();
+	}
+
+	CONSTEXPR_AUTO
+	_span() const noexcept -> utils::Span<const uint64_t> {
+		return _lhs._span();
+	}
+
 private:
 	T _lhs;
 
@@ -825,6 +697,16 @@ public:
 	CONSTEXPR_AUTO
 	operator[](std::size_t index) const -> uint64_t {
 		return lhs()[index];
+	}
+
+	CONSTEXPR_AUTO
+	_span() noexcept -> utils::Span<const uint64_t> {
+		return _lhs._span();
+	}
+
+	CONSTEXPR_AUTO
+	_span() const noexcept -> utils::Span<const uint64_t> {
+		return _lhs._span();
 	}
 
 private:
@@ -1003,6 +885,35 @@ operator>>=(TLHS &a, uint64_t digits) -> TLHS& {
 // comparison operators:
 namespace bigint {
 
+BIGINT_TRACY_CONSTEXPR_AUTO
+operator<=>(const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b) -> std::strong_ordering {
+	BIGINT_TRACY_ZONE_SCOPED;
+	if (is_zero(a) && is_zero(b)) {
+		return std::strong_ordering::equal;
+	}
+
+	if (!is_zero(a) && !is_zero(b)) {
+
+		if (a.size() > b.size()) {
+			for (size_t i = a.size(); i --> b.size();) {
+				if (a[i]) { return std::strong_ordering::greater; }
+			}
+		} else if (b.size() > a.size()) {
+			for (size_t i = b.size(); i --> a.size();) {
+				if (b[i]) { return std::strong_ordering::less; }
+			}
+		}
+
+		size_t i;
+		for (i = std::min(a.size(), b.size()); i --> 1 && a[i] == b[i];) {
+			// do nothing
+		}
+		return a[i] <=> b[i];
+	}
+
+	return is_zero(a) ? std::strong_ordering::less : std::strong_ordering::greater;
+}
+
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator<=>(const TLHS &a, const TRHS &b) -> std::strong_ordering {
@@ -1012,11 +923,7 @@ operator<=>(const TLHS &a, const TRHS &b) -> std::strong_ordering {
 	}
 
 	if (!is_zero(a) && !is_zero(b) && a.sign() == b.sign()) {
-		std::size_t i;
-		for (i = std::max(a.size(), b.size()); i-->1 && a[i] == b[i];) {
-			// do nothing
-		}
-		return a[i] <=> b[i];
+		return a._span() <=> b._span();
 	}
 
 	return (is_neg(a) || is_pos(b)) ? std::strong_ordering::less : std::strong_ordering::greater;
@@ -1120,63 +1027,82 @@ namespace bigint::_private {
  * @param b the operand with the least digits.
  * @return carry
  */
-template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
-BIGINT_TRACY_CONSTEXPR_AUTO
-_add_ignore_sign(TRES &result, TLHS &a, TRHS &b) -> bool {
+BIGINT_TRACY_CONSTEXPR_VOID
+_add_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b) {
 	BIGINT_TRACY_ZONE_SCOPED;
 	assert(a.size() >= b.size());
+	assert(result.size() >= a.size());
 
 	bool c = false; // carry
 	size_t i = 0;
-	for (; i < b.size(); i++) {
+	for (; i < b.size(); ++i) {
 		const auto ai = a[i];
 		auto result_i = ai + b[i];
 		if (c) { ++result_i; }
 		c = result_i < ai || (c && result_i == ai);
-		result.set(i, result_i);
+		result[i] = result_i;
 	}
 
-	for (; i < result.size(); i++) {
+	for (; i < a.size(); ++i) {
 		const auto ai = a[i];
-		result.set(i, ai + (c ? 1 : 0));
+		result[i] = ai + (c ? 1 : 0);
 		c = ai == std::numeric_limits<decltype(ai)>::max() && c;
 	}
 
-	return c;
+	if (c) {
+		result[i] = 1;
+		++i;
+	}
+
+	for (; i < result.size(); ++i) {
+		result[i] = 0;
+	}
 }
 
 /**
  * @brief subtracts `b` from `a` ignoring their sign. `abs(a)` *must* be equal or greater than `abs(b)`.
-* @param result the result will be put in here.
+ * @param result the result will be put in here.
  * @param a the first operand.
  * @param b the second operand.
  */
-template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
-CONSTEXPR_VOID
-_sub_ignore_sign_no_negative_result(TRES &result, TLHS &a, TRHS &b) {
+BIGINT_TRACY_CONSTEXPR_VOID
+_sub_ignore_sign_no_negative_result(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b) {
 	BIGINT_TRACY_ZONE_SCOPED;
-	assert(a.size() >= b.size());
+	assert(result.size() >= std::max(a.size(), b.size()));
 
 	bool c = false; // carry
 	size_t i = 0;
-	for (; i < b.size(); i++) {
+	const auto min_size = std::min(a.size(), b.size());
+	for (; i < min_size; ++i) {
 		const auto ai = a[i];
 		auto result_i = ai - b[i];
 		if (c) { --result_i; }
 		c = result_i > ai || (c && result_i == ai);
-		result.set(i, result_i);
+		result[i] = result_i;
 	}
 
-	for (; i < result.size(); i++) {
-		const auto ai = a[i];
-		result.set(i, ai - (c ? 1 : 0));
-		c = ai == 0 && c;
+	if (a.size() >= b.size()) {
+		for (; i < a.size(); ++i) {
+			const auto ai = a[i];
+			result[i] = ai - (c ? 1 : 0);
+			c = ai == 0 && c;
+		}
+	} else {
+		if (!is_zero(b.subspan_trunc(a.size()))) {
+			std::string msg = "abs(b) was greater than abs(a). This is not supported.";
+			throw std::invalid_argument(utils::error_msg(std::move(msg)));
+		}
 	}
+
 	if (c) { // should NEVER happen.
 		auto msg = utils::concat(
 			"leftover carry! abs(b) was greater than abs(a). This is not supported.",
 			" c: ", c, ".");
 		throw std::invalid_argument(utils::error_msg(std::move(msg)));
+	}
+
+	for (; i < result.size(); ++i) {
+		result[i] = 0;
 	}
 }
 
@@ -1187,17 +1113,12 @@ _sub_ignore_sign_no_negative_result(TRES &result, TLHS &a, TRHS &b) {
  * @param b the second operand.
  * @return carry
  */
-template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_VOID
-add_ignore_sign(TRES &result, TLHS &a, TRHS &b) {
+add_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b) {
 	if (b.size() > a.size()) { // put the number with more digits first.
-		if (_add_ignore_sign(result, b, a)) {
-			result.append(1);
-		}
+		_add_ignore_sign(result, b, a);
 	} else {
-		if (_add_ignore_sign(result, a, b)) {
-			result.append(1);
-		}
+		_add_ignore_sign(result, a, b);
 	}
 }
 
@@ -1207,17 +1128,16 @@ add_ignore_sign(TRES &result, TLHS &a, TRHS &b) {
  * @param a the first operand.
  * @param b the second operand.
  */
-template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
-BIGINT_TRACY_CONSTEXPR_VOID
-sub_ignore_sign(TRES &result, TLHS &a, TRHS &b) {
+BIGINT_TRACY_CONSTEXPR_AUTO
+sub_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b) -> Sign {
 	BIGINT_TRACY_ZONE_SCOPED;
-	const bool isNegative = abs(b) > abs(a);
+	const bool isNegative = (a <=> b) == std::strong_ordering::less;
 	if (isNegative) {
 		_sub_ignore_sign_no_negative_result(result, b, a);
-		result.sign() = Sign::NEG;
+		return Sign::NEG;
 	} else {
 		_sub_ignore_sign_no_negative_result(result, a, b);
-		result.sign() = Sign::POS;
+		return Sign::POS;
 	}
 }
 
@@ -1230,18 +1150,18 @@ namespace bigint {
 template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_VOID
 add(TRES &result, TLHS &a, const TRHS &b) {
-	result.resize(std::max(a.size(), b.size()));
+	result.resize(std::max(a.size(), b.size()) + 1);
 	if (is_pos(a)) {
 		if (is_pos(b)) {
-			_private::add_ignore_sign(result, a, const_cast<TRHS&>(b));
+			_private::add_ignore_sign(result._span(), a._span(), const_cast<TRHS&>(b)._span());
 		} else {
-			_private::sub_ignore_sign(result, a, const_cast<TRHS&>(b));
+			result.sign() = _private::sub_ignore_sign(result._span(), a._span(), const_cast<TRHS&>(b)._span());
 		}
 	} else {
 		if (is_pos(b)) {
-			_private::sub_ignore_sign(result, const_cast<TRHS&>(b), a);
+			result.sign() = _private::sub_ignore_sign(result._span(), const_cast<TRHS&>(b)._span(), a._span());
 		} else {
-			_private::add_ignore_sign(result, a, const_cast<TRHS&>(b));
+			_private::add_ignore_sign(result._span(), a._span(), const_cast<TRHS&>(b)._span());
 			result.sign() = Sign::NEG;
 		}
 	}
@@ -1294,19 +1214,19 @@ namespace bigint {
 template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_VOID
 sub(TRES &result, TLHS &a, const TRHS &b) {
-	result.resize(std::max(a.size(), b.size()));
+	result.resize(std::max(a.size(), b.size()) + 1);
 	if (is_pos(a)) {
 		if (is_pos(b)) {
-			_private::sub_ignore_sign(result, a, const_cast<TRHS&>(b));
+			result.sign() = _private::sub_ignore_sign(result._span(), a._span(), const_cast<TRHS&>(b)._span());
 		} else {
-			_private::add_ignore_sign(result, a, const_cast<TRHS&>(b));
+			_private::add_ignore_sign(result._span(), a._span(), const_cast<TRHS&>(b)._span());
 		}
 	} else {
 		if (is_pos(b)) {
-			_private::add_ignore_sign(result, a, const_cast<TRHS&>(b));
+			_private::add_ignore_sign(result._span(), a._span(), const_cast<TRHS&>(b)._span());
 			result.sign() = Sign::NEG;
 		} else {
-			_private::sub_ignore_sign(result, const_cast<TRHS&>(b), a);
+			result.sign() = _private::sub_ignore_sign(result._span(), const_cast<TRHS&>(b)._span(), a._span());
 		}
 	}
 	result.cleanup();
@@ -1393,6 +1313,32 @@ mult(uint64_t a, uint64_t b) -> BigIntAdapter2 {
 	return BigIntAdapter2{r, c};
 }
 
+namespace _private {
+
+	BIGINT_TRACY_CONSTEXPR_VOID
+	_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, uint64_t b) {
+		BIGINT_TRACY_ZONE_SCOPED;
+		uint64_t c = 0; // carry
+		size_t i = 0;
+		for (; i < a.size(); i++) {
+			const auto rc = mult(a[i], b);
+			auto result_i = rc[0] + c;
+			result[i] = result_i;
+			c = rc[1] + (result_i < c ? 1 : 0); // account for addition overflow
+		}
+
+		if (c) {
+			result[i] = c;
+			++i;
+		}
+
+		for (; i < result.size(); ++i) {
+			result[i] = 0;
+		}
+	}
+
+}
+
 template <is_BigInt_like TRES, is_BigInt_like TLHS>
 BIGINT_TRACY_CONSTEXPR_VOID
 mult(TRES &result, TLHS &a, uint64_t b) {
@@ -1401,18 +1347,9 @@ mult(TRES &result, TLHS &a, uint64_t b) {
 		result = BigInt{};
 		return;
 	}
-	result.resize(a.size());
 
-	uint64_t c = 0; // carry
-	for (size_t i = 0; i < a.size(); i++) {
-		const auto rc = mult(a[i], b);
-		auto result_i = rc[0] + c;
-		result.set(i, result_i);
-		c = rc[1] + (result_i < c ? 1 : 0); // account for addition overflow
-	}
-	if (c){
-		result.append(c);
-	};
+	result.resize(a.size() + 1);
+	_private::_mult_naive_ignore_sign(result._span(), a._span(), b);
 	result.sign() = a.sign();
 	result.cleanup();
 }
@@ -1426,116 +1363,131 @@ mult(TRES &result, TLHS &a, int64_t b) {
 	}
 }
 
-template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
-BIGINT_TRACY_CONSTEXPR_VOID
-_mult_naive_ignore_sign(TRES &result, const TLHS &a, const TRHS &b) {
-	BIGINT_TRACY_ZONE_SCOPED;
-	if (is_zero(a) || is_zero(b)) {
-		result = BigInt{};
-		return;
-	}
 
-	result.resize(a.size() + b.size());
+namespace _private {
+	BIGINT_TRACY_CONSTEXPR_VOID
+	_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b) {
+		BIGINT_TRACY_ZONE_SCOPED;
+		if (is_zero(a) || is_zero(b)) {
+			std::fill(result.begin(), result.end(), 0);
+			return;
+		}
 
-	BigInt temp;
-	for (size_t i = 0; i < b.size(); i++) {
-		mult(temp, a, b[i]);
-		auto rshifted_result = _private::rmasked(result, i, temp.size() + 1);
-		if (_private::_add_ignore_sign(rshifted_result, rshifted_result, temp)) {
-			auto msg = utils::concat(
-				"leftover carry! rshifted_result was not big enough. This is not supported."
-				" rshifted_result.size(): ", rshifted_result.size(), " temp.size(): ", temp.size(), ".");
-			throw std::invalid_argument(utils::error_msg(std::move(msg)));
+		// fill first digits with zeros, so we do not add to what ever garbage was in there.
+		std::fill_n(result.begin(), std::min(a.size() + 1, result.size()), 0);
+		// we don't need to fill all digits, because all subsequent digits are replaced by the carry of the previous addition.
+
+		std::vector<uint64_t> temp_vec;
+		temp_vec.resize(a.size() + 1, 0);
+		utils::Span<uint64_t> temp(temp_vec);
+		size_t i = 0;
+		for (i = 0; i < b.size(); i++) {
+			_mult_naive_ignore_sign(temp, a, b[i]);
+			_add_ignore_sign(rmasked(result, i, temp.size() + 1), rmasked(result, i, temp.size()), temp);
+		}
+
+		i += temp.size() + 1;
+
+		for (; i < result.size(); ++i) {
+			result[i] = 0;
 		}
 	}
 
-	result.cleanup();
-}
+	BIGINT_TRACY_CONSTEXPR_VOID
+	_mult_karatsuba_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &lhs, const utils::Span<const uint64_t> &rhs) {
+		BIGINT_TRACY_ZONE_SCOPED;
+		// xx = mm(ac) + m((a+b) * (c+d) - ac - bd) + (bd)
+		if (is_zero(lhs) || is_zero(rhs)) {
+			std::fill(result.begin(), result.end(), 0);
+			return;
+		}
+		if (lhs.size() + rhs.size() < MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA) {
+			_mult_naive_ignore_sign(result, rhs, lhs);
+			return;
+		}
+		if (rhs.size() == 1) {
+			_mult_naive_ignore_sign(result, lhs, rhs[0]);
+			return;
+		}
+		if (lhs.size() == 1) {
+			_mult_naive_ignore_sign(result, rhs, lhs[0]);
+			return;
+		}
 
-template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
-BIGINT_TRACY_CONSTEXPR_VOID
-_mult_karatsuba_ignore_sign(TRES &result, const TLHS &lhs, const TRHS &rhs) {
-	BIGINT_TRACY_ZONE_SCOPED;
-	// xx = mm(ac) + m((a+b) * (c+d) - ac - bd) + (bd)
-	if (is_zero(lhs) || is_zero(rhs)) {
-		result = BigInt{};
-		return;
+		auto n = std::max(lhs.size(), rhs.size());
+
+		const auto mid = n >> 1;
+
+		const auto a = _private::rmasked(lhs, mid, lhs.size());
+		const auto b = _private::rmasked(lhs, 0, mid);
+		const auto c = _private::rmasked(rhs, mid, rhs.size());
+		const auto d = _private::rmasked(rhs, 0, mid);
+
+		BigInt ac;
+		ac.resize(a.size() + c.size());
+		_mult_karatsuba_ignore_sign(ac._span(), a, c);
+		ac.cleanup();
+
+		BigInt bd;
+		bd.resize(b.size() + d.size());
+		_mult_karatsuba_ignore_sign(bd._span(), b, d);
+		bd.cleanup();
+
+		BigInt ab_cd;
+		{
+			BigInt a_b;
+			a_b.resize(std::max(a.size(), b.size()) + 1);
+			add_ignore_sign(a_b._span(), a, b);
+			a_b.cleanup();
+
+
+			BigInt c_d;
+			c_d.resize(std::max(c.size(), d.size()) + 1);
+			add_ignore_sign(c_d._span(), c, d);
+			c_d.cleanup();
+
+			ab_cd.resize(a_b.size() + c_d.size());
+			_mult_karatsuba_ignore_sign(ab_cd._span(), a_b._span(), c_d._span());
+			ab_cd.cleanup();
+		}
+
+		[[maybe_unused]] auto sign = sub_ignore_sign(ab_cd._span(), ab_cd._span(), ac._span());
+		ab_cd.cleanup();
+		[[maybe_unused]] auto sign2 = sub_ignore_sign(ab_cd._span(), ab_cd._span(), bd._span());
+		ab_cd.cleanup();
+
+		std::copy(ac._span().begin(), ac._span().end(), (result.begin()) + (mid << 1));
+		auto result_shifted = rshifted(result, mid);
+		_add_ignore_sign(result_shifted, result_shifted, ab_cd._span());
+		_add_ignore_sign(result, result, bd._span());
 	}
-	if (lhs.size() + rhs.size() < _private::MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA) {
-		_mult_naive_ignore_sign(result, rhs, lhs);
-		return;
-	}
-	if (rhs.size() == 1) {
-		mult(result, lhs, rhs[0]);
-		result.sign() = Sign::POS;
-		return;
-	}
-	if (lhs.size() == 1) {
-		mult(result, rhs, lhs[0]);
-		result.sign() = Sign::POS;
-		return;
-	}
 
-	auto n = std::max(lhs.size(), rhs.size());
-
-	const auto mid = n >> 1;
-
-	const auto a = _private::rmasked(lhs, mid, lhs.size());
-	const auto b = _private::rmasked(lhs, 0, mid);
-	const auto c = _private::rmasked(rhs, mid, rhs.size());
-	const auto d = _private::rmasked(rhs, 0, mid);
-
-	BigInt ac;
-	_mult_karatsuba_ignore_sign(ac, a, c);
-
-	BigInt bd;
-	_mult_karatsuba_ignore_sign(bd, b, d);
-
-	BigInt ab_cd;
-	{
-		BigInt a_b;
-		a_b.resize(std::max(a.size(), b.size()));
-		_private::add_ignore_sign(a_b, a, b);
-
-		BigInt c_d;
-		c_d.resize(std::max(c.size(), d.size()));
-		_private::add_ignore_sign(c_d, c, d);
-
-		_mult_karatsuba_ignore_sign(ab_cd, _private::rmasked(a_b), _private::rmasked(c_d));
-	}
-
-	ab_cd -= ac;
-	ab_cd -= bd;
-
-	result = _private::lshifted(ac, mid << 1);
-	result.resize(lhs.size() + rhs.size());
-	auto result_shifted = _private::rshifted(result, mid);
-	_private::_add_ignore_sign(result_shifted, result_shifted, ab_cd);
-	result += bd;
-
-	result.cleanup();
 }
 
 template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_VOID
 mult_naive(TRES &result, const TLHS &lhs, const TRHS &rhs) {
+	result.resize(lhs.size() + rhs.size());
 	if (rhs.size() > lhs.size()) { // put the number with more digits first.
-		_mult_naive_ignore_sign(result, rhs, lhs);
+		_private::_mult_naive_ignore_sign(result._span(), rhs._span(), lhs._span());
 	} else {
-		_mult_naive_ignore_sign(result, lhs, rhs);
+		_private::_mult_naive_ignore_sign(result._span(), lhs._span(), rhs._span());
 	}
 	result.sign() = _private::mult_sign(lhs.sign(), rhs.sign());
+	result.cleanup();
 }
 
 template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_VOID
 mult_karatsuba(TRES &result, const TLHS &lhs, const TRHS &rhs) {
+	result.resize(lhs.size() + rhs.size());
 	if (rhs.size() > lhs.size()) { // put the number with more digits first.
-		_mult_karatsuba_ignore_sign(result, _private::rmasked(lhs), _private::rmasked(rhs));
+		_private::_mult_karatsuba_ignore_sign(result._span(), lhs._span(), rhs._span());
 	} else {
-		_mult_karatsuba_ignore_sign(result, _private::rmasked(rhs), _private::rmasked(lhs));
+		_private::_mult_karatsuba_ignore_sign(result._span(), rhs._span(), lhs._span());
 	}
 	result.sign() = _private::mult_sign(lhs.sign(), rhs.sign());
+	result.cleanup();
 }
 
 template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
@@ -1617,7 +1569,9 @@ template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
 _prefix(TLHS& d, const TRHS& s, size_t n) {
 	d.resize(n);
-	_private::copy_digits_to_from(d, _private::rshifted(s, s.size() - n));
+	utils::Span<uint64_t> dspan = d._span();
+	utils::Span<const uint64_t> sspan = s._span();
+	std::copy(sspan.begin() + (s.size() - n), sspan.end(), dspan.begin());
 }
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
@@ -1727,12 +1681,13 @@ divmod_ignore_sign(const TLHS& aa, const TRHS& bb) -> DivModResult<BigInt> {
 		/* normalization */
 		uint64_t f = utils::div_u128_saturate(1ull, 0ull, e + 1); // 1^64/(e + 1);
 		const auto af = aa * f;
-		const auto bf = bb * f;
+		auto bf = bb * f;
+		bf.sign() = Sign::POS;
 		e = bf[bf.size() - 1];
-		auto result = _divide_loop<BigInt, _private::BigIntAbs<const BigInt&>, ignore_quotient>(af, abs(bf), e);
+		auto result = _divide_loop<BigInt, BigInt, ignore_quotient>(af, bf, e);
 
 		if constexpr (!ignore_remainder) {
-			result.r = std::move(divmod_ignore_sign<BigInt, BigIntAdapter<uint64_t>, false, true>(result.r, BigIntAdapter{f}).d);
+			result.r = std::move(divmod_ignore_sign<BigInt, BigIntAdapter, false, true>(result.r, BigIntAdapter{f}).d);
 		}
 		return result;
 	} else {
@@ -1775,7 +1730,7 @@ divmod(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
 template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod(const TLHS &a, int64_t b) -> DivModResult<BigInt, int64_t> {
-	const auto res = divmod<TLHS, BigIntAdapter<int64_t>, ignore_quotient, ignore_remainder>(a, BigIntAdapter{b});
+	const auto res = divmod<TLHS, BigIntAdapter, ignore_quotient, ignore_remainder>(a, BigIntAdapter{b});
 	auto r = static_cast<int64_t>(res.r[0]);
 	return { res.d, is_neg(res.r) ? -r : r };
 }
@@ -1783,7 +1738,7 @@ divmod(const TLHS &a, int64_t b) -> DivModResult<BigInt, int64_t> {
 template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod(const TLHS &a, uint64_t b) -> DivModResult<BigInt, uint64_t> {
-	const auto res = divmod<TLHS, BigIntAdapter<uint64_t>, ignore_quotient, ignore_remainder>(a, BigIntAdapter{b});
+	const auto res = divmod<TLHS, BigIntAdapter, ignore_quotient, ignore_remainder>(a, BigIntAdapter{b});
 	return { res.d, res.r[0] };
 }
 
@@ -1895,7 +1850,7 @@ div(BigInt &result, TLHS &a, uint32_t b) {
 		result = BigInt{0};
 	}
 	uint64_t c_lo = 0ull;
-	for (auto i = a.size(); i-->0;) {
+	for (auto i = a.size(); i --> 0;) {
 		const auto ai = a[i];
 		const auto ai_hi = (ai >> 32) | c_lo;
 		const auto r_hi = ai_hi / b;
@@ -1938,7 +1893,7 @@ operator/(const TLHS &a, TRHS b) -> BigInt {
 template <is_BigInt_like TLHS, one_of<uint64_t, int64_t> TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator/(const TLHS &a, TRHS b) -> BigInt {
-	return divmod<TLHS, BigIntAdapter<TRHS>, false, true>(a, BigIntAdapter(b)).d;
+	return divmod<TLHS, BigIntAdapter, false, true>(a, BigIntAdapter(b)).d;
 }
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
@@ -1959,7 +1914,7 @@ operator/=(BigInt &a, TRHS b) -> BigInt& {
 template <one_of<uint64_t, int64_t> TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
 operator/=(BigInt &a, TRHS b) -> BigInt& {
-	const auto result = divmod<BigInt, BigIntAdapter<TRHS>, false, true>(a, BigIntAdapter(b)).d;
+	const auto result = divmod<BigInt, BigIntAdapter, false, true>(a, BigIntAdapter(b)).d;
 	a = std::move(result);
 	return a;
 }

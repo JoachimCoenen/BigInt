@@ -1,12 +1,15 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
+#include <cassert>
 #include <charconv>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <source_location>
 #include <type_traits>
+#include <vector>
 #include <cstdint>
 
 //      [[nodiscard]] conseval auto
@@ -280,5 +283,156 @@ check_bounds(size_t index, size_t size) {
 		throw std::invalid_argument(error_msg(std::move(msg)));
 	}
 }
+
+}
+
+namespace bigint::utils {
+
+inline constexpr size_t full_extent = static_cast<size_t>(-1);
+
+template <typename T>
+class Span {
+
+public:
+
+	// constructors, copy and assignment
+
+	constexpr
+	Span() noexcept
+		: _data(nullptr), _size(0)
+	{ }
+
+	constexpr
+	Span(T* data, size_t size) noexcept
+		: _data(data), _size(size)
+	{ }
+
+	template <size_t N>
+	explicit constexpr
+	Span (std::type_identity_t<T>(&arr)[N])
+	noexcept
+	: Span (static_cast<T*>(arr), N)
+	{ }
+
+	template <size_t N>
+	requires std::is_const_v<T>
+	explicit constexpr
+	Span(const std::array<std::remove_const_t<T>, N>& arr) noexcept
+		: Span(arr.data(), N)
+	{ }
+
+	template <size_t N>
+	requires (!std::is_const_v<T>)
+	explicit constexpr
+	Span(std::array<T, N>& arr) noexcept
+		: Span(arr.data(), N)
+	{ }
+
+	explicit constexpr
+	Span(std::vector<T>& vec) noexcept
+		: Span(vec.data(), vec.size())
+	{ }
+
+	template <class T2>
+	requires (std::is_const_v<T> && !std::is_const_v<T2> && std::is_same_v<std::remove_const_t<T>, T2>)
+	constexpr
+	Span(const Span<T2>& other) noexcept
+		: _data(other.data()), _size(other.size())
+	{ }
+
+	constexpr
+	Span(const Span&) noexcept = default;
+
+	~Span() noexcept = default;
+
+	constexpr Span&
+	operator=(const Span&) noexcept = default;
+
+	// observers
+
+	CONSTEXPR_AUTO
+	size() const noexcept -> size_t { return _size; }
+
+	CONSTEXPR_AUTO
+	size_bytes() const noexcept -> size_t { return _size * sizeof(T); }
+
+	CONSTEXPR_AUTO
+	empty() const noexcept -> bool { return size() == 0; }
+
+	// element access
+
+	CONSTEXPR_AUTO
+	front() const noexcept -> T& {
+		assert(!empty());
+		return *_data;
+	}
+
+	CONSTEXPR_AUTO
+	back() const noexcept -> T& {
+		assert(!empty());
+		return *(_data + (_size - 1));
+	}
+
+	CONSTEXPR_AUTO
+	operator[](size_t idx) const noexcept -> T& {
+		assert(idx < _size);
+		return *(_data + idx);
+	}
+
+	CONSTEXPR_AUTO
+	data() const noexcept -> T* { return _data; }
+
+	// iterator support
+
+	CONSTEXPR_AUTO
+	begin() const noexcept -> T* { return _data; }
+
+	CONSTEXPR_AUTO
+	end() const noexcept -> T* { return _data + _size; }
+
+	// subviews
+
+	CONSTEXPR_AUTO
+	first(size_t count) const noexcept -> Span {
+		assert(count <= _size);
+		return {_data, count};
+	}
+
+	CONSTEXPR_AUTO
+	last(size_t count) const noexcept -> Span {
+		assert(count <= _size);
+		return {_data + (_size - count), count};
+	}
+
+	CONSTEXPR_AUTO
+	subspan(size_t offset, size_t count = full_extent) const noexcept -> Span {
+		assert(offset <= _size);
+		if (count == full_extent)
+			count = _size - offset;
+		else {
+			assert(count <= _size);
+			assert(offset + count <= _size);
+		}
+		return {_data + offset, count};
+	}
+
+	/**
+	 * like @link subspan, but `offset` and `count` are truncated automatically.
+	 * @param offset
+	 * @param count
+	 * @return
+	 */
+	CONSTEXPR_AUTO
+	subspan_trunc(size_t offset, size_t count = full_extent) const noexcept -> Span {
+		offset = _size > offset ? offset : _size;
+		count = std::min(_size - offset, count);
+		return subspan(offset, count);
+		// return {_data + offset, count};
+	}
+
+private:
+	T* _data;
+	size_t _size;
+};
 
 }
