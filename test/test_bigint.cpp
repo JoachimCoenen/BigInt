@@ -385,6 +385,8 @@ namespace {
 
 TEST_BINARY_OPERATOR_BIGINT(Mul, BigInt, BigInt, a * b, get_all_mul_test_values())
 
+TEST_BINARY_OPERATOR_BIGINT(MulKaratsuba, BigInt, BigInt, a * b, get_all_mul_karatsuba_test_values())
+
 TEST_BINARY_OPERATOR_BIGINT(Mul, BigInt, uint64_t, a * b, get_all_mul_test_values())
 
 TEST_BINARY_OPERATOR_BIGINT(Mul, BigInt, int64_t, a * b, get_all_mul_test_values())
@@ -404,6 +406,8 @@ TEST_BINARY_OPERATOR_BIGINT(Mul, int32_t, BigInt, a * b, get_all_mul_test_values
 TEST_BINARY_OPERATOR_BIGINT(Mul, uint64_t, uint64_t, BigInt{mult(a, b)}, get_all_mul_test_values())
 
 TEST_ASSIGN_OPERATOR_BIGINT(Mul, BigInt, a *= b, get_all_mul_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT(MulKaratsuba, BigInt, a *= b, get_all_mul_karatsuba_test_values())
 
 TEST_ASSIGN_OPERATOR_BIGINT(Mul, uint64_t, a *= b, get_all_mul_test_values())
 
@@ -550,6 +554,7 @@ TEST_BINARY_OPERATOR_BIGINT(Gcd, BigInt, BigInt, gcd(a, b), get_all_gcd_test_val
 TEST_BINARY_OPERATOR_BIGINT(Lcm, BigInt, BigInt, lcm(a, b), get_all_lcm_test_values())
 
 }
+
 
 // to_string
 namespace {

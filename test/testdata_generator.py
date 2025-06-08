@@ -1,10 +1,13 @@
 # This Python file uses the following encoding: utf-8
-from dataclasses import dataclass
+import enum
+import sys
+from dataclasses import dataclass, field
 import itertools as it
 import math
 from operator import itemgetter
 from typing import Callable, ClassVar, Iterable
 
+sys.set_int_max_str_digits(8600*4)
 
 INDENT = '\t'
 
@@ -51,11 +54,18 @@ class Arg:
 	value: int
 
 
+class TestdataSet(enum.Enum):
+	NORMAL = enum.auto()
+	BIG = enum.auto()
+	HUGE = enum.auto()
+	MIX = enum.auto()
+
 @dataclass
 class Operation:
 	type_name: ClassVar[str] = 'abstract'
 	param_count: ClassVar[int] = 0
 	name: str
+	testdata: TestdataSet = field(default=TestdataSet.NORMAL, kw_only=True)
 
 
 @dataclass
@@ -219,6 +229,7 @@ BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
 	BinOperation('add',    lambda a, b:    a + b),
 	BinOperation('sub',    lambda a, b:    a - b),
 	BinOperation('mul',    lambda a, b:    a * b),
+	BinOperation('mul_karatsuba', lambda a, b: a * b, lambda a, b: max(a.bit_length(), b.bit_length()) > 64 * 16, testdata=TestdataSet.MIX),
 	BinOperation('div',    lambda a, b:    a // b,                   lambda a, b:    b != 0),
 	BinOperation('mod',    lambda a, b:    a % b,                    lambda a, b:    b != 0),
 	BinOperation('divmod', lambda a, b:    f'{a // b}|{a % b}',      lambda a, b:    b != 0),
@@ -245,58 +256,110 @@ BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
 ]
 
 ALL_UNIQUE_VALUES: list[int] = [
-		0,
-		1,
-		2,
-		3,
-		5,
-		9,
-		10,
-		14,
-		15,
-		97,
-		150,
-		INT32_MAX_M1 // 5000000,
-		UINT32_MAX_M1,
-		UINT32_MAX_00,
-		UINT32_MAX_P1,
-		UINT32_MAX_P2,
-		18446744065119617025,
-		UINT64_MAX_M1,
-		UINT64_MAX_00,
-		UINT64_MAX_P1,
-		UINT64_MAX_P2,  # eqivalent to 11, usful for testing carry overflow
-		18446744082299486209,
-		340282366920938463426481119284349108225,
-		340282366920938463463374607431768211455,  # eqivalent to 99, usful for testing carry overflow or underflow
-		340282366920938463463374607431768211456,  # eqivalent to 100, usful for testing carry underflow
-		340282366920938463481821351505477763072,
-		340282366920938463500268095579187314689,
-		340282366920938464926816303946059311975,  # broke division as a divisor
-		618354700061515834059999999799999999991,
-		618354700061515834059999999999999999991,
-		1236709400123031668119999999799999999982,
-		6277101735386680790718096409961805133951500192106399399936,  # broke division as a dividend
-		382362535088167210234626361716426516060166448586892714986920000001800000000081,
-		531137992816767098689588206552468627329593117727031923199444138200403559860852242739162502265229285668889,  # 2^107 - 1, a Mersenne prime.
-		85053461164796801949539541639542805770666392330682673302530819774105141531698707146930307290253537320447270457,  # 3rd Generalized repunit prime for a=7
+	0,
+	1,
+	2,
+	3,
+	5,
+	9,
+	10,
+	14,
+	15,
+	97,
+	150,
+	INT32_MAX_M1 // 5000000,
+	UINT32_MAX_M1,
+	UINT32_MAX_00,
+	UINT32_MAX_P1,
+	UINT32_MAX_P2,
+	18446744065119617025,
+	UINT64_MAX_M1,
+	UINT64_MAX_00,
+	UINT64_MAX_P1,
+	UINT64_MAX_P2,  # equivalent to 11, useful for testing carry overflow
+	18446744082299486209,
+	340282366920938463426481119284349108225,
+	340282366920938463463374607431768211455,  # eqivalent to 99, usful for testing carry overflow or underflow
+	340282366920938463463374607431768211456,  # eqivalent to 100, usful for testing carry underflow
+	340282366920938463481821351505477763072,
+	340282366920938463500268095579187314689,
+	340282366920938464926816303946059311975,  # broke division as a divisor
+	618354700061515834059999999799999999991,
+	618354700061515834059999999999999999991,
+	1236709400123031668119999999799999999982,
+	6277101735386680790718096409961805133951500192106399399936,  # broke division as a dividend
+	382362535088167210234626361716426516060166448586892714986920000001800000000081,
+	531137992816767098689588206552468627329593117727031923199444138200403559860852242739162502265229285668889,  # 2^107 - 1, a Mersenne prime.
+	85053461164796801949539541639542805770666392330682673302530819774105141531698707146930307290253537320447270457,  # 3rd Generalized repunit prime for a=7
 ]
 
-ALL_UNIQUE_VALUES_SIGNED: list[int] = list(dict.fromkeys(value * sign for value in ALL_UNIQUE_VALUES for sign in (1, -1)))
-ALL_UNIQUE_ARGUMENTS: list[Arg] = [Arg(i, arg) for i, arg in enumerate(ALL_UNIQUE_VALUES_SIGNED)]
+ALL_UNIQUE_VALUES_HUGE: list[int] = [
+	123670940012303166811909400123031668119999999999997999999999821236709400123031668119999999799999999982,
+	531137992816767098689588206552468627329593117727031923199444138200403559860852242739162502265229285668889,  # 2^107 - 1, a Mersenne prime.
+	85053461164796801949539541639542805770666392330682673302530819774105141531698707146930307290253537320447270457,  # 3rd Generalized repunit prime for a=7
+	3823625350881672102346263850534611647968019617164265160601664485868927149869200000018000000009869200000018000081,
+	6183547000615158340599999997999999999913402823669209384634633746074317986920000001808505346116479680190068211455,
+	340282366920938463500268095518446744082299094001230316681198505346116479680199999948620979187314685053461164796801989,
+	3402823669209384634633746074340282366920938463500268095518446744082299486209791873146893176818446744065119617025211456,  # eqivalent to 100, usful for testing carry underflow
+	6277101735386680790718096409961805112367094001230316681199991844674406511961702599979999999998233951500192106399399936,  # broke division as a dividend
+	3402823669209123670940012303166811999999972114554028236692093846348182135150579680194953954163959999999998238463463374607431768211455,
+	3402823669209384634264811192843491082251236709400123031668119999999792114554028236692093846348182135150579680194953954163959999999982,
+	340282366920938464926816303531137992816767098689588206552468627329593117727031923199444138200403559860852242739162502265229285668889946059311975,  # broke division as a divisor
+	6183547000615184467440822994862091583405997968019495395416395428057706663923306826733025308197741051415316987071469303072902535373204472799999999999999991,
+	33402823669209384634633746074317682114554028236692093846348182135150579680194953954163954280577066639233068267330253081977410514153169870714693030729025353732044727477763072,
+]
 
 
-ALL_UNA_ARGUMENTS: list[tuple[Arg]] = list(it.product(ALL_UNIQUE_ARGUMENTS))
-ALL_BIN_ARGUMENTS: list[tuple[Arg, Arg]] = list(it.product(ALL_UNIQUE_ARGUMENTS, ALL_UNIQUE_ARGUMENTS))
-ALL_TRI_ARGUMENTS: list[tuple[Arg, Arg, Arg]] = list(it.product(ALL_UNIQUE_ARGUMENTS, ALL_UNIQUE_ARGUMENTS, ALL_UNIQUE_ARGUMENTS))
+def combine_huge(value: int) -> int:
+	return value * ((value >> 3) + 7) * ((value >> 2) + 71)
+
+
+def build_testdata_set(unique_values: list[int]) -> tuple[list[tuple[Arg]], list[tuple[Arg, Arg]], list[tuple[Arg, Arg, Arg]]]:
+	all_unique_values_signed: list[int] = list(dict.fromkeys(value * sign for value in unique_values for sign in (1, -1)))
+	all_unique_arguments: list[Arg] = [Arg(i, arg) for i, arg in enumerate(all_unique_values_signed)]
+
+	all_una_arguments: list[tuple[Arg]] = list(it.product(all_unique_arguments))
+	all_bin_arguments: list[tuple[Arg, Arg]] = list(it.product(all_unique_arguments, all_unique_arguments))
+	all_tri_arguments: list[tuple[Arg, Arg, Arg]] = list(it.product(all_unique_arguments, all_unique_arguments, all_unique_arguments))
+	return all_una_arguments, all_bin_arguments, all_tri_arguments
+
+
+ALL_UNA_ARGUMENTS: list[tuple[Arg]]
+ALL_BIN_ARGUMENTS: list[tuple[Arg, Arg]]
+ALL_TRI_ARGUMENTS: list[tuple[Arg, Arg, Arg]]
+ALL_UNA_ARGUMENTS, ALL_BIN_ARGUMENTS, ALL_TRI_ARGUMENTS = build_testdata_set(ALL_UNIQUE_VALUES)
+ALL_ARGUMENTS_NORMAL: list[list[tuple[Arg, ...]]] = [ALL_UNA_ARGUMENTS, ALL_BIN_ARGUMENTS, ALL_TRI_ARGUMENTS]
+
+
+ALL_UNA_ARGUMENTS_BIG: list[tuple[Arg]]
+ALL_BIN_ARGUMENTS_BIG: list[tuple[Arg, Arg]]
+ALL_TRI_ARGUMENTS_BIG: list[tuple[Arg, Arg, Arg]]
+ALL_UNA_ARGUMENTS_BIG, ALL_BIN_ARGUMENTS_BIG, ALL_TRI_ARGUMENTS_BIG = build_testdata_set([combine_huge(combine_huge(combine_huge(value))) for value in ALL_UNIQUE_VALUES_HUGE])
+ALL_ARGUMENTS_BIG: list[list[tuple[Arg, ...]]] = [ALL_UNA_ARGUMENTS_BIG, ALL_BIN_ARGUMENTS_BIG, ALL_TRI_ARGUMENTS_BIG]
+
+
+ALL_UNA_ARGUMENTS_HUGE: list[tuple[Arg]]
+ALL_BIN_ARGUMENTS_HUGE: list[tuple[Arg, Arg]]
+ALL_TRI_ARGUMENTS_HUGE: list[tuple[Arg, Arg, Arg]]
+ALL_UNA_ARGUMENTS_HUGE, ALL_BIN_ARGUMENTS_HUGE, ALL_TRI_ARGUMENTS_HUGE = build_testdata_set([combine_huge(combine_huge(combine_huge(combine_huge(value)))) for value in ALL_UNIQUE_VALUES_HUGE])
+ALL_ARGUMENTS_HUGE: list[list[tuple[Arg, ...]]] = [ALL_UNA_ARGUMENTS_HUGE, ALL_BIN_ARGUMENTS_HUGE, ALL_TRI_ARGUMENTS_HUGE]
+
+
+ALL_UNA_ARGUMENTS_MIX: list[tuple[Arg]]
+ALL_BIN_ARGUMENTS_MIX: list[tuple[Arg, Arg]]
+ALL_TRI_ARGUMENTS_MIX: list[tuple[Arg, Arg, Arg]]
+ALL_UNA_ARGUMENTS_MIX, ALL_BIN_ARGUMENTS_MIX, ALL_TRI_ARGUMENTS_MIX = build_testdata_set([0, 1] + ALL_UNIQUE_VALUES[6:14] + ALL_UNIQUE_VALUES[29:] + [combine_huge(combine_huge(combine_huge(value))) for value in ALL_UNIQUE_VALUES_HUGE[::2]])
+ALL_ARGUMENTS_MIX: list[list[tuple[Arg, ...]]] = [ALL_UNA_ARGUMENTS_MIX, ALL_BIN_ARGUMENTS_MIX, ALL_TRI_ARGUMENTS_MIX]
 
 
 def select_all_arguments(operation: Operation) -> list[tuple[Arg, ...]]:
-	match operation.param_count:
-		case 1: return ALL_UNA_ARGUMENTS
-		case 2: return ALL_BIN_ARGUMENTS
-		case 3: return ALL_TRI_ARGUMENTS
-		case _: raise ValueError(f"unhandeled param_count: {param_count!r}")
+	match operation.testdata:
+		case TestdataSet.NORMAL: return ALL_ARGUMENTS_NORMAL[operation.param_count - 1]
+		case TestdataSet.BIG: return ALL_ARGUMENTS_BIG[operation.param_count - 1]
+		case TestdataSet.HUGE: return ALL_ARGUMENTS_HUGE[operation.param_count - 1]
+		case TestdataSet.MIX: return ALL_ARGUMENTS_MIX[operation.param_count - 1]
+
+		case _: raise ValueError(f"unhandled TestdataSet: {operation.testdata!r}")
 
 
 def make_values_for_test_csv(operation: Operation) -> tuple[str, str]:
@@ -304,6 +367,7 @@ def make_values_for_test_csv(operation: Operation) -> tuple[str, str]:
 			select_all_arguments(operation),
 			operation
 		)
+	print(f"{operation.name} finished!")
 	return (
 		f'values_for_{operation.name}_test.csv',
 		'\n'.join(lines)
