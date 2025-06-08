@@ -287,6 +287,39 @@ check_bounds(size_t index, size_t size) {
 }
 
 namespace bigint::utils {
+/**
+ *
+ * very simple unique_ptr that supports constexpr.
+ */
+template<typename T>
+struct UniquePtr {
+	explicit constexpr UniquePtr(T* ptr) noexcept : ptr(ptr) { }
+	explicit constexpr UniquePtr() noexcept : ptr(nullptr) { }
+	constexpr ~UniquePtr() { delete ptr; }
+
+	UniquePtr(const UniquePtr&) = delete;
+	UniquePtr& operator=(const UniquePtr&) = delete;
+	UniquePtr(UniquePtr&& other) noexcept : ptr(other.ptr) { other.ptr = nullptr; }
+	UniquePtr& operator=(UniquePtr&& other) noexcept {
+		std::swap(ptr, other.ptr);
+		return *this;
+	}
+
+	CONSTEXPR_AUTO
+	operator *() const noexcept -> T& { return *ptr; }
+
+	CONSTEXPR_AUTO
+	operator ->() const noexcept -> T* { return ptr; }
+
+	[[nodiscard]] inline
+	explicit operator bool() const noexcept { return ptr != nullptr; }
+private:
+	T* ptr;
+};
+
+}
+
+namespace bigint::utils {
 
 inline constexpr size_t full_extent = static_cast<size_t>(-1);
 

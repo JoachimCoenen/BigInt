@@ -46,22 +46,13 @@
 
 namespace bigint::_private {
 /**
- * When Multiplying two BigInts A and B, the Karatsuba multiplication algorithm gets chosen if the total number of
- * digits in A and B together is equal to or exceeds this threshold.
+ * When Multiplying two BigInts A and B, the Karatsuba multiplication algorithm gets chosen if the number of
+ * digits in the bigger operand is equal to or exceeds this threshold and the lower operand either also exceeds this
+ * threshold or has at least half as many digits as the bigger operand.
  *
- * E.g.:
- * | digits ...          |                        |
- * | in A | in B | total | Algorithm used         |
- * | ==== | ==== | ===== | ====================== |
- * | 2    | 3    | 5     | naive (Big * Big)      |
- * | 31   | 32   | 63    | naive (Big * Big)      |
- * | 32   | 32   | 64    | Karatsuba              |
- * | 96   | 2    | 98    | Karatsuba              |
- * | 96   | 1    | 97    | naive (Big * uint64_t) |
- *
- * The optimal value seems to lie somewhere between 60 and 80, based on some basic testing.
+ * The optimal value seems to lie somewhere around 32 based on some basic testing.
  */
-constexpr size_t MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA = 64;
+inline constexpr size_t MIN_DIGITS_FOR_MULT_KARATSUBA = 32;
 }
 
 namespace bigint {
@@ -160,6 +151,23 @@ get_sign(T v) noexcept -> Sign {
 	}
 }
 
+CONSTEXPR_VOID
+cleanup(std::vector<uint64_t>& data) {
+	if (data.empty()) {
+		data.resize(1);
+		data[0] = 0;
+		return;
+	}
+
+	for (auto i = data.size(); 0 <--i;) {
+		if (data[i] == 0) {
+			data.pop_back();
+		} else {
+			break;
+		}
+	}
+}
+
 }
 
 
@@ -255,13 +263,7 @@ class BigInt : public IBigIntLike
 	BIGINT_TRACY_CONSTEXPR_VOID
 	cleanup() {
 		BIGINT_TRACY_ZONE_SCOPED;
-		for (auto i = _data.size(); 0 <--i;) {
-			if (_data[i] == 0) {
-				_data.pop_back();
-			} else {
-				break;
-			}
-		}
+		_private::cleanup(_data);
 	}
 
 	BIGINT_TRACY_CONSTEXPR_VOID
@@ -386,13 +388,13 @@ public:
 	}
 
 	CONSTEXPR_AUTO
-	_span() -> utils::Span<uint64_t> {
+	_span_full() -> utils::Span<uint64_t> {
 		return utils::Span{_data};
 	}
 
 	CONSTEXPR_AUTO
 	_span() const noexcept -> utils::Span<const uint64_t> {
-		return utils::Span<const uint64_t>{_data};
+		return utils::Span{_data.data(), size()};
 	}
 
 private:
@@ -1366,10 +1368,10 @@ mult(TRES &result, TLHS &a, int64_t b) {
 
 namespace _private {
 	BIGINT_TRACY_CONSTEXPR_VOID
-	_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b) {
+	_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b, std::vector<uint64_t> &temp_vec) {
 		BIGINT_TRACY_ZONE_SCOPED;
 		if (is_zero(a) || is_zero(b)) {
-			std::fill(result.begin(), result.end(), 0);
+			std::ranges::fill(result, 0);
 			return;
 		}
 
@@ -1377,9 +1379,8 @@ namespace _private {
 		std::fill_n(result.begin(), std::min(a.size() + 1, result.size()), 0);
 		// we don't need to fill all digits, because all subsequent digits are replaced by the carry of the previous addition.
 
-		std::vector<uint64_t> temp_vec;
 		temp_vec.resize(a.size() + 1, 0);
-		utils::Span<uint64_t> temp(temp_vec);
+		utils::Span temp(temp_vec);
 		size_t i = 0;
 		for (i = 0; i < b.size(); i++) {
 			_mult_naive_ignore_sign(temp, a, b[i]);
@@ -1393,73 +1394,99 @@ namespace _private {
 		}
 	}
 
+	struct KaratsubaStepTemps {
+		std::vector<uint64_t> ac;
+		std::vector<uint64_t> bd;
+		std::vector<uint64_t> ab_cd;
+		std::vector<uint64_t> a_b;
+		std::vector<uint64_t> c_d;
+
+		utils::UniquePtr<KaratsubaStepTemps> local_temps;
+
+		CONSTEXPR_AUTO
+		ac_span() -> utils::Span<uint64_t> { return utils::Span{ac}; };
+		CONSTEXPR_AUTO
+		bd_span() -> utils::Span<uint64_t> { return utils::Span{bd}; };
+		CONSTEXPR_AUTO
+		ab_cd_span() -> utils::Span<uint64_t> { return utils::Span{ab_cd}; };
+		CONSTEXPR_AUTO
+		a_b_span() -> utils::Span<uint64_t> { return utils::Span{a_b}; };
+		CONSTEXPR_AUTO
+		c_d_span() -> utils::Span<uint64_t> { return utils::Span{c_d}; };
+	};
+
+	CONSTEXPR_AUTO
+	should_use_karatsuba(size_t a_size, size_t b_size) -> bool {
+		const auto min_size = std::min(a_size, b_size);
+		const auto max_size = std::max(a_size, b_size);
+		return max_size >= MIN_DIGITS_FOR_MULT_KARATSUBA && (min_size >= MIN_DIGITS_FOR_MULT_KARATSUBA || min_size > max_size >> 1);
+	}
+
 	BIGINT_TRACY_CONSTEXPR_VOID
-	_mult_karatsuba_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &lhs, const utils::Span<const uint64_t> &rhs) {
+	_mult_karatsuba_step(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &lhs_, const utils::Span<const uint64_t> &rhs_, KaratsubaStepTemps& temps) {
 		BIGINT_TRACY_ZONE_SCOPED;
 		// xx = mm(ac) + m((a+b) * (c+d) - ac - bd) + (bd)
-		if (is_zero(lhs) || is_zero(rhs)) {
-			std::fill(result.begin(), result.end(), 0);
+		auto [lhs, rhs] = lhs_.size() >= rhs_.size() ? std::tie(lhs_, rhs_) : std::tie(rhs_, lhs_);
+
+		assert(lhs.size() >= rhs.size());
+
+		if (is_zero(rhs)) {
+			std::ranges::fill(result, 0);
 			return;
 		}
-		if (lhs.size() + rhs.size() < MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA) {
-			_mult_naive_ignore_sign(result, rhs, lhs);
+		if (!should_use_karatsuba(lhs.size(), rhs.size())) {
+			_mult_naive_ignore_sign(result, rhs, lhs, temps.ab_cd);
 			return;
 		}
-		if (rhs.size() == 1) {
-			_mult_naive_ignore_sign(result, lhs, rhs[0]);
-			return;
-		}
-		if (lhs.size() == 1) {
-			_mult_naive_ignore_sign(result, rhs, lhs[0]);
-			return;
+
+		if (!temps.local_temps) {
+			temps.local_temps = utils::UniquePtr(new KaratsubaStepTemps());
 		}
 
 		auto n = std::max(lhs.size(), rhs.size());
-
 		const auto mid = n >> 1;
 
-		const auto a = _private::rmasked(lhs, mid, lhs.size());
-		const auto b = _private::rmasked(lhs, 0, mid);
-		const auto c = _private::rmasked(rhs, mid, rhs.size());
-		const auto d = _private::rmasked(rhs, 0, mid);
+		const auto a = rmasked(lhs, mid, lhs.size());
+		const auto b = rmasked(lhs, 0, mid);
+		const auto c = rmasked(rhs, mid, rhs.size());
+		const auto d = rmasked(rhs, 0, mid);
 
-		BigInt ac;
-		ac.resize(a.size() + c.size());
-		_mult_karatsuba_ignore_sign(ac._span(), a, c);
-		ac.cleanup();
+		KaratsubaStepTemps &local_temps = *temps.local_temps;
 
-		BigInt bd;
-		bd.resize(b.size() + d.size());
-		_mult_karatsuba_ignore_sign(bd._span(), b, d);
-		bd.cleanup();
+		temps.ac.resize(a.size() + c.size());
+		_mult_karatsuba_step(temps.ac_span(), a, c, local_temps);
+		cleanup(temps.ac);
 
-		BigInt ab_cd;
-		{
-			BigInt a_b;
-			a_b.resize(std::max(a.size(), b.size()) + 1);
-			add_ignore_sign(a_b._span(), a, b);
-			a_b.cleanup();
+		temps.bd.resize(b.size() + d.size());
+		_mult_karatsuba_step(temps.bd_span(), b, d, local_temps);
+		cleanup(temps.bd);
 
 
-			BigInt c_d;
-			c_d.resize(std::max(c.size(), d.size()) + 1);
-			add_ignore_sign(c_d._span(), c, d);
-			c_d.cleanup();
+		temps.a_b.resize(std::max(a.size(), b.size()) + 1);
+		add_ignore_sign(temps.a_b_span(), a, b);
+		cleanup(temps.a_b);
 
-			ab_cd.resize(a_b.size() + c_d.size());
-			_mult_karatsuba_ignore_sign(ab_cd._span(), a_b._span(), c_d._span());
-			ab_cd.cleanup();
-		}
+		temps.c_d.resize(std::max(c.size(), d.size()) + 1);
+		add_ignore_sign(temps.c_d_span(), c, d);
+		cleanup(temps.c_d);
 
-		[[maybe_unused]] auto sign = sub_ignore_sign(ab_cd._span(), ab_cd._span(), ac._span());
-		ab_cd.cleanup();
-		[[maybe_unused]] auto sign2 = sub_ignore_sign(ab_cd._span(), ab_cd._span(), bd._span());
-		ab_cd.cleanup();
+		temps.ab_cd.resize(temps.a_b.size() + temps.c_d.size());
+		_mult_karatsuba_step(temps.ab_cd_span(), temps.a_b_span(), temps.c_d_span(), local_temps);
+		cleanup(temps.ab_cd);
 
-		std::copy(ac._span().begin(), ac._span().end(), (result.begin()) + (mid << 1));
-		auto result_shifted = rshifted(result, mid);
-		_add_ignore_sign(result_shifted, result_shifted, ab_cd._span());
-		_add_ignore_sign(result, result, bd._span());
+		[[maybe_unused]] auto sign = sub_ignore_sign(temps.ab_cd_span(), temps.ab_cd_span(), temps.ac_span());
+		cleanup(temps.ab_cd);
+		[[maybe_unused]] auto sign2 = sub_ignore_sign(temps.ab_cd_span(), temps.ab_cd_span(), temps.bd_span());
+		cleanup(temps.ab_cd);
+
+		std::ranges::copy(temps.bd, result.begin());
+		std::fill(result.begin() + temps.bd.size(), result.end(), 0);
+
+		const auto result_shifted1 = rshifted(result, mid);
+		_add_ignore_sign(result_shifted1, result_shifted1, temps.ab_cd_span().subspan_trunc(0, result_shifted1.size()));
+
+		const auto result_shifted2 = rshifted(result, mid << 1);
+		_add_ignore_sign(result_shifted2, result_shifted2, temps.ac_span().subspan_trunc(0, result_shifted2.size()));
 	}
 
 }
@@ -1468,10 +1495,11 @@ template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_VOID
 mult_naive(TRES &result, const TLHS &lhs, const TRHS &rhs) {
 	result.resize(lhs.size() + rhs.size());
+	std::vector<uint64_t> temp_vec;
 	if (rhs.size() > lhs.size()) { // put the number with more digits first.
-		_private::_mult_naive_ignore_sign(result._span(), rhs._span(), lhs._span());
+		_private::_mult_naive_ignore_sign(result._span(), rhs._span(), lhs._span(), temp_vec);
 	} else {
-		_private::_mult_naive_ignore_sign(result._span(), lhs._span(), rhs._span());
+		_private::_mult_naive_ignore_sign(result._span(), lhs._span(), rhs._span(), temp_vec);
 	}
 	result.sign() = _private::mult_sign(lhs.sign(), rhs.sign());
 	result.cleanup();
@@ -1481,11 +1509,8 @@ template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_VOID
 mult_karatsuba(TRES &result, const TLHS &lhs, const TRHS &rhs) {
 	result.resize(lhs.size() + rhs.size());
-	if (rhs.size() > lhs.size()) { // put the number with more digits first.
-		_private::_mult_karatsuba_ignore_sign(result._span(), lhs._span(), rhs._span());
-	} else {
-		_private::_mult_karatsuba_ignore_sign(result._span(), rhs._span(), lhs._span());
-	}
+	_private::KaratsubaStepTemps local_temps;
+	_private::_mult_karatsuba_step(result._span(), lhs._span(), rhs._span(), local_temps);
 	result.sign() = _private::mult_sign(lhs.sign(), rhs.sign());
 	result.cleanup();
 }
@@ -1493,10 +1518,10 @@ mult_karatsuba(TRES &result, const TLHS &lhs, const TRHS &rhs) {
 template <is_BigInt_like TRES, is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_VOID
 mult(TRES &result, const TLHS &a, const TRHS &b) {
-	if (a.size() + b.size() < _private::MIN_TOTAL_DIGITS_FOR_MULT_KARATSUBA) {
-		mult_naive(result, a, b);
-	} else {
+	if (_private::should_use_karatsuba(a.size(), b.size())) {
 		mult_karatsuba(result, a, b);
+	} else {
+		mult_naive(result, a, b);
 	}
 }
 
