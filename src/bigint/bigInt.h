@@ -1080,6 +1080,40 @@ _add_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const ui
 
 /**
  * @brief subtracts `b` from `a` ignoring their sign. `abs(a)` *must* be equal or greater than `abs(b)`.
+ * @param result_lo the result will be put in here.
+ * @param result_hi the result will be put in here.
+ * @param a_lo the first operand.
+ * @param a_hi the first operand.
+ * @param b_lo the second operand.
+ * @param b_hi the second operand.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+_sub_ignore_sign_no_negative_result(
+	uint64_t& result_hi,
+	uint64_t& result_lo,
+	const uint64_t a_hi,
+	const uint64_t a_lo,
+	const uint64_t b_hi,
+	const uint64_t b_lo
+) {
+	result_lo = a_lo - b_lo;
+	bool c = result_lo > a_lo; // carry
+
+	result_hi = a_hi - b_hi;
+	if (c) { --result_hi; }
+	c = result_hi > a_hi || (c && result_hi == a_hi);
+
+	if (c) { // should NEVER happen.
+		auto msg = utils::concat(
+			"leftover carry! abs(b) was greater than abs(a). This is not supported.",
+			" c: ", c, ".");
+		throw std::invalid_argument(utils::error_msg(std::move(msg)));
+	}
+}
+
+
+/**
+ * @brief subtracts `b` from `a` ignoring their sign. `abs(a)` *must* be equal or greater than `abs(b)`.
  * @param result the result will be put in here.
  * @param a the first operand.
  * @param b the second operand.
@@ -2299,14 +2333,23 @@ pow_mod(const BASE& base, const EXP& exp, const MOD& mod) -> BigInt {
 	const uint64_t exp_bits = (exp.size() - 1) * 64 + (64 - utils::clzll(exp[exp.size()-1]));
 
 	BigInt result{1};
-	auto temp = base % mod;
+	BigInt temp = base % mod;
+	BigInt temp2;
+	BigInt temp3;
+	std::vector<uint64_t> temp_mod;
 	for (uint64_t i = 0; i < exp_bits; ++i) {
 		const auto mask = 1ull << (i % 64);
 		if (exp[i/64] & mask) {
-			result = (result * temp) % mod;
+			// result = (result * temp) % mod;
+			mult(temp2, result, temp);
+			// result = temp2 % mod;
+			result = _private::divmod<BigInt, MOD, true, false>(temp2, mod, temp_mod, std::move(result)).r;
 		}
 		if (i+1 < exp_bits) {
-			temp = (temp * temp) % mod;
+			// temp = (temp * temp) % mod;
+			mult(temp3, temp, temp);
+			// temp = temp3 % mod;
+			temp = _private::divmod<BigInt, MOD, true, false>(temp3, mod, temp_mod, std::move(temp)).r;
 		}
 	}
 	return result;
