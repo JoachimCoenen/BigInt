@@ -1618,108 +1618,99 @@ _correct_d_and_subtract(const utils::Span<uint64_t> &x, const utils::Span<const 
 	return d;
 }
 
-// forward declaration:
-template <is_BigInt_like TLHS, is_BigInt_like TRHS, bool ignore_quotient, bool ignore_remainder>
-BIGINT_TRACY_CONSTEXPR_AUTO
-divmod_ignore_sign(const TLHS& aa, const TRHS& bb) -> DivModResult<BigInt>;
-
-
 /**
- * @brief division algorithm adapted from Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division
+ * @brief division algorithm adapted from "Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division" and adapted.
+ * @param result the result will be put in here. Size requirement: `result.d.size() == a.size() - b.size() + 1 && `result.r.size() == a.size() + 1`.
  * @param a the dividend
  * @param b the divisor
  * @param e estimator (?) for the divisor
  * @return
  */
 template <bool ignore_quotient>
-BIGINT_TRACY_CONSTEXPR_AUTO
-_divide_loop(const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b, uint64_t e) -> DivModResult<BigInt> {
+BIGINT_TRACY_CONSTEXPR_VOID
+_divide_loop(const DivModResult<utils::Span<uint64_t>>& result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b, uint64_t e, std::vector<uint64_t>& temp) {
 	const auto na = a.size();
 	const auto nb = b.size();
-	const bool is_single_digit_division = nb == 1;
 	/* na >= nb holds. */
-	BigInt qt;
+	assert(nb > 1); // single digit division must be handled by dedicated divmod_ignore_sign(DivModResult, Span uint64_t).
 	if constexpr (!ignore_quotient) {
 		/* quotient can have maximum (na-nb+1) digits */
-		qt.resize(na-nb+1);
+		assert(result.d.size() == na - nb + 1);
 	}
-	BigInt x{a, Sign::POS};
-	x.resize(x.size() + 1);
-	auto x_span = x._span().subspan(na-nb + 1);
+	assert(result.r.size() == na + 1);
 
-	std::vector<uint64_t> temp(nb + 1);
+	std::ranges::copy(a, result.r.begin());
+	result.r.back() = 0;
+	auto x_span = result.r.subspan(na - nb + 1);
+
+	temp.resize(nb + 1);
 	auto temp_span = utils::Span{temp};
 
 	/* loop-invariant P: first m digits of ’a’ have been brought-down and processed. */
 	for (auto i = na - nb + 1; i --> 0;) {
 		x_span = utils::Span{x_span.data() - 1, x_span.size() + 1};
-
-		const uint64_t yz_lo = x_span[nb-1];
-		const uint64_t yz_hi = x_span[nb];
-
-		uint64_t d = utils::div_u128_saturate(yz_hi, yz_lo, e); // yz/e;
-
-		if(is_single_digit_division) {
-			const BigIntAdapter2 yz{yz_lo, yz_hi};
-			auto ed = mult(e, d);
-			_sub_ignore_sign_no_negative_result(x_span, yz._span(), ed._span()); // remainder is less than e, so must be single digit
-		} else {
-			d = _correct_d_and_subtract(x_span, b, d, temp_span);
-		}
-
+		uint64_t d = utils::div_u128_saturate(x_span[nb], x_span[nb-1], e); // yz/e;
+		d = _correct_d_and_subtract(x_span, b, d, temp_span);
 		if constexpr (!ignore_quotient) {
-			qt.set(i, d);
+			result.d[i] = d;
 		}
 	}
 	/* (loop-invariant P) AND (m=na) holds. */
 	/* Now x contains the remainder. */
-
-	if constexpr (!ignore_quotient) {
-		qt.cleanup();
-	}
-	return {std::move(qt), std::move(x)};
 }
 
 
 /**
- * @brief division algorithm adapted from Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division
- *
- * @param a the dividend
+ * @brief division algorithm adapted from "Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division" and then heavily adapted.
+ * @param result the result will be put in here. Size requirement: `result.size() == a.size()`.
+ * @param a the dividend. Can be the same span as the quotient of the result (`result.d.data() == a.data()`).
  * @param b the divisor
  * @return the result
  */
-BIGINT_TRACY_CONSTEXPR_AUTO
-divmod_ignore_sign(const utils::Span<const uint64_t>& a, const uint64_t b) -> DivModResult<BigInt, uint64_t> {
+template <bool ignore_quotient = false>
+BIGINT_TRACY_CONSTEXPR_VOID
+divmod_ignore_sign(DivModResult<utils::Span<uint64_t>, uint64_t>& result, const utils::Span<const uint64_t>& a, const uint64_t b) {
 	if (b == 0) {
 		throw std::domain_error{utils::error_msg("division by zero")};
 	}
 	if (is_zero(a)) {
-		return {BigInt{0}, 0};
+		std::ranges::fill(result.d, 0);
+		result.r = 0;
+		return;
 	}
 
 	const auto na = a.size();
 	/* na >= nb holds. */
-	std::vector<uint64_t> qt(na);
-	std::array<uint64_t, 2> x{0, 0};
-	utils::Span x_span{x};
+	const auto& qt = result.d;
+	uint64_t& x_lo = result.r;
+	uint64_t x_hi = 0;
 
-	/* loop-invariant P: first m digits of ’a’ have been brought-down and processed. */
+	/* loop-invariant P: first m digits of `a` have been brought-down and processed. */
 	for (auto i = na - 1 + 1; i --> 0;) {
-		x_span[1] = x_span[0];
-		x_span[0] = a[i];
+		x_hi = x_lo;
+		x_lo = a[i];
 
-		uint64_t d = utils::div_u128_saturate(x_span[1], x_span[0], b); // yz/e;
-
+		uint64_t d = utils::div_u128_saturate(x_hi, x_lo, b); // yz/e;
 		auto ed = mult(b, d);
-		_sub_ignore_sign_no_negative_result(x_span, x_span, ed._span()); // remainder is less than e, so must be single digit
+		_sub_ignore_sign_no_negative_result(x_hi, x_lo, x_hi, x_lo, ed.hi, ed.lo); // remainder is less than e, so must be single digit
 
-		qt[i] = d;
+		if constexpr (!ignore_quotient) {
+			qt[i] = d;
+		}
 	}
 	/* (loop-invariant P) AND (m=na) holds. */
 	/* Now x contains the remainder. */
+}
 
-	cleanup(qt);
-	return {BigInt{std::move(qt)}, x_span[0]};
+
+template <bool ignore_quotient = false>
+BIGINT_TRACY_CONSTEXPR_VOID
+_resize_result_for_divide_loop(DivModResult<BigInt>& result, const size_t na, const size_t nb) {
+	if constexpr (!ignore_quotient) {
+		// quotient can have maximum (na-nb+1) digits
+		result.d.resize(na - nb + 1);
+	}
+	result.r.resize(na + 1);
 }
 
 
@@ -1731,24 +1722,37 @@ divmod_ignore_sign(const utils::Span<const uint64_t>& a, const uint64_t b) -> Di
  * @return the result
  */
 template <bool ignore_quotient = false, bool ignore_remainder = false>
-BIGINT_TRACY_CONSTEXPR_AUTO
-divmod_ignore_sign(const utils::Span<const uint64_t>& aa, const utils::Span<const uint64_t>& bb) -> DivModResult<BigInt> {
+BIGINT_TRACY_CONSTEXPR_VOID
+divmod_ignore_sign(DivModResult<BigInt>& result, const utils::Span<const uint64_t>& aa, const utils::Span<const uint64_t>& bb, std::vector<uint64_t>& temp) {
 	BIGINT_TRACY_ZONE_SCOPED;
 
 	if (is_zero(bb)) {
 		throw std::domain_error{utils::error_msg("division by zero")};
 	}
-	if (is_zero(aa)) {
-		return {BigInt{0}, BigInt{0}};
-	}
-	if (bb.size() > aa.size()) {
+	if (is_zero(aa) || bb.size() > aa.size()) {
+		result.d.resize(0);
+
 		if constexpr (!ignore_remainder) {
-			return {BigInt{0}, BigInt{aa}};
+			result.r.resize(aa.size());
+			std::ranges::copy(aa, result.r._span().begin());
 		} else {
-			return {BigInt{0}, BigInt{1}}; // remainder could be any positive number. It is only used to
-			                                            // signify that the remainder is non-zero. Used for correcting a
-			                                            // negative quotient in divmod(...)
+			result.r.resize(1);
+			// remainder could be any positive number. It's only used to signify that the remainder is non-zero.
+			// Used for correcting a negative quotient in divmod(...)
+			result.r.set(0, is_zero(aa) ? 0 : 1);
 		}
+		return;
+	}
+	if (bb.size() == 1) {
+		if constexpr (!ignore_quotient) {
+			result.d.resize(aa.size());
+		}
+		result.r.resize(1);
+
+		DivModResult<utils::Span<uint64_t>, uint64_t> result2{result.d._span(), 0};
+		divmod_ignore_sign<ignore_quotient>(result2, aa, bb[0]);
+		result.r.set(0, result2.r);
+		return;
 	}
 
 	uint64_t e = bb.back();
@@ -1766,15 +1770,48 @@ divmod_ignore_sign(const utils::Span<const uint64_t>& aa, const utils::Span<cons
 
 		e = bf.back();
 
-		auto result = _divide_loop<ignore_quotient>(utils::Span{af}, utils::Span{bf}, e);
+		_resize_result_for_divide_loop(result, af.size(), bf.size());
+		_divide_loop<ignore_quotient>(DivModResult{result.d._span(), result.r._span()}, utils::Span{af}, utils::Span{bf}, e, temp);
 
-		if constexpr (!ignore_remainder) {
-			result.r = std::move(divmod_ignore_sign(result.r._span(), f).d);
+		if constexpr (!ignore_remainder) { // fix remainder:
+			DivModResult<utils::Span<uint64_t>, uint64_t> result2{result.r._span(), 0};
+			divmod_ignore_sign(result2, result.r._span(), f);
 		}
-		return result;
 	} else {
-		return _divide_loop<ignore_quotient>(aa, bb, e);
+		_resize_result_for_divide_loop(result, aa.size(), bb.size());
+		_divide_loop<ignore_quotient>(DivModResult{result.d._span(), result.r._span()}, aa, bb, e, temp);
 	}
+
+	if constexpr (!ignore_quotient) {
+		result.d.cleanup();
+	}
+	result.r.cleanup(); // result.r is also used by quotient.
+}
+
+
+template <is_BigInt_like TLHS, is_BigInt_like TRHS, bool ignore_quotient = false, bool ignore_remainder = false>
+BIGINT_TRACY_CONSTEXPR_AUTO
+divmod(const TLHS &a, const TRHS &b, std::vector<uint64_t>& temp, BigInt&& remainder_holder) -> DivModResult<BigInt> {
+	DivModResult result{BigInt{}, std::move(remainder_holder)};
+
+	_private::divmod_ignore_sign<ignore_quotient, ignore_remainder>(result, a._span(), b._span(), temp);
+
+	if constexpr (!ignore_remainder) {
+		if (!is_zero(result.r)) {
+			result.r.sign() = a.sign();
+			if (a.sign() != b.sign()) {
+				result.r += b;
+			}
+		}
+	}
+	if constexpr (!ignore_quotient) {
+		result.d.sign() = _private::mult_sign(a.sign(), b.sign());
+		if (!is_zero(result.r) and result.d.sign() == Sign::NEG) {
+			result.d -= 1;
+		}
+		result.d.cleanup();
+	}
+	return result;
 }
 
 }
@@ -1786,72 +1823,67 @@ namespace bigint {
 template <is_BigInt_like TLHS, is_BigInt_like TRHS, bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
-	auto r = _private::divmod_ignore_sign<ignore_quotient, ignore_remainder>(a._span(), b._span());
-
-	r.r.cleanup(); //r.r is also used by quotient.
-	if constexpr (!ignore_remainder) {
-		if (!is_zero(r.r)) {
-			if (is_neg(a)) {
-				r.r.sign() = Sign::NEG;
-			}
-			if (a.sign() != b.sign()) {
-				r.r += b;
-			}
-		}
-	}
-	if constexpr (!ignore_quotient) {
-		r.d.sign() = _private::mult_sign(a.sign(), b.sign());
-		if (!is_zero(r.r) and r.d.sign() == Sign::NEG) {
-			r.d -= 1;
-		}
-		r.d.cleanup();
-	}
-	return r;
+	std::vector<uint64_t> temp;
+	return _private::divmod<TLHS, TRHS, ignore_quotient, ignore_remainder>(a, b, temp, BigInt{});
 }
 
 template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod(const TLHS &a, int64_t b) -> DivModResult<BigInt, int64_t> {
-	auto res = _private::divmod_ignore_sign(a._span(), utils::constexpr_abs(b));
-
-	int64_t r = res.r;
+	DivModResult<BigInt, int64_t> result;
+	result.d.resize(a.size());
+	{
+		DivModResult<utils::Span<uint64_t>, uint64_t> result2{result.d._span(), 0};
+		_private::divmod_ignore_sign(result2, a._span(), utils::constexpr_abs(b));
+		result.r = result2.r;
+	}
 
 	if constexpr (!ignore_remainder) {
-		if (r != 0) {
+		if (result.r != 0) {
 			if (is_neg(a)) {
-				r = -r;
+				result.r = -result.r;
 			}
 			if (a.sign() != _private::get_sign(b)) {
-				r += b;
+				result.r += b;
 			}
 		}
 	}
 	if constexpr (!ignore_quotient) {
-		res.d.sign() = _private::mult_sign(a.sign(), _private::get_sign(b));
-		if (r != 0 and res.d.sign() == Sign::NEG) {
-			res.d -= 1;
+		result.d.sign() = _private::mult_sign(a.sign(), _private::get_sign(b));
+		if (result.r != 0 and result.d.sign() == Sign::NEG) {
+			result.d -= 1;
 		}
-		res.d.cleanup();
+		result.d.cleanup();
 	}
-	return {std::move(res.d), r};
+	return result;
 }
 
-template <is_BigInt_like TLHS>
+template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod(const TLHS &a, uint64_t b) -> DivModResult<BigInt, uint64_t> {
-	auto r = _private::divmod_ignore_sign(a._span(), b);
+	DivModResult<BigInt, uint64_t> result;
+	result.d.resize(a.size());
+	{
+		DivModResult<utils::Span<uint64_t>, uint64_t> result2{result.d._span(), 0};
+		_private::divmod_ignore_sign(result2, a._span(), utils::constexpr_abs(b));
+		result.r = result2.r;
+	}
 
-	if (r.r != 0) {
-		if (is_neg(a)) {
-			r.r = b - r.r;
+	if constexpr (!ignore_remainder) {
+		if (result.r != 0) {
+			if (is_neg(a)) {
+				result.r = b - result.r;
+			}
 		}
 	}
-	r.d.sign() = a.sign();
-	if (r.r != 0 and r.d.sign() == Sign::NEG) {
-		r.d -= 1;
+	if constexpr (!ignore_quotient) {
+		result.d.sign() = a.sign();
+		if (result.r != 0 and result.d.sign() == Sign::NEG) {
+			result.d -= 1;
+		}
+		result.d.cleanup();
 	}
-	r.d.cleanup();
-	return r;
+	return result;
 }
 
 template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
