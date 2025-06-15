@@ -544,16 +544,13 @@ rmasked(const utils::Span<uint64_t>& a, uint64_t shifted, uint64_t mask_size) {
 // abs(), neg:
 namespace bigint::_private {
 
-template <typename T>
+class BigIntNeg;
+class BigIntAbsNeg;
+
 class BigIntAbs: IBigIntLike {
-	using T_Plain = std::remove_cvref_t<T>;
 public:
 	explicit constexpr
-	BigIntAbs(T_Plain&& lhs) :
-		_lhs(std::move(lhs)) {}
-
-	explicit constexpr
-	BigIntAbs(const T_Plain& lhs) :
+	BigIntAbs(const BigInt& lhs) :
 		_lhs(lhs) {}
 
 	CONSTEXPR_AUTO
@@ -581,23 +578,18 @@ public:
 		return _lhs._span();
 	}
 
-private:
-	T _lhs;
-
 	CONSTEXPR_AUTO
-	lhs() const -> const T_Plain& { return _lhs; }
+	lhs() const -> const BigInt& { return _lhs; }
+
+private:
+	const BigInt& _lhs;
 };
 
-template <typename T>
 class BigIntNeg: IBigIntLike {
-	using T_Plain = std::remove_cvref_t<T>;
 public:
-	explicit constexpr
-	BigIntNeg(T_Plain&& lhs) :
-		_lhs(std::move(lhs)) {}
 
 	explicit constexpr
-	BigIntNeg(const T_Plain& lhs) :
+	BigIntNeg(const BigInt& lhs) :
 		_lhs(lhs) {}
 
 	CONSTEXPR_AUTO
@@ -625,11 +617,49 @@ public:
 		return _lhs._span();
 	}
 
+	CONSTEXPR_AUTO
+	lhs() const -> const BigInt& { return _lhs; }
+
 private:
-	T _lhs;
+	const BigInt& _lhs;
+};
+
+class BigIntAbsNeg: IBigIntLike {
+public:
+	explicit constexpr
+	BigIntAbsNeg(const BigInt& lhs) :
+		_lhs(lhs) {}
 
 	CONSTEXPR_AUTO
-	lhs() const -> const T_Plain& { return _lhs; }
+	sign() const noexcept -> Sign {
+		return Sign::NEG;
+	}
+
+	CONSTEXPR_AUTO
+	size() const noexcept -> std::size_t {
+		return lhs().size();
+	}
+
+	CONSTEXPR_AUTO
+	operator[](std::size_t index) const -> uint64_t {
+		return lhs()[index];
+	}
+
+	CONSTEXPR_AUTO
+	_span() noexcept -> utils::Span<const uint64_t> {
+		return _lhs._span();
+	}
+
+	CONSTEXPR_AUTO
+	_span() const noexcept -> utils::Span<const uint64_t> {
+		return _lhs._span();
+	}
+
+	CONSTEXPR_AUTO
+	lhs() const -> const BigInt& { return _lhs; }
+
+private:
+	const BigInt& _lhs;
 };
 
 }
@@ -638,28 +668,56 @@ private:
 // abs(), neg:
 namespace bigint {
 
-template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-abs(const TLHS& a) {
-	return _private::BigIntAbs<const TLHS&>(a);
+abs(const _private::BigIntAbs& a) -> _private::BigIntAbs {
+	return a;
 }
 
-template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-abs(TLHS&& a) {
-	return _private::BigIntAbs<TLHS>(std::forward<TLHS>(a));
+abs(const _private::BigIntNeg& a) -> _private::BigIntAbs {
+	return _private::BigIntAbs(a.lhs());
 }
 
-template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-operator-(const TLHS& a) {
-	return _private::BigIntNeg<const TLHS&>(a);
+abs(const _private::BigIntAbsNeg& a) -> _private::BigIntAbs {
+	return _private::BigIntAbs(a.lhs());
 }
 
-template <is_BigInt_like TLHS>
 CONSTEXPR_AUTO
-operator-(TLHS&& a) {
-	return _private::BigIntNeg<TLHS>(std::forward<TLHS>(a));
+abs(const BigInt& a) -> _private::BigIntAbs {
+	return _private::BigIntAbs(a);
+}
+
+CONSTEXPR_AUTO
+abs(BigInt&& a) -> BigInt {
+	a.sign() = Sign::POS;
+	return std::move(a);
+}
+
+CONSTEXPR_AUTO
+operator-(const _private::BigIntNeg& a) -> BigInt {
+	return a.lhs();
+}
+
+CONSTEXPR_AUTO
+operator-(const _private::BigIntAbs& a) -> _private::BigIntAbsNeg {
+	return _private::BigIntAbsNeg(a.lhs());
+}
+
+CONSTEXPR_AUTO
+operator-(const _private::BigIntAbsNeg& a) -> _private::BigIntAbs {
+	return _private::BigIntAbs(a.lhs());
+}
+
+CONSTEXPR_AUTO
+operator-(const BigInt& a) -> _private::BigIntNeg {
+	return _private::BigIntNeg(a);
+}
+
+CONSTEXPR_AUTO
+operator-(BigInt&& a) -> BigInt {
+	a.sign() = _private::neg(a.sign());
+	return std::move(a);
 }
 
 }
@@ -1958,7 +2016,7 @@ template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remaind
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod1(const TLHS &a, int32_t bb) -> DivModResult<BigInt, int32_t> {
 	if (bb < 0) {
-		auto r = divmod1<_private::BigIntNeg<const TLHS&>, ignore_quotient, ignore_remainder>(-a, static_cast<uint32_t>(-bb));
+		auto r = divmod1<decltype(-a), ignore_quotient, ignore_remainder>(-a, static_cast<uint32_t>(-bb));
 		return DivModResult{std::move(r.d), -static_cast<int32_t>(r.r)};
 	} else {
 		auto r = divmod1<TLHS, ignore_quotient, ignore_remainder>(a, static_cast<uint32_t>(bb));
