@@ -19,14 +19,34 @@ If you experience problems, found a bug, or have suggestions, Feel free to creat
 * [Installing](#installing)
 * [Overview](#overview)
   * [Features](#features)
-  * [Instantiation](#instantiation)
+  * [Initialization](#initialization)
   * [Basic Operators](#basic-operators)
+    * [addition (+, +=)](#addition--)
+    * [subtraction (-, -=)](#subtraction----)
+    * [multiplication (*, *=)](#multiplication--)
+    * [division (/, /=)](#division--)
+    * [modulo (%, %=)](#modulo--)
+    * [divmod](#divmod)
+    * [left-shift, right-shift (<<, >>, <<=, >>=)](#left-shift-right-shift----)
+    * [negation (-), abs](#negation---abs)
   * [Basic Math Functions](#basic-math-functions)
+    * [sqrt(y)](#sqrty)
+    * [log2(y)](#log2y)
+    * [log10(y)](#log10y)
+    * [log(base, y)](#logbase-y)
+    * [pow(base, exp)](#powbase-exp)
+    * [pow_mod(base, exp, mod)](#pow_modbase-exp-mod)
+    * [digit_sum(x)](#digit_sumx)
+    * [factorial(x), aka. x!](#factorialx-aka-x)
+    * [perm(n, k)](#permn-k)
+    * [comb(n, ki)](#combn-ki)
+    * [gcd(u, v)](#gcdu-v)
+    * [lcm(u, v)](#lcmu-v)
   * [Additional Functions](#additional-functions)
   * [Exceptions](#exceptions)
   * [Internals](#internals)
 * [Examples](#examples)
-  * [Factorial](#factorial-1)
+  * [Factorial](#factorial)
   * [Digit Sum](#digit-sum)
 * [Contributing](#contributing)
 * [License](#license)
@@ -91,25 +111,25 @@ For simplicity reasons, this overview will use `using bigint;`. If you prefer no
   uint16_t b = as_integral<uint16_t>(-1234_big);
   BigInt c = BigInt{-99LL);
   ```
-* many math functions:  
+* many useful math functions:  
   ```c++
   pow_mod(123456789_big, 987654321_big, 5555555555_big); // efficient modular exponentiation
   log(factorial(100), pow(3, 100));
-  lcm(factorial(100), pow(3, 100)); // least commin multiple
+  lcm(factorial(100), pow(3, 100)); // least common multiple
   divmod(factorial(100), pow(3, 50)); // combined division and modulo
   digit_sum<13>(factorial(100)); // digit sum in base 13
   ...
   ```
 
-### Instantiation
+### Initialization
 It is possible to instantiate a BigInt in multiple ways:  
 ```c++
 BigInt A;  // will hold the value +0.
-BigInt B1 = 100_big;  // BigInt literal
-BigInt B2 = 123'456'789_big;  // BigInt literal with digit separators
-BigInt B3 = 0x5abcDEF1_big;  // hexadecimal BigInt literal
-BigInt B4 = 0b10101010110_big;  // binary BigInt literal
-BigInt B5 = 0777777_big;  // octal BigInt literal
+BigInt B1 = 123456789_big;     // BigInt literal
+BigInt B2 = 123'456'789_big;   // BigInt literal with digit separators
+BigInt B3 = 0x5abcDEF1_big;    // hexadecimal BigInt literal
+BigInt B4 = 0b10101010110_big; // binary BigInt literal
+BigInt B5 = 077777755555_big;  // octal BigInt literal
 BigInt C{100};  // B will hold the value +100.
 BigInt D{-50};  // C will hold the value -50.
 BigInt E{50, Sign::NEG};  // D will hold the value -50.
@@ -123,148 +143,43 @@ BigInt G = 2;  // BigInt(uint64_t) is also explicit. prevents accidental use of 
 
 ### Basic Operators
 
-#### addition
-Sums two integers. The addition assignment operations are performed in-place. 
-```c++
-constexpr auto
-operator+(const BigInt& a, const BigInt& b) -> BigInt;
-constexpr auto
-operator+(const BigInt& a, std::integral auto b) -> BigInt;
-constexpr auto
-operator+(std::integral auto a, const BigInt& b) -> BigInt;
+All arithmetic operators can be used with mixed BigInt and integral types.```c++
 
-constexpr auto
-operator+=(BigInt& a, const BigInt& b) -> BigInt&;
-constexpr auto
-operator+=(BigInt& a, std::integral auto b) -> BigInt&;
+BigInt a{"1390824942691875931654"};
+std::cout << (a * 78) - 12 << std::endl;
+// Output: 108484345529966322669000
 ```
 
-#### subtraction
-Subtracts `b` from `a`. The subtraction assignment operations are performed in-place.
-```c++
-constexpr auto
-operator-(const BigInt& a, const BigInt& b) -> BigInt;
-constexpr auto
-operator-(const BigInt& a, std::integral auto b) -> BigInt;
-constexpr auto
-operator-(std::integral auto a, const BigInt& b) -> BigInt;
+#### addition (+, +=)
+Sums two integers. The addition assignment operations are always performed in-place. 
 
-constexpr auto
-operator-=(BigInt& a, const BigInt& b) -> BigInt&;
-constexpr auto
-operator-=(BigInt& a, std::integral auto b) -> BigInt&;
-```
+#### subtraction (-, -=)
+Subtracts `b` from `a`. The subtraction assignment operations are always performed in-place.
 
-#### multiplication
+#### multiplication (*, *=)
 Multiplies two integers. The multiplication assignment operation is only performed in-place if the second multiplicand is an integral type (like `int` or `uint64_t`).
-```c++
-constexpr auto
-operator*(const BigInt& a, const BigInt& b) -> BigInt;
-constexpr auto
-operator*(const BigInt& a, std::integral auto b) -> BigInt;
-constexpr auto
-operator*(std::integral auto a, const BigInt& b) -> BigInt;
 
-constexpr auto
-operator*=(BigInt& a, const BigInt& b) -> BigInt&;
-constexpr auto
-operator*=(BigInt& a, std::integral auto b) -> BigInt&;
-
-constexpr auto
-mult(uint64_t a, uint64_t b) -> /* Special stack allocated BigInt-like type */
-```
-
-#### division
+#### division (/, /=)
 Divides `a` by `b`. The division assignment operation is only performed in-place if the divisor is a 32-bit integer.  
-Dividing by a 32-bit integer is considerably faster than dividing ba a 64-bit one: `myBigInt / 7` is noticeably faster than `myBigInt / 7ull`.  
-```c++
-constexpr auto
-operator/(const BigInt& a, const BigInt& b) -> BigInt;
-constexpr auto
-operator/(const BigInt& a, std::integral auto b) -> BigInt;
+Dividing by a 32-bit integer is considerably faster than dividing by a 64-bit one: `myBigInt / 7` is noticeably faster than `myBigInt / 7ull`.
 
-constexpr auto
-operator/=(BigInt& a, const BigInt& b) -> BigInt&;
-constexpr auto
-operator/=(BigInt& a, std::integral auto b) -> BigInt&;
-```
-
-#### modulo
+#### modulo (%, %=)
 calculates the reminder of dividing `a` by `b`. The modulo assignment operation is *never* performed in-place.  
-Dividing by a 32-bit integer is considerably faster than dividing ba a 64-bit one: `myBigInt % 17` is noticeably faster than `myBigInt % 17ull`.  
-```c++
-constexpr auto
-operator%(const BigInt& a, const BigInt& b) -> BigInt;
-constexpr auto
-operator%(const BigInt& a, std::integral auto b) -> /*simple integral type */;
-
-constexpr auto
-operator%=(BigInt& a, const BigInt& b) -> BigInt&;
-```
+Dividing by a 32-bit integer is considerably faster than dividing ba a 64-bit one: `myBigInt % 17` is noticeably faster than `myBigInt % 17ull`.
 
 #### divmod
 Calculates the dividend and reminder of dividing `a` by `b` at the same time.  
-Dividing by a 32-bit integer is considerably faster than dividing ba a 64-bit one: `divmod1(myBigInt, 17)` is noticeably faster than `divmod(myBigInt, 17ull)`.  
-```c++
-constexpr auto
-divmod(const BigInt& a, const BigInt& b) -> DivModResult<BigInt, BigInt>
-constexpr auto
-divmod(const BigInt& a, std::integral auto b) -> DivModResult<BigInt, /*simple integral type */>
+Dividing by a 32-bit integer is considerably faster than dividing ba a 64-bit one: `divmod(myBigInt, 17)` is noticeably faster than `divmod(myBigInt, 17ull)`.
 
-constexpr auto
-divmod1(const BigInt& a, uint32_t auto b) -> DivModResult<BigInt, uint32_t> // aslo aviable for int32_t.
-```
-
-#### left-shift, right-shift
-Shifts the given integer by n bits left or right, filling with zeros. The shift assignment operations are always performed in-place.  
-Dividing by a 32-bit integer is considerably faster than dividing ba a 64-bit one: `divmod1(myBigInt, 17)` is noticeably faster than `divmod(myBigInt, 17ull)`.  
-```c++
-constexpr auto
-operator<<(const BigInt& a, uint64_t n) -> BigInt;
-constexpr auto
-operator>>(const BigInt& a, uint64_t n) -> BigInt;
-
-constexpr auto
-operator<<=(BigInt& a, uint64_t n) -> BigInt&;
-constexpr auto
-operator>>=(BigInt& a, uint64_t n) -> BigInt&;
-```
+#### left-shift, right-shift (<<, >>, <<=, >>=)
+Shifts the given integer by n bits left or right, filling with zeros. The shift assignment operations are always performed in-place.
 
 #### negation (-), abs
  Both operations return a view of the underlying BigInt with the sign changed accordingly.
-```c++
-constexpr auto
-operator-(const BigInt& a) -> /* negated BigInt view */;
-constexpr auto
-operator-(BigInt&& a) -> /* negated BigInt view */;
-
-constexpr auto
-abs(const BigInt& a) -> /* BigInt view with negative sign removed */;
-constexpr auto
-abs(BigInt&& a) -> /* BigInt view with negative sign removed */;
-```
-
-Following operators are provided: 
-* Basic arithmetic operators: `+`, `-`, `*`, `/`, `%`.
-* Bitwise shift operators: `<<`, `>>`.
-* Inline operators: `+=`, `-=`, `*=`, `/=`.
-	* `+=`, `-=`, `<<=`, `>>=` are always performed inline.
-	* `*=` is only performed inline if the second argument is an integral type (e.g. int32_t, or uint64_t).
-	* `/=` is never performed inline.
-* Negation `-`, `abs(const BigInt&)`: Both operations return a view of the underlying BigInt with the sign changed.
-* `mult(uint64_t, uint64_t)`: multiplies both numbers and returns an entirely stack-allocated BigInt-like object.
-* `divmod(...)`, `divmod1(...)`: to get both the quotient and the reminder with only one calculation.
-
-All arithmetic operators can be used with mixed BigInt and integral types.
-```c++
-BigInt a{"1390824942691875931654"};
-std::cout << (a * 78) << std::endl;
-// Output: 108484345529966322669012
-```
 
 
 ### Basic Math Functions
-#### sqrt
+#### sqrt(y)
 Calculates the integer square root of `y` using Newton's method.  
 Throws `std::domain_error` if y < 0.
 ```c++
@@ -272,7 +187,7 @@ constexpr auto
 sqrt(const BigInt& y) -> BigInt
 ```  
 
-#### log2
+#### log2(y)
 Calculates the integer logarithm of y for base 2.  
 Throws `std::domain_error` if y <= 0.  
 This is the same as counting the number of digits of a positive, non-zero integer in binary representation minus one.  
@@ -282,7 +197,7 @@ constexpr auto
 log2(const BigInt& y) -> uint64_t;
 ```
 
-#### log10
+#### log10(y)
 Calculates the integer logarithm of y for base 10. Throws `std::domain_error` if y <= 0
 This is the same as counting the number of digits of a positive, non-zero integer in decimal representation minus one.
 `log10(y)` is the same as `log(10, y)`.
@@ -291,14 +206,14 @@ constexpr auto
 log10(const BigInt& y) -> uint64_t;
 ```
 
-#### log
+#### log(base, y)
 Calculates the integer logarithm of y for base `base`. Throws `std::domain_error` if base <= 1 or y <= 0
 ```c++
 constexpr auto
 log(const BigInt& base, const BigInt& y) -> uint64_t;
 ```
 
-#### pow
+#### pow(base, exp)
 Raises `base` to the power of `exp`. E.g.: `pow(10, 3) == 1000`. if you need to calculate `pow(a, b) % m` use `pow_mod()` instead.  
 Throws `std::domain_error` if both `base` and `exp` are equal to zero.
 ```c++
@@ -306,7 +221,7 @@ constexpr auto
 pow(const BigInt& base, uin64_t exp) -> BigInt
 ```
 
-#### pow_mod
+#### pow_mod(base, exp, mod)
 Raises `base` to the power of `exp` modulo `mod`. E.g.: `pow_mod(10, 3, 12) == 4`. This is *way* faster than doing `pow(base, exp) % mod`; especially for large `x` and `y`.  
 Throws `std::domain_error` if both `base` and `exp` are equal to zero or if `mod` is zero
 ```c++
@@ -314,7 +229,7 @@ constexpr auto
 pow_mod(const BigInt& base, const BigInt& exp, const BigInt& mod) -> BigInt
 ```
 
-#### digit_sum
+#### digit_sum(x)
 Sums all digits in the given base ignoring any sign. E.g.: `digit_sum<10>(-12955) == 1 + 2 + 9 + 5 + 5 == 22`.  
 Supported bases are 2 - 64 (inclusive). The bases 2, 4, 8, 16, and 32 are considerable faster than any other base.
 ```c++
@@ -323,35 +238,35 @@ constexpr auto
 digit_sum(const BigInt& x) -> uint64_t
 ```
 
-#### factorial
+#### factorial(x), aka. x!
 Calculates the factorial of `x`. `x! = 1 * 2 * 3 * ... * x`.
 ```c++
 constexpr auto
 factorial(uin32_t x) -> BigInt
 ```
 
-#### perm
+#### perm(n, k)
 The Permutation function, Pochhammer symbol, or `nPk`. Calculates the number of ways to choose `k` items from `n` items without repetition and with order. Evaluates to `n! / (n - k)!` when `k <= n` and evaluates to zero otherwise.
 ```c++
 constexpr auto
 perm(uint32_t n, uint32_t k) -> BigInt
 ```
 
-#### comb
+#### comb(n, ki)
 The Combinations function, Binomial coefficient, or `nCk`. Calculates the number of ways to choose `k` items from `n` items without repetition and without order. Evaluates to `n! / ((n - k)! * k!)` when `k <= n` and evaluates to zero otherwise.
 ```c++
 constexpr auto
 comb(uint32_t n, uint32_t k) -> BigInt
 ```
 
-#### gcd
+#### gcd(u, v)
 Calculates the greatest common divisor of `u` and `v` using Lehmer’s Euclidean GCD Algorithm. The result is never negative. Adapted from Jonathan Sorenson, 1995, An Analysis of Lehmer’s Euclidean GCD Algorithm
 ```c++
 constexpr auto
 gcd(const BigInt& u, const BigInt& v) -> BigInt
 ```
 
-#### lcm
+#### lcm(u, v)
 Calculates the least common multiple of `u` and `v` using Lehmer’s Euclidean GCD Algorithm. The result is never negative. 
 ```c++
 constexpr auto
