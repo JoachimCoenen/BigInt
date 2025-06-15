@@ -459,64 +459,6 @@ as_i32(const is_BigInt_like auto& value) -> int32_t { return as_integral<int32_t
 // rshifted & lshifted:
 namespace bigint::_private {
 
-template <typename T>
-class BigIntLShifted : IBigIntLike {
-	using T_Plain = std::remove_cvref_t<T>;
-public:
-	constexpr BigIntLShifted(T_Plain&& lhs, const uint64_t shifted) :
-		_lhs(std::move(lhs)), _shifted(shifted) {}
-
-	constexpr BigIntLShifted(std::remove_reference_t<T>& lhs, const uint64_t shifted) :
-		_lhs(lhs), _shifted(shifted) {}
-
-	CONSTEXPR_AUTO
-	sign() const noexcept -> Sign {
-		return lhs().sign();
-	}
-
-	CONSTEXPR_AUTO
-	sign() noexcept -> Sign& {
-		return lhs().sign();
-	}
-
-	CONSTEXPR_AUTO
-	size() const -> std::size_t {
-		return lhs().size() + _shifted;
-	}
-
-	CONSTEXPR_AUTO
-	operator[](std::size_t index) const -> uint64_t {
-		return index < _shifted ? 0 : lhs()[index - _shifted];
-	}
-
-	BIGINT_TRACY_CONSTEXPR_VOID
-	cleanup() {
-		lhs().cleanup();
-	}
-
-private:
-	T _lhs;
-	uint64_t _shifted;
-
-	CONSTEXPR_AUTO
-	lhs() const -> const T_Plain& { return _lhs; }
-	CONSTEXPR_AUTO
-	lhs() -> T_Plain& { return _lhs; }
-};
-
-template <is_BigInt_like TLHS>
-CONSTEXPR_AUTO
-lshifted(const TLHS& a, uint64_t shifted) {
-	return BigIntLShifted<const TLHS&>(a, is_zero(a) ? 0 : shifted);
-}
-
-template <is_BigInt_like TLHS>
-CONSTEXPR_AUTO
-lshifted(TLHS&& a, uint64_t shifted) {
-	return BigIntLShifted<TLHS>(std::forward<TLHS>(a), is_zero(a) ? 0 : shifted);
-}
-
-
 CONSTEXPR_AUTO
 rshifted(const utils::Span<const uint64_t>& a, uint64_t shifted) {
 	return a.subspan_trunc(shifted);
