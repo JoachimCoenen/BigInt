@@ -319,109 +319,6 @@ private:
 }
 
 
-// class BigIntAdapter:
-namespace bigint {
-
-class BigIntAdapter : public IBigIntLike
-{ // maybe use SSO instead? (SSO = Small String Optimization)
-
- public:
-	template<std::integral T>
-	explicit constexpr
-	BigIntAdapter(T v) noexcept
-		: _data(utils::constexpr_abs(v)), _sign(_private::get_sign(v))
-	{ }
-
-	CONSTEXPR_AUTO
-	sign() const noexcept -> Sign {
-		return _sign;
-	}
-
-	CONSTEXPR_AUTO
-	size() const noexcept -> std::size_t {
-		return 1;
-	}
-
-	CONSTEXPR_AUTO
-	operator[](std::size_t index) const noexcept -> uint64_t {
-		return index >= size() ? 0 : utils::constexpr_abs(_data);
-	}
-
-	CONSTEXPR_AUTO
-	_span() -> utils::Span<uint64_t> {
-		return utils::Span{&_data, 1};
-	}
-
-	CONSTEXPR_AUTO
-	_span() const noexcept -> utils::Span<const uint64_t> {
-		return utils::Span{&_data, 1};
-	}
-
-private:
-	uint64_t _data;
-	Sign _sign;
-};
-
-}
-
-
-// class BigIntAdapter2:
-namespace bigint {
-
-class BigIntAdapter2 : public IBigIntLike
-{ // maybe use SSO instead? (SSO = Small String Optimization)
-public:
-	explicit constexpr
-	BigIntAdapter2(uint64_t lo, uint64_t hi, Sign sign=Sign::POS) noexcept
-		 : _data({lo, hi}), _sign(sign)
-	{ }
-
-	CONSTEXPR_AUTO
-	sign() const noexcept -> Sign {
-		return _sign;
-	}
-
-	CONSTEXPR_AUTO
-	sign() noexcept -> Sign& {
-		return _sign;
-	}
-
-	CONSTEXPR_AUTO
-	size() const noexcept -> std::size_t {
-		return _data.back() != 0 ? 2 : 1;
-	}
-
-	CONSTEXPR_AUTO
-	operator[](std::size_t index) const noexcept -> uint64_t {
-		return index >= 2 ? 0 : _data[index];
-	}
-
-	CONSTEXPR_VOID
-	set(std::size_t index, uint64_t digit) {
-#if BIGINT_ENABLE_BOUNDS_CHECKS
-		utils::check_bounds(index, 2);
-#endif
-		_data[index] = digit;
-	}
-
-	CONSTEXPR_AUTO
-	_span_full() -> utils::Span<uint64_t> {
-		return utils::Span{_data};
-	}
-
-	CONSTEXPR_AUTO
-	_span() const noexcept -> utils::Span<const uint64_t> {
-		return utils::Span{_data.data(), size()};
-	}
-
-private:
-	std::array<uint64_t, 2> _data;
-	Sign _sign;
-};
-
-}
-
-
 // is_zero(), is_neg(), ...:
 namespace bigint {
 
@@ -1222,17 +1119,41 @@ add(TRES &result, TLHS &a, const TRHS &b) {
 }
 
 
-template <is_BigInt_like TLHS, std::integral TRHS>
+template <is_BigInt_like TRES, is_BigInt_like TLHS>
+BIGINT_TRACY_CONSTEXPR_VOID
+add(TRES &result, TLHS &a, std::integral auto b) {
+	result.resize(a.size() + 1);
+
+	uint64_t abs_b = utils::constexpr_abs(b);
+	if (is_pos(a)) {
+		if (b > 0) {
+			_private::add_ignore_sign(result._span(), a._span(), utils::Span{&abs_b, 1});
+		} else {
+			result.sign() = _private::sub_ignore_sign(result._span(), a._span(), utils::Span{&abs_b, 1});
+		}
+	} else {
+		if (b > 0) {
+			result.sign() = _private::sub_ignore_sign(result._span(), utils::Span{&abs_b, 1}, a._span());
+		} else {
+			_private::add_ignore_sign(result._span(), a._span(), utils::Span{&abs_b, 1});
+			result.sign() = Sign::NEG;
+		}
+	}
+	result.cleanup();
+}
+
+
+template <is_BigInt_like TLHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
-operator+(const TLHS &a, TRHS b) -> BigInt {
+operator+(const TLHS &a, std::integral auto b) -> BigInt {
 	BigInt result;
-	add(result, const_cast<TLHS&>(a), BigIntAdapter(b));
+	add(result, const_cast<TLHS&>(a), b);
 	return result;
 }
 
-template <std::integral TLHS, is_BigInt_like TRHS>
+template <is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
-operator+(TLHS a, const TRHS &b) -> BigInt {
+operator+(std::integral auto a, const TRHS &b) -> BigInt {
 	return b + a;
 }
 
@@ -1244,10 +1165,10 @@ operator+(const TLHS &a, const TRHS &b) -> BigInt {
 	return result;
 }
 
-template <is_BigInt_like TLHS, std::integral TRHS>
+template <is_BigInt_like TLHS>
 BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
-operator+=(TLHS &a, TRHS b) -> TLHS& {
-	add(a, a, BigIntAdapter(b));
+operator+=(TLHS &a, std::integral auto b) -> TLHS& {
+	add(a, a, b);
 	return a;
 }
 
@@ -1285,20 +1206,43 @@ sub(TRES &result, TLHS &a, const TRHS &b) {
 	result.cleanup();
 }
 
-template <is_BigInt_like TLHS, std::integral TRHS>
+template <is_BigInt_like TRES, is_BigInt_like TLHS>
+BIGINT_TRACY_CONSTEXPR_VOID
+sub(TRES &result, TLHS &a, std::integral auto b) {
+	result.resize(a.size() + 1);
+
+	uint64_t abs_b = utils::constexpr_abs(b);
+	if (is_pos(a)) {
+		if (b > 0) {
+			result.sign() = _private::sub_ignore_sign(result._span(), a._span(), utils::Span{&abs_b, 1});
+		} else {
+			_private::add_ignore_sign(result._span(), a._span(), utils::Span{&abs_b, 1});
+		}
+	} else {
+		if (b > 0) {
+			_private::add_ignore_sign(result._span(), a._span(), utils::Span{&abs_b, 1});
+			result.sign() = Sign::NEG;
+		} else {
+			result.sign() = _private::sub_ignore_sign(result._span(), utils::Span{&abs_b, 1}, a._span());
+		}
+	}
+	result.cleanup();
+}
+
+template <is_BigInt_like TLHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
-operator-(const TLHS &a, TRHS b) -> BigInt {
+operator-(const TLHS &a, std::integral auto b) -> BigInt {
 	BigInt result;
-	sub(result, const_cast<TLHS&>(a), BigIntAdapter(b));
+	sub(result, const_cast<TLHS&>(a), b);
 	return result;
 }
 
-template <std::integral TLHS, is_BigInt_like TRHS>
+template <is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
-operator-(TLHS a, const TRHS &b) -> BigInt {
+operator-(std::integral auto a, const TRHS &b) -> BigInt {
 	BigInt result;
-	BigIntAdapter a_ {a};
-	sub(result, a_, b);
+	sub(result, const_cast<TRHS&>(b), a);
+	result.sign() = _private::neg(result.sign());
 	return result;
 }
 
@@ -1310,10 +1254,10 @@ operator-(const TLHS &a, const TRHS &b) -> BigInt {
 	return result;
 }
 
-template <is_BigInt_like TLHS, std::integral TRHS>
+template <is_BigInt_like TLHS>
 BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
-operator-=(TLHS &a, TRHS b) -> TLHS& {
-	sub(a, a, BigIntAdapter(b));
+operator-=(TLHS &a, std::integral auto b) -> TLHS& {
+	sub(a, a, b);
 	return a;
 }
 
@@ -1341,8 +1285,19 @@ mult_sign(Sign a, Sign b) -> Sign {
 // multiplication:
 namespace bigint {
 
+struct MultResult {
+	uint64_t lo, hi;
+
+	[[nodiscard]] explicit constexpr
+	operator BigInt() const {
+		BigInt result{{lo, hi}};
+		result.cleanup();
+		return result;
+	}
+};
+
 BIGINT_TRACY_CONSTEXPR_AUTO
-mult(uint64_t a, uint64_t b) -> BigIntAdapter2 {
+mult(uint64_t a, uint64_t b) -> MultResult {
 	BIGINT_TRACY_ZONE_SCOPED;
 	const auto a_0 = a & 0xFFFFFFFFull;
 	const auto a_1 = a >> 32;
@@ -1363,7 +1318,7 @@ mult(uint64_t a, uint64_t b) -> BigIntAdapter2 {
 	r += r_10 << 32;
 	c += (r < (r_10 << 32)) ? 1 : 0;
 
-	return BigIntAdapter2{r, c};
+	return MultResult{r, c};
 }
 
 namespace _private {
@@ -1375,9 +1330,9 @@ namespace _private {
 		size_t i = 0;
 		for (; i < a.size(); i++) {
 			const auto rc = mult(a[i], b);
-			auto result_i = rc[0] + c;
+			auto result_i = rc.lo + c;
 			result[i] = result_i;
-			c = rc[1] + (result_i < c ? 1 : 0); // account for addition overflow
+			c = rc.hi + (result_i < c ? 1 : 0); // account for addition overflow
 		}
 
 		if (c) {
@@ -2071,7 +2026,7 @@ operator/(const TLHS &a, TRHS b) -> BigInt {
 template <is_BigInt_like TLHS, one_of<uint64_t, int64_t> TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator/(const TLHS &a, TRHS b) -> BigInt {
-	return divmod<TLHS, BigIntAdapter, false, true>(a, BigIntAdapter(b)).d;
+	return divmod<TLHS, false, true>(a, b).d;
 }
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
@@ -2092,7 +2047,7 @@ operator/=(BigInt &a, TRHS b) -> BigInt& {
 template <one_of<uint64_t, int64_t> TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
 operator/=(BigInt &a, TRHS b) -> BigInt& {
-	const auto result = divmod<BigInt, BigIntAdapter, false, true>(a, BigIntAdapter(b)).d;
+	const auto result = divmod<BigInt, false, true>(a, b).d;
 	a = std::move(result);
 	return a;
 }
@@ -2120,19 +2075,19 @@ operator%(const TLHS &a, TRHS b) -> TRHS {
 template <is_BigInt_like TLHS, one_of<uint64_t, int64_t> TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator%(const TLHS &a, TRHS b) -> TRHS {
-	return divmod<TLHS>(a, b).r;
+	return divmod<TLHS, true, false>(a, b).r;
 }
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator%(const TLHS &a, const TRHS &b) -> BigInt {
-	return divmod<TLHS, TRHS, true>(a, b).r;
+	return divmod<TLHS, TRHS, true, false>(a, b).r;
 }
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator%=(TLHS &a, const TRHS &b) -> BigInt& {
-	a = divmod<TLHS, TRHS, true>(a, b).r;
+	a = divmod<TLHS, TRHS, true, false>(a, b).r;
 	return a;
 }
 
