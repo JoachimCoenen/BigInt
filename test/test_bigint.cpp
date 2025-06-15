@@ -507,9 +507,9 @@ TEST_DIVMOD(Divmod, BigInt, uint64_t, divmod(a, b), uint64_t, res.r)
 
 TEST_DIVMOD(Divmod, BigInt, int64_t, divmod(a, b), int64_t, res.r)
 
-TEST_DIVMOD(Divmod1, BigInt, uint32_t, divmod1(a, b), uint32_t, res.r)
+TEST_DIVMOD(Divmod, BigInt, uint32_t, divmod(a, b), uint32_t, res.r)
 
-TEST_DIVMOD(Divmod1, BigInt, int32_t, divmod1(a, b), int32_t, res.r)
+TEST_DIVMOD(Divmod, BigInt, int32_t, divmod(a, b), int32_t, res.r)
 
 }
 

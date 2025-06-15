@@ -1877,7 +1877,7 @@ divmod(const TLHS &a, uint64_t b) -> DivModResult<BigInt, uint64_t> {
 
 template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
-divmod1(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> {
+divmod(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> {
 	BIGINT_TRACY_ZONE_SCOPED;
 	if (b == 0) {
 		throw std::domain_error{utils::error_msg("division by zero")};
@@ -1956,12 +1956,12 @@ divmod1(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> {
 
 template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
-divmod1(const TLHS &a, int32_t bb) -> DivModResult<BigInt, int32_t> {
+divmod(const TLHS &a, int32_t bb) -> DivModResult<BigInt, int32_t> {
 	if (bb < 0) {
-		auto r = divmod1<decltype(-a), ignore_quotient, ignore_remainder>(-a, static_cast<uint32_t>(-bb));
+		auto r = divmod<decltype(-a), ignore_quotient, ignore_remainder>(-a, static_cast<uint32_t>(-bb));
 		return DivModResult{std::move(r.d), -static_cast<int32_t>(r.r)};
 	} else {
-		auto r = divmod1<TLHS, ignore_quotient, ignore_remainder>(a, static_cast<uint32_t>(bb));
+		auto r = divmod<TLHS, ignore_quotient, ignore_remainder>(a, static_cast<uint32_t>(bb));
 		return DivModResult{std::move(r.d), static_cast<int32_t>(r.r)};
 	}
 }
@@ -2069,7 +2069,7 @@ namespace bigint {
 template <is_BigInt_like TLHS, one_of<uint32_t, int32_t> TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator%(const TLHS &a, TRHS b) -> TRHS {
-	return divmod1<TLHS, true>(a, b).r; // we can truncate safely because the divisor only also is uint32_t.
+	return divmod<TLHS, true, false>(a, b).r; // we can truncate safely because the divisor only also is uint32_t.
 }
 
 template <is_BigInt_like TLHS, one_of<uint64_t, int64_t> TRHS>
@@ -2634,7 +2634,7 @@ digit_sum(const BigInt& v) -> uint64_t {
 
 		uint64_t sum = 0ull;
 		while (!is_zero(temp.d)) {
-			temp = divmod1(temp.d, division_base);
+			temp = divmod(temp.d, division_base);
 			uint32_t& digs = temp.r;
 			while (digs > 0) {
 				sum += digs % base;
@@ -2670,7 +2670,7 @@ to_string(const BigInt &v) -> std::string {
 		temp.d.sign() = Sign::POS;
 
 		while (temp.d > 0) {
-			temp = divmod1(temp.d, conv.division_base);
+			temp = divmod(temp.d, conv.division_base);
 			auto& digs = temp.r;
 			result.insert(0, _private::to_string_padded_generic<base, conv.base_power>(digs));
 			temp.d.cleanup();
