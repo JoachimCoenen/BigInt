@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include "bigint/bigInt.h"
+#include "bigint/math.h"
 
 using namespace bigint;
 

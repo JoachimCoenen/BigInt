@@ -3,158 +3,14 @@
 #endif
 
 #include "../src/bigint/bigInt.h"
-#include "../src/bigint/utils.h"
 
 #include "values_for_test.h"
-
-#include <gtest/gtest.h>
+#include "macros_for_tests.h"
 
 namespace {
 using namespace bigint;
 using namespace test_data;
 }
-
-namespace test_utils {
-
-template <size_t N, typename R, typename RT, typename... On>
-inline void test_operation(
-	const Operation<R, On...>& operation,
-	const std::function<RT(const R&)> get_result_compare_value,
-	const std::vector<OperationTest<N>>& tests
-) {
-	const std::function<void(const R&, const R&, const std::string&, const On&...)>
-	test_func = [&](const R& result, const R& expected, const std::string& test_str, [[maybe_unused]] const On&... on) -> void {
-		// const auto& o1 = utils::get<0>(on...);
-		// EXPECT_NE(&result, &o1) << "return value & first operand expected to be different reference." << test_str;
-		EXPECT_EQ(get_result_compare_value(result), get_result_compare_value(expected)) << test_str;
-	};
-
-	testOperationBase<N, R, On...>(operation, tests, test_func);
-}
-
-template <size_t N, typename R, typename RT, typename... On>
-	requires std::same_as<R, first_type_of<On...>>
-			 && (!std::is_const_v<R>)
-			 && (!std::is_const_v<first_type_of<On...>>)
-inline void test_assignment_operation(
-	const Operation<R&, On...>& operation,
-	const std::function<RT(const R&)> get_result_compare_value,
-	const std::vector<OperationTest<N>>& tests
-) {
-	const std::function<void(const R&, const R&, const std::string&, const On&...)>
-		test_func = [&](const R& result, const R& expected, const std::string& test_str, [[maybe_unused]] const On&... on) -> void {
-		const auto& o1 = get<0>(on...);
-		EXPECT_EQ((&result), (&o1)) << "return value & first operand expected to be same reference." << test_str;
-		EXPECT_EQ(get_result_compare_value(result), get_result_compare_value(expected)) << test_str;
-	};
-
-	testOperationBase<N, R&, On...>(operation, tests, test_func);
-}
-
-}
-
-/* ***************************************************************************************
- * all tests needed:
- * NON-MATHS PUBLIC:
- *   NORMAL CONSTRUCTORS (explicit & implicit):
- *   COPY/MOVE CONSTRUCTORS / ASSIGNMENT:
- *   ...
- *
- * NON-MATHS PRIVATE:
- *   size() const
- *   uint64_t &operator[](std::size_t) const
- *   uint64_t &operator[](std::size_t)
- *   append(uint64_t v)
- *   insertFront(uint64_t v)
- *   cleanup()
- *   ...
- *
- *
- *
- * MATHS RELATED:
- *   UNARY OPERATORS:
- *     operator-() const
- *     operator+() const
- *      operator++()
- *      operator++(int)
- *      operator--()
- *      operator--(int)
- *
- *   BIARY OPERATORS:
- *     KINDS:
- *       +
- *       -
- *       *
- *       /
- *       %
- *       <<
- *       >>
- *       divmod
- *       power(?)
- *     PERMUTATIONS:
- *       BigInt, BigInt
- *       BigInt, uint64_t
- *       BigInt, int64_t
- *       BigInt, uint32_t
- *       BigInt, int32_t
- *       uint64_t, BigInt
- *       int64_t,  BigInt
- *       uint32_t, BigInt
- *       int32_t,  BigInt
- *
- *   SELF OPERATORS (what is their propper name?):
- *     KINDS:
- *       +=
- *       -=
- *       *=
- *       /=
- *       %=
- *       <<=
- *       >>=
- *     PERMUTATIONS:
- *       BigInt, BigInt
- *       BigInt, uint64_t
- *       BigInt, int64_t
- *       BigInt, uint32_t
- *       BigInt, int32_t
- *
- *   CMPARISONS:
- *     KINDS:
- *       <
- *       >
- *       <=
- *       >=
- *       ==
- *       !=
- *     PERMUTATIONS:
- *       BigInt, BigInt
- *       BigInt, uint64_t
- *       BigInt, int64_t
- *       BigInt, uint32_t
- *       BigInt, int32_t
- *       uint64_t, BigInt
- *       int64_t,  BigInt
- *       uint32_t, BigInt
- *       int32_t,  BigInt
- *
- *   FUNCTIONS:
- *     sqr
- *     sqrt?
- *     factorial
- *     digit_sum
- *     // maybe combinatoricsrelated functions, e.g.: P(), C()?
- *
- * AUXILLARY:
- *   fromString(BigInt)
- *   to_string(BigInt)
- *   to_stringPadded(BigInt)
- *   operator<<(std::ostream&, BigInt)
- *
- *
- *
- *
- */
-
 
 // Constructors
 namespace {
@@ -242,59 +98,6 @@ TEST(HelloTest, TestCreateFromString) {
 }
 
 }
-
-#define TEST_UNARY_OPERATOR(NAME, O1, R, OP, TEST_VALUES, RT, GET_RT) \
-TEST(HelloTest, Test##NAME##_##O1) {\
-	test_operation<1, R, RT, O1>(\
-		[](const O1& a) -> R { return OP; },\
-		[](const R& res) -> RT { return GET_RT; },\
-		TEST_VALUES\
-	);\
-}
-
-#define TEST_UNARY_OPERATOR_BIGINT(NAME, O1, OP, TEST_VALUES) \
-TEST_UNARY_OPERATOR(NAME, O1, BigInt, OP, TEST_VALUES, std::vector<uint64_t>, res.__data_for_testing_only())
-
-
-
-#define TEST_BINARY_OPERATOR(NAME, O1, O2, R, OP, TEST_VALUES, RT, GET_RT) \
-TEST(HelloTest, Test##NAME##_##O1##_##O2) {\
-	test_operation<2, R, RT, O1, O2>(\
-		[](const O1& a, const O2& b) -> R { return OP; },\
-		[](const R& res) -> RT { return GET_RT; },\
-		TEST_VALUES\
-	);\
-}
-
-#define TEST_BINARY_OPERATOR_BIGINT(NAME, O1, O2, OP, TEST_VALUES) \
-TEST_BINARY_OPERATOR(NAME, O1, O2, BigInt, OP, TEST_VALUES, std::vector<uint64_t>, res.__data_for_testing_only())
-
-
-#define TEST_ASSIGN_OPERATOR(NAME, O1, O2, OP, TEST_VALUES, RT, GET_RT) \
-TEST(HelloTest, TestI##NAME##_##O1##_##O2) {\
-	test_assignment_operation<2, O1, RT, O1, O2>(\
-		[](O1& a, const O2& b) -> O1& { return OP; },\
-		[](const O1& res) -> RT { return GET_RT; },\
-		TEST_VALUES\
-	);\
-}
-
-#define TEST_ASSIGN_OPERATOR_BIGINT(NAME, O2, OP, TEST_VALUES) \
-TEST_ASSIGN_OPERATOR(NAME, BigInt, O2, OP, TEST_VALUES, std::vector<uint64_t>, res.__data_for_testing_only())
-
-
-
-#define TEST_TRINARY_OPERATOR(NAME, O1, O2, O3, R, OP, TEST_VALUES, RT, GET_RT) \
-TEST(HelloTest, Test##NAME##_##O1##_##O2##_##O3) {\
-	test_operation<3, R, RT, O1, O2, O3>(\
-		[](const O1& a, const O2& b, const O3& c) -> R { return OP; },\
-		[](const R& res) -> RT { return GET_RT; },\
-		TEST_VALUES\
-	);\
-}
-
-#define TEST_TRINARY_OPERATOR_BIGINT(NAME, O1, O2, O3, OP, TEST_VALUES) \
-TEST_TRINARY_OPERATOR(NAME, O1, O2, O3, BigInt, OP,TEST_VALUES, std::vector<uint64_t>, res.__data_for_testing_only())
 
 
 // Bitwise Shift
@@ -510,48 +313,6 @@ TEST_DIVMOD(Divmod, BigInt, int64_t, divmod(a, b), int64_t, res.r)
 TEST_DIVMOD(Divmod, BigInt, uint32_t, divmod(a, b), uint32_t, res.r)
 
 TEST_DIVMOD(Divmod, BigInt, int32_t, divmod(a, b), int32_t, res.r)
-
-}
-
-
-// sqrt, log2, pow, pow_mod, etc.
-namespace {
-
-TEST_UNARY_OPERATOR_BIGINT(Sqrt, BigInt, sqrt(a), get_all_sqrt_test_values())
-
-TEST_UNARY_OPERATOR(Log2, BigInt, uint64_t, log2(a), get_all_log2_test_values(), uint64_t, res)
-
-TEST_UNARY_OPERATOR(Log10, BigInt, uint64_t, log10(a), get_all_log10_test_values(), uint64_t, res)
-
-TEST_BINARY_OPERATOR(Log, BigInt, BigInt, uint64_t, log(a, b), get_all_log_test_values(), uint64_t, res)
-
-TEST_BINARY_OPERATOR_BIGINT(Pow, BigInt, uint64_t, pow(a, b), get_all_pow_test_values())
-
-TEST_TRINARY_OPERATOR_BIGINT(PowMod, BigInt, BigInt, BigInt, pow_mod(a, b, c), get_all_powmod_test_values())
-
-TEST_UNARY_OPERATOR(DigitSum_10, BigInt, uint64_t, digit_sum<10>(a), get_all_digit_sum_10_test_values(), uint64_t, res)
-
-TEST_UNARY_OPERATOR(DigitSum_16, BigInt, uint64_t, digit_sum<16>(a), get_all_digit_sum_16_test_values(), uint64_t, res)
-
-}
-
-
-// combinatorics
-namespace {
-
-TEST_BINARY_OPERATOR_BIGINT(Perm, uint32_t, uint32_t, perm(a, b), get_all_perm_test_values())
-
-TEST_BINARY_OPERATOR_BIGINT(Comb, uint32_t, uint32_t, comb(a, b), get_all_comb_test_values())
-
-}
-
-
-// number theory
-namespace {
-
-TEST_BINARY_OPERATOR_BIGINT(Gcd, BigInt, BigInt, gcd(a, b), get_all_gcd_test_values())
-
-TEST_BINARY_OPERATOR_BIGINT(Lcm, BigInt, BigInt, lcm(a, b), get_all_lcm_test_values())
 
 }
 

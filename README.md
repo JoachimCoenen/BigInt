@@ -180,6 +180,8 @@ Shifts the given integer by n bits left or right, filling with zeros. The shift 
 
 
 ### Basic Math Functions
+located in `bigint/math.h`.
+
 #### sqrt(y)
 Calculates the integer square root of `y` using Newton's method.  
 Throws `std::domain_error` if y < 0.

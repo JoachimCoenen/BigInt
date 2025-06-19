@@ -26,8 +26,10 @@ FetchContent_MakeAvailable(googletest)
 
 add_executable("Test_BigInt"
 	test_bigint.cpp
+	test_math.cpp
 	values_for_test.h
 	utils_for_test.h
+	macros_for_tests.h
 	data_loader.h
 	../src/bigint/bigInt.h
 	../src/bigint/utils.h
