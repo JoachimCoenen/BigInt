@@ -143,38 +143,39 @@ BigInt G = 2;  // BigInt(uint64_t) is also explicit. prevents accidental use of 
 
 ### Basic Operators
 
-All arithmetic operators can be used with mixed BigInt and integral types.```c++
+All arithmetic operators can be used with mixed BigInt and integral types.
 
+```c++
 BigInt a{"1390824942691875931654"};
 std::cout << (a * 78) - 12 << std::endl;
 // Output: 108484345529966322669000
 ```
 
-#### addition (+, +=)
+#### Addition (+, +=)
 Sums two integers. The addition assignment operations are always performed in-place. 
 
-#### subtraction (-, -=)
+#### Subtraction (-, -=)
 Subtracts `b` from `a`. The subtraction assignment operations are always performed in-place.
 
-#### multiplication (*, *=)
+#### Multiplication (*, *=)
 Multiplies two integers. The multiplication assignment operation is only performed in-place if the second multiplicand is an integral type (like `int` or `uint64_t`).
 
-#### division (/, /=)
+#### Division (/, /=)
 Divides `a` by `b`. The division assignment operation is only performed in-place if the divisor is a 32-bit integer.  
 Dividing by a 32-bit integer is considerably faster than dividing by a 64-bit one: `myBigInt / 7` is noticeably faster than `myBigInt / 7ull`.
 
-#### modulo (%, %=)
+#### Modulo (%, %=)
 calculates the reminder of dividing `a` by `b`. The modulo assignment operation is *never* performed in-place.  
 Dividing by a 32-bit integer is considerably faster than dividing ba a 64-bit one: `myBigInt % 17` is noticeably faster than `myBigInt % 17ull`.
 
-#### divmod
+#### divmod(a, b)
 Calculates the dividend and reminder of dividing `a` by `b` at the same time.  
 Dividing by a 32-bit integer is considerably faster than dividing ba a 64-bit one: `divmod(myBigInt, 17)` is noticeably faster than `divmod(myBigInt, 17ull)`.
 
-#### left-shift, right-shift (<<, >>, <<=, >>=)
+#### Left-shift, Right-shift (<<, >>, <<=, >>=)
 Shifts the given integer by n bits left or right, filling with zeros. The shift assignment operations are always performed in-place.
 
-#### negation (-), abs
+#### Negation (-), abs
  Both operations return a view of the underlying BigInt with the sign changed accordingly.
 
 
