@@ -413,8 +413,50 @@ lcm(const BigInt& u, const BigInt& v) -> BigInt {
 	return abs(u) / gcd(u, v) * abs(v);
 }
 
+/**
+ * @brief Sums all digits in the given base ignoring any sign. E.g.: `digit_sum<10>(-12955) == 1 + 2 + 9 + 5 + 5 == 22`.
+ * Supported bases are 2 - 64 (inclusive). The bases 2, 4, 8, 16, and 32 are considerable faster than any other base.
+ * @tparam base
+ * @param v
+ * @return
+ */
+template <int base = 10>
+BIGINT_TRACY_CONSTEXPR_AUTO
+digit_sum(const BigInt& v) -> uint64_t {
+	BIGINT_TRACY_ZONE_SCOPED;
+	const uint32_t division_base = _private::base_conversion_32{base}.division_base; // 9 is the larges value for n such that 10^n fits into 32 bits
+
+	if (division_base != 0) {
+		DivModResult temp {v, (uint32_t)0};
+		temp.d.sign() = Sign::POS;
+
+		uint64_t sum = 0ull;
+		while (!is_zero(temp.d)) {
+			temp = divmod(temp.d, division_base);
+			uint32_t& digs = temp.r;
+			while (digs > 0) {
+				sum += digs % base;
+				digs /= base;
+			}
+			temp.d.cleanup();
+		}
+		return sum;
+
+	} else { // special case for when base is a divider of 32.
+		const auto base_power = _private::base_conversion_64{base}.base_power;
+		uint64_t sum = 0ull;
+		for (size_t i = 0; i < v.size(); ++i) {
+			uint64_t digs = v[i];
+			for (size_t j = 0; j < base_power; ++j) {
+				sum += digs % base;
+				digs /= base;
+			}
+		}
+		return sum;
+	}
 }
 
+}
 
 
 #include "_bigint_tracy_undefines.h"

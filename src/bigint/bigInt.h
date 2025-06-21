@@ -2186,42 +2186,6 @@ to_string_padded_generic(uint64_t val) -> std::string {
 // to_string, from_string, & digit_sum:
 namespace bigint {
 
-template <int base = 10>
-BIGINT_TRACY_CONSTEXPR_AUTO
-digit_sum(const BigInt& v) -> uint64_t {
-	BIGINT_TRACY_ZONE_SCOPED;
-	constexpr auto division_base = _private::base_conversion_32{base}.division_base; // 9 is the larges value for n such that 10^n fits into 32 bits
-
-	if constexpr (division_base != 0) {
-		DivModResult temp {v, (uint32_t)0};
-		temp.d.sign() = Sign::POS;
-
-		uint64_t sum = 0ull;
-		while (!is_zero(temp.d)) {
-			temp = divmod(temp.d, division_base);
-			uint32_t& digs = temp.r;
-			while (digs > 0) {
-				sum += digs % base;
-				digs /= base;
-			}
-			temp.d.cleanup();
-		}
-		return sum;
-
-	} else { // special case for when base is a divider of 32.
-		constexpr auto base_power = _private::base_conversion_64{base}.base_power;
-		uint64_t sum = 0ull;
-		for (size_t i = 0; i < v.size(); ++i) {
-			uint64_t digs = v[i];
-			for (size_t j = 0; j < base_power; ++j) {
-				sum += digs % base;
-				digs /= base;
-			}
-		}
-		return sum;
-	}
-}
-
 // todo convert argument to BigIntLike
 template <int base = 10>
 BIGINT_TRACY_CONSTEXPR_AUTO
