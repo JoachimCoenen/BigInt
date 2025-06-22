@@ -3,7 +3,6 @@
 #include "utils.h"
 
 // standard library
-#include <array>
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -46,49 +45,11 @@ using utils::one_of;
 namespace bigint {
 
 class BigInt;
-
-BIGINT_TRACY_CONSTEXPR_AUTO
-to_string_base2(const is_BigInt_like auto& v) -> std::string;
-
-BIGINT_TRACY_CONSTEXPR_AUTO
-to_string_base8(const is_BigInt_like auto& v) -> std::string;
-
-BIGINT_TRACY_CONSTEXPR_AUTO
-to_string_base10(const is_BigInt_like auto& v) -> std::string;
-
-BIGINT_TRACY_CONSTEXPR_AUTO
-to_string_base16(const is_BigInt_like auto& v) -> std::string;
-
-BIGINT_TRACY_CONSTEXPR_AUTO
-to_string(const is_BigInt_like auto& v) -> std::string;
-
-NODISCARD_AUTO
-to_debug_string(const is_BigInt_like auto& value) -> std::string;
-
-BIGINT_TRACY_CONSTEXPR_AUTO
-from_string_base2(std::string_view input) -> BigInt;
-
-BIGINT_TRACY_CONSTEXPR_AUTO
-from_string_base8(std::string_view input) -> BigInt;
-
-BIGINT_TRACY_CONSTEXPR_AUTO
-from_string_base10(std::string_view input) -> BigInt;
-
-BIGINT_TRACY_CONSTEXPR_AUTO
-from_string_base16(std::string_view input) -> BigInt;
-
 BIGINT_TRACY_CONSTEXPR_AUTO
 from_string(std::string_view input) -> BigInt;
 
-
-CONSTEXPR_AUTO
-is_zero(const is_BigInt_like auto &value) -> bool;
-
 CONSTEXPR_AUTO
 is_neg(const is_BigInt_like auto &value) -> bool;
-
-CONSTEXPR_AUTO
-is_pos(const is_BigInt_like auto &value) -> bool;
 
 }
 
