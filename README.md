@@ -161,16 +161,16 @@ Subtracts `b` from `a`. The subtraction assignment operations are always perform
 Multiplies two integers. The multiplication assignment operation is only performed in-place if the second multiplicand is an integral type (like `int` or `uint64_t`).
 
 #### Division (/, /=)
-Divides `a` by `b`. The division assignment operation is only performed in-place if the divisor is a 32-bit integer.  
-Dividing by a 32-bit integer is considerably faster than dividing by a 64-bit one: `myBigInt / 7` is noticeably faster than `myBigInt / 7ull`.
+Divides `a` by `b`. The division assignment operation is only performed in-place if the divisor has 64 or fewer bits (e.g. `uint64_t`, `int16_t`, `BigInt` with `.size() == 1`).  
+Dividing by a 32-bit integer is 1.26 times faster than dividing by a 64-bit one (`myBigInt / 7` is faster than `myBigInt / 7ull`)..
 
 #### Modulo (%, %=)
 calculates the reminder of dividing `a` by `b`. The modulo assignment operation is *never* performed in-place.  
-Dividing by a 32-bit integer is considerably faster than dividing ba a 64-bit one: `myBigInt % 17` is noticeably faster than `myBigInt % 17ull`.
+Dividing by a 32-bit integer is 1.26 times faster than dividing by a 64-bit one (`myBigInt % 7` is faster than `myBigInt % 7ull`).
 
 #### divmod(a, b)
 Calculates the dividend and reminder of dividing `a` by `b` at the same time.  
-Dividing by a 32-bit integer is considerably faster than dividing ba a 64-bit one: `divmod(myBigInt, 17)` is noticeably faster than `divmod(myBigInt, 17ull)`.
+Dividing by a 32-bit integer is 1.26 times faster than dividing by a 64-bit one (`divmod(myBigInt, 17)` is faster than `divmod(myBigInt, 17ull)`).
 
 #### Left-shift, Right-shift (<<, >>, <<=, >>=)
 Shifts the given integer by n bits left or right, filling with zeros. The shift assignment operations are always performed in-place.

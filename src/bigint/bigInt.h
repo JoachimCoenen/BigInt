@@ -1625,15 +1625,16 @@ _divide_loop(const DivModResult<utils::Span<uint64_t>>& result, const utils::Spa
 
 
 /**
- * @brief division algorithm adapted from "Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division" and then heavily adapted.
+ * @brief division & modulo ignoring any sign.
  * @param result the result will be put in here. Size requirement: `result.size() == a.size()`.
  * @param a the dividend. Can be the same span as the quotient of the result (`result.d.data() == a.data()`).
- * @param b the divisor
+ * @param b the divisor. Either `uint32_t` or `uint64_t`.
  * @return the result
  */
-template <bool ignore_quotient = false>
+template <bool ignore_quotient = false, one_of<uint32_t, uint64_t> TRHS>
 BIGINT_TRACY_CONSTEXPR_VOID
-divmod_ignore_sign(DivModResult<utils::Span<uint64_t>, uint64_t>& result, const utils::Span<const uint64_t>& a, const uint64_t b) {
+divmod_ignore_sign(DivModResult<utils::Span<uint64_t>, TRHS>& result, const utils::Span<const uint64_t>& a, TRHS b) {
+	BIGINT_TRACY_ZONE_SCOPED;
 	if (b == 0) {
 		throw std::domain_error{utils::error_msg("division by zero")};
 	}
@@ -1643,38 +1644,44 @@ divmod_ignore_sign(DivModResult<utils::Span<uint64_t>, uint64_t>& result, const 
 		return;
 	}
 
-	const auto na = a.size();
-	/* na >= nb holds. */
-	const auto& qt = result.d;
-	uint64_t& x_lo = result.r;
-	uint64_t x_hi = 0;
-
-	/* loop-invariant P: first m digits of `a` have been brought-down and processed. */
-	for (auto i = na - 1 + 1; i --> 0;) {
-		x_hi = x_lo;
-		x_lo = a[i];
-
-		uint64_t d = utils::div_u128_saturate(x_hi, x_lo, b); // yz/e;
-		auto ed = mult(b, d);
-		_sub_ignore_sign_no_negative_result(x_hi, x_lo, x_hi, x_lo, ed.hi, ed.lo); // remainder is less than e, so must be single digit
+	TRHS x_lo = 0;
+	for (auto i = a.size(); i --> 0;) {
+		uint64_t qi;
+		if constexpr (std::is_same_v<TRHS, uint32_t>) {
+			const auto ai = a[i];
+			const auto ai_hi = (ai >> 32) | (static_cast<uint64_t>(x_lo) << 32);
+			const auto qi_hi = ai_hi / b;
+			const auto c_hi = ai_hi % b;
+			const auto ai_lo = (ai & 0xFFFFFFFF) | (static_cast<uint64_t>(c_hi) << 32);
+			const auto qi_lo = ai_lo / b;
+			x_lo = ai_lo % b; // ???
+			qi = (qi_hi << 32) | qi_lo;
+		} else {
+			uint64_t x_hi;
+			x_hi = x_lo;
+			x_lo = a[i];
+			qi = utils::div_u128_saturate(x_hi, x_lo, b); // yz/e;
+			auto bqi = mult(b, qi);
+			_sub_ignore_sign_no_negative_result(x_hi, x_lo, x_hi, x_lo, bqi.hi, bqi.lo);
+		}
 
 		if constexpr (!ignore_quotient) {
-			qt[i] = d;
+			result.d[i] = qi;
 		}
 	}
-	/* (loop-invariant P) AND (m=na) holds. */
-	/* Now x contains the remainder. */
+
+	result.r = x_lo;
 }
 
 
 template <bool ignore_quotient = false>
 BIGINT_TRACY_CONSTEXPR_VOID
-_resize_result_for_divide_loop(DivModResult<BigInt>& result, const size_t na, const size_t nb) {
+_resize_result_for_divide_loop(BigInt& quotient, BigInt& remainder, const size_t na, const size_t nb) {
 	if constexpr (!ignore_quotient) {
 		// quotient can have maximum (na-nb+1) digits
-		result.d.resize(na - nb + 1);
+		quotient.resize(na - nb + 1);
 	}
-	result.r.resize(na + 1);
+	remainder.resize(na + 1);
 }
 
 
@@ -1687,42 +1694,42 @@ _resize_result_for_divide_loop(DivModResult<BigInt>& result, const size_t na, co
  */
 template <bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_VOID
-divmod_ignore_sign(DivModResult<BigInt>& result, const utils::Span<const uint64_t>& aa, const utils::Span<const uint64_t>& bb, std::vector<uint64_t>& temp) {
+divmod_ignore_sign(BigInt& quotient, BigInt& remainder, const utils::Span<const uint64_t>& aa, const utils::Span<const uint64_t>& bb, std::vector<uint64_t>& temp) {
 	BIGINT_TRACY_ZONE_SCOPED;
 
 	if (is_zero(bb)) {
 		throw std::domain_error{utils::error_msg("division by zero")};
 	}
 	if (is_zero(aa) || bb.size() > aa.size()) {
-		result.d.resize(0);
+		quotient.resize(0);
 
 		if constexpr (!ignore_remainder) {
-			result.r.resize(aa.size());
-			std::ranges::copy(aa, result.r._span().begin());
+			remainder.resize(aa.size());
+			std::ranges::copy(aa, remainder._span().begin());
 		} else {
-			result.r.resize(1);
+			remainder.resize(1);
 			// remainder could be any positive number. It's only used to signify that the remainder is non-zero.
 			// Used for correcting a negative quotient in divmod(...)
-			result.r.set(0, is_zero(aa) ? 0 : 1);
+			remainder.set(0, is_zero(aa) ? 0 : 1);
 		}
 		return;
 	}
 	if (bb.size() == 1) {
 		if constexpr (!ignore_quotient) {
-			result.d.resize(aa.size());
+			quotient.resize(aa.size());
 		}
-		result.r.resize(1);
+		remainder.resize(1);
 
-		DivModResult<utils::Span<uint64_t>, uint64_t> result2{result.d._span(), 0};
+		DivModResult<utils::Span<uint64_t>, uint64_t> result2{quotient._span(), 0};
 		divmod_ignore_sign<ignore_quotient>(result2, aa, bb[0]);
-		result.r.set(0, result2.r);
+		remainder.set(0, result2.r);
 		return;
 	}
 
 	uint64_t e = bb.back();
 	if ((bb.size() > 1) && (e < 1ull<<63)) {
 		/* normalization */
-		uint64_t f = utils::div_u128_saturate(1ull, 0ull, e + 1); // 1^64/(e + 1);
+		const uint64_t f = utils::div_u128_saturate(1ull, 0ull, e + 1); // 1^64/(e + 1);
 
 		std::vector<uint64_t> af(aa.size() + 1);
 		_mult_naive_ignore_sign(utils::Span{af}, aa, f);
@@ -1734,48 +1741,78 @@ divmod_ignore_sign(DivModResult<BigInt>& result, const utils::Span<const uint64_
 
 		e = bf.back();
 
-		_resize_result_for_divide_loop(result, af.size(), bf.size());
-		_divide_loop<ignore_quotient>(DivModResult{result.d._span(), result.r._span()}, utils::Span{af}, utils::Span{bf}, e, temp);
+		_resize_result_for_divide_loop(quotient, remainder, af.size(), bf.size());
+		_divide_loop<ignore_quotient>(DivModResult{quotient._span(), remainder._span()}, utils::Span{af}, utils::Span{bf}, e, temp);
 
 		if constexpr (!ignore_remainder) { // fix remainder:
-			DivModResult<utils::Span<uint64_t>, uint64_t> result2{result.r._span(), 0};
-			divmod_ignore_sign(result2, result.r._span(), f);
+			DivModResult<utils::Span<uint64_t>, uint64_t> result2{remainder._span(), 0};
+			divmod_ignore_sign(result2, remainder._span(), f);
 		}
 	} else {
-		_resize_result_for_divide_loop(result, aa.size(), bb.size());
-		_divide_loop<ignore_quotient>(DivModResult{result.d._span(), result.r._span()}, aa, bb, e, temp);
+		_resize_result_for_divide_loop(quotient, remainder, aa.size(), bb.size());
+		_divide_loop<ignore_quotient>(DivModResult{quotient._span(), remainder._span()}, aa, bb, e, temp);
 	}
 
 	if constexpr (!ignore_quotient) {
-		result.d.cleanup();
+		quotient.cleanup();
 	}
-	result.r.cleanup(); // result.r is also used by quotient.
+	remainder.cleanup(); // remainder is also used by quotient.
 }
 
 
 template <is_BigInt_like TLHS, is_BigInt_like TRHS, bool ignore_quotient = false, bool ignore_remainder = false>
-BIGINT_TRACY_CONSTEXPR_AUTO
-divmod(const TLHS &a, const TRHS &b, std::vector<uint64_t>& temp, BigInt&& remainder_holder) -> DivModResult<BigInt> {
-	DivModResult result{BigInt{}, std::move(remainder_holder)};
-
-	_private::divmod_ignore_sign<ignore_quotient, ignore_remainder>(result, a._span(), b._span(), temp);
+BIGINT_TRACY_CONSTEXPR_VOID
+divmod(BigInt& quotient, BigInt& remainder, const TLHS &a, const TRHS &b, std::vector<uint64_t>& temp) {
+	_private::divmod_ignore_sign<ignore_quotient, ignore_remainder>(quotient, remainder, a._span(), b._span(), temp);
 
 	if constexpr (!ignore_remainder) {
-		if (!is_zero(result.r)) {
-			result.r.sign() = a.sign();
+		if (!is_zero(remainder)) {
+			remainder.sign() = a.sign();
 			if (a.sign() != b.sign()) {
-				result.r += b;
+				remainder += b;
 			}
 		}
 	}
 	if constexpr (!ignore_quotient) {
-		result.d.sign() = _private::mult_sign(a.sign(), b.sign());
-		if (!is_zero(result.r) and result.d.sign() == Sign::NEG) {
-			result.d -= 1;
+		quotient.sign() = _private::mult_sign(a.sign(), b.sign());
+		if (!is_zero(remainder) and quotient.sign() == Sign::NEG) {
+			quotient -= 1;
 		}
-		result.d.cleanup();
+		quotient.cleanup();
 	}
-	return result;
+}
+
+template <is_BigInt_like TLHS, one_of<int32_t, uint32_t, int64_t, uint64_t> TRHS, bool ignore_quotient = false, bool ignore_remainder = false>
+BIGINT_TRACY_CONSTEXPR_AUTO
+divmod(BigInt& quotient, const TLHS &a, TRHS b) -> TRHS {
+	if constexpr (!ignore_quotient) {
+		quotient.resize(a.size());
+	}
+	TRHS remainder;
+	{
+		DivModResult<utils::Span<uint64_t>, std::make_unsigned_t<TRHS>> result2{quotient._span(), 0};
+		_private::divmod_ignore_sign<ignore_quotient>(result2, a._span(), utils::constexpr_abs(b));
+		remainder = result2.r;
+	}
+
+	if constexpr (!ignore_remainder) {
+		if (remainder != 0) {
+			if (is_neg(a)) {
+				remainder = -remainder;
+			}
+			if (a.sign() != _private::get_sign(b)) {
+				remainder += b;
+			}
+		}
+	}
+	if constexpr (!ignore_quotient) {
+		quotient.sign() = _private::mult_sign(a.sign(), _private::get_sign(b));
+		if (remainder != 0 and quotient.sign() == Sign::NEG) {
+			quotient -= 1;
+		}
+		quotient.cleanup();
+	}
+	return remainder;
 }
 
 }
@@ -1787,158 +1824,18 @@ namespace bigint {
 template <is_BigInt_like TLHS, is_BigInt_like TRHS, bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod(const TLHS &a, const TRHS &b) -> DivModResult<BigInt> {
+	DivModResult<BigInt> result;
 	std::vector<uint64_t> temp;
-	return _private::divmod<TLHS, TRHS, ignore_quotient, ignore_remainder>(a, b, temp, BigInt{});
-}
-
-template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
-BIGINT_TRACY_CONSTEXPR_AUTO
-divmod(const TLHS &a, int64_t b) -> DivModResult<BigInt, int64_t> {
-	DivModResult<BigInt, int64_t> result;
-	result.d.resize(a.size());
-	{
-		DivModResult<utils::Span<uint64_t>, uint64_t> result2{result.d._span(), 0};
-		_private::divmod_ignore_sign(result2, a._span(), utils::constexpr_abs(b));
-		result.r = result2.r;
-	}
-
-	if constexpr (!ignore_remainder) {
-		if (result.r != 0) {
-			if (is_neg(a)) {
-				result.r = -result.r;
-			}
-			if (a.sign() != _private::get_sign(b)) {
-				result.r += b;
-			}
-		}
-	}
-	if constexpr (!ignore_quotient) {
-		result.d.sign() = _private::mult_sign(a.sign(), _private::get_sign(b));
-		if (result.r != 0 and result.d.sign() == Sign::NEG) {
-			result.d -= 1;
-		}
-		result.d.cleanup();
-	}
+	_private::divmod<TLHS, TRHS, ignore_quotient, ignore_remainder>(result.d, result.r, a, b, temp);
 	return result;
 }
 
 template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
-divmod(const TLHS &a, uint64_t b) -> DivModResult<BigInt, uint64_t> {
-	DivModResult<BigInt, uint64_t> result;
-	result.d.resize(a.size());
-	{
-		DivModResult<utils::Span<uint64_t>, uint64_t> result2{result.d._span(), 0};
-		_private::divmod_ignore_sign(result2, a._span(), utils::constexpr_abs(b));
-		result.r = result2.r;
-	}
-
-	if constexpr (!ignore_remainder) {
-		if (result.r != 0) {
-			if (is_neg(a)) {
-				result.r = b - result.r;
-			}
-		}
-	}
-	if constexpr (!ignore_quotient) {
-		result.d.sign() = a.sign();
-		if (result.r != 0 and result.d.sign() == Sign::NEG) {
-			result.d -= 1;
-		}
-		result.d.cleanup();
-	}
+divmod(const TLHS &a, one_of<int32_t, uint32_t, int64_t, uint64_t> auto b) -> DivModResult<BigInt, decltype(b)> {
+	DivModResult<BigInt, decltype(b)> result;
+	result.r = _private::divmod<TLHS, decltype(b), ignore_quotient, ignore_remainder>(result.d, a, b);
 	return result;
-}
-
-template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
-BIGINT_TRACY_CONSTEXPR_AUTO
-divmod(const TLHS &a, uint32_t b) -> DivModResult<BigInt, uint32_t> {
-	BIGINT_TRACY_ZONE_SCOPED;
-	if (b == 0) {
-		throw std::domain_error{utils::error_msg("division by zero")};
-	}
-	if (is_zero(a)) {
-		return {BigInt{0}, 0};
-	}
-
-	BigInt q;
-	if constexpr (!ignore_quotient) {
-		q.resize(a.size());
-	}
-
-	// y = q * b; but not always.
-	BigInt y{0, a.sign()};
-	if constexpr (!ignore_remainder) {
-		y.resize(a.size() + 1);
-	}
-
-	uint64_t c_div = 0ull;
-	uint64_t di_hi = 0ull;
-	uint64_t ai_lo = 0ull;
-
-	size_t i = a.size() + 1;
-	bool is_first_iter = true;
-	while (i > 0) {
-		--i;
-		uint64_t di = 0;
-		if (!is_first_iter) {
-			const auto di_lo = ai_lo / b;
-			c_div = (ai_lo % b) << 32; // ???
-			di = (di_hi << 32) | di_lo;
-
-			if constexpr (!ignore_quotient) {
-				q.set(i, di);
-			}
-		}
-
-		const auto ai = (i != 0) ? a[i-1]: 0;
-		const auto ai_hi = (i != 0) ? (ai >> 32) | c_div : 0;
-				   di_hi = ai_hi / b;
-		const auto c_diw = (ai_hi % b) << 32;
-				   ai_lo = (ai & 0xFFFFFFFFull) | c_diw;
-
-		if constexpr (!ignore_remainder) {
-			const uint32_t c_ = di_hi >> 32;
-			const auto ji = di + c_;
-			const auto yi = ji*b; // todo: investigate why doesn't this overflow ??
-			y.set(i, yi);
-		}
-
-		is_first_iter = false;
-	}
-
-
-	if constexpr (!ignore_quotient) {
-		q.sign() = _private::mult_sign(a.sign(), Sign::POS);
-		if (c_div != 0 && q.sign() == Sign::NEG) {
-			q -= 1;
-		}
-		q.cleanup();
-	}
-
-	if constexpr (ignore_remainder) {
-		return { q, 0 };
-	} else {
-		y.cleanup();
-		BigInt r_big = a - y;
-		auto r = static_cast<uint32_t>(r_big[0]);
-		if (r != 0 && is_neg(a)) {
-			r = b - r;
-		}
-		return { q, r };
-	}
-}
-
-template <is_BigInt_like TLHS, bool ignore_quotient = false, bool ignore_remainder = false>
-BIGINT_TRACY_CONSTEXPR_AUTO
-divmod(const TLHS &a, int32_t bb) -> DivModResult<BigInt, int32_t> {
-	if (bb < 0) {
-		auto r = divmod<decltype(-a), ignore_quotient, ignore_remainder>(-a, static_cast<uint32_t>(-bb));
-		return DivModResult{std::move(r.d), -static_cast<int32_t>(r.r)};
-	} else {
-		auto r = divmod<TLHS, ignore_quotient, ignore_remainder>(a, static_cast<uint32_t>(bb));
-		return DivModResult{std::move(r.d), static_cast<int32_t>(r.r)};
-	}
 }
 
 }
@@ -1947,58 +1844,7 @@ divmod(const TLHS &a, int32_t bb) -> DivModResult<BigInt, int32_t> {
 // division:
 namespace bigint {
 
-template <is_BigInt_like TLHS>
-BIGINT_TRACY_CONSTEXPR_VOID
-div(BigInt &result, TLHS &a, uint32_t b) {
-	BIGINT_TRACY_ZONE_SCOPED;
-	if (b == 0) {
-		throw std::domain_error{utils::error_msg("division by zero")};
-	}
-	if (is_zero(a)) {
-		result = BigInt{0};
-	}
-	uint64_t c_lo = 0ull;
-	for (auto i = a.size(); i --> 0;) {
-		const auto ai = a[i];
-		const auto ai_hi = (ai >> 32) | c_lo;
-		const auto r_hi = ai_hi / b;
-		const auto c_hi = (ai_hi % b) << 32;
-
-		const auto ai_lo = (ai & 0xFFFFFFFFull) | c_hi;
-		const auto r_lo = ai_lo / b;
-		c_lo = (ai_lo % b) << 32;
-		const auto r = (r_hi << 32) | r_lo;
-		result.set(i, r);
-	}
-	result.sign() = a.sign();
-	if (c_lo != 0 && result.sign() == Sign::NEG) {
-		result -= 1;
-	}
-}
-
-template <is_BigInt_like TLHS>
-BIGINT_TRACY_CONSTEXPR_VOID
-div(BigInt &result, TLHS &a, int32_t bb) {
-	if (bb < 0) {
-		auto neg_a = -a; // todo check undefined behavior with -a if result === a, because operator-() const-ifies a?
-		div(result, neg_a, static_cast<uint32_t>(-bb));
-	} else {
-		div(result, a, static_cast<uint32_t>(bb));
-	}
-}
-
-
-template <is_BigInt_like TLHS, one_of<uint32_t, int32_t> TRHS>
-BIGINT_TRACY_CONSTEXPR_AUTO
-operator/(const TLHS &a, TRHS b) -> BigInt {
-	BigInt result;
-	result.resize(a.size());
-	div(result, const_cast<TLHS&>(a), b);
-	result.cleanup();
-	return result;
-}
-
-template <is_BigInt_like TLHS, one_of<uint64_t, int64_t> TRHS>
+template <is_BigInt_like TLHS, one_of<uint32_t, int32_t, uint64_t, int64_t> TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator/(const TLHS &a, TRHS b) -> BigInt {
 	return divmod<TLHS, false, true>(a, b).d;
@@ -2011,27 +1857,27 @@ operator/(const TLHS &a, const TRHS &b) -> BigInt {
 }
 
 
-template <one_of<uint32_t, int32_t> TRHS>
+template <one_of<uint32_t, int32_t, uint64_t, int64_t> TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
 operator/=(BigInt &a, TRHS b) -> BigInt& {
-	div(a, a, b);
-	a.cleanup();
-	return a;
-}
-
-template <one_of<uint64_t, int64_t> TRHS>
-BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
-operator/=(BigInt &a, TRHS b) -> BigInt& {
-	const auto result = divmod<BigInt, false, true>(a, b).d;
-	a = std::move(result);
+	[[maybe_unused]]auto remainder = _private::divmod<BigInt, TRHS, false, true>(a, a, b);
 	return a;
 }
 
 template <is_BigInt_like TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
 operator/=(BigInt &a, const TRHS &b) -> BigInt& {
-	const auto result = divmod<BigInt, TRHS, false, true>(a, b).d;
-	a = std::move(result);
+	if (b.size() == 1) { // we can perform division inplace:
+		auto remainder = _private::divmod<BigInt, uint64_t, false, true>(a, a, b[0]);
+		a.sign() = _private::mult_sign(a.sign(), b.sign());
+		// correct wrong corrections, caused by wrong sign of `b` supplied above:
+		if (remainder != 0 && b.sign() == Sign::NEG) {
+			a -= 1;
+		}
+	} else { // we cannot do it inplace:
+		const auto result = divmod<BigInt, TRHS, false, true>(a, b).d;
+		a = std::move(result);
+	}
 	return a;
 }
 
@@ -2041,13 +1887,7 @@ operator/=(BigInt &a, const TRHS &b) -> BigInt& {
 // Modulo:
 namespace bigint {
 
-template <is_BigInt_like TLHS, one_of<uint32_t, int32_t> TRHS>
-BIGINT_TRACY_CONSTEXPR_AUTO
-operator%(const TLHS &a, TRHS b) -> TRHS {
-	return divmod<TLHS, true, false>(a, b).r; // we can truncate safely because the divisor only also is uint32_t.
-}
-
-template <is_BigInt_like TLHS, one_of<uint64_t, int64_t> TRHS>
+template <is_BigInt_like TLHS, one_of<uint32_t, int32_t, uint64_t, int64_t> TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator%(const TLHS &a, TRHS b) -> TRHS {
 	return divmod<TLHS, true, false>(a, b).r;
@@ -2059,10 +1899,20 @@ operator%(const TLHS &a, const TRHS &b) -> BigInt {
 	return divmod<TLHS, TRHS, true, false>(a, b).r;
 }
 
-template <is_BigInt_like TLHS, is_BigInt_like TRHS>
+template <one_of<uint32_t, int32_t, uint64_t, int64_t> TRHS>
 BIGINT_TRACY_CONSTEXPR_AUTO
-operator%=(TLHS &a, const TRHS &b) -> BigInt& {
-	a = divmod<TLHS, TRHS, true, false>(a, b).r;
+operator%=(BigInt &a, const TRHS &b) -> BigInt& {
+	TRHS result = divmod<BigInt, true, false>(a, b).r;
+	a.resize(1);
+	a.set(0, utils::constexpr_abs(result));
+	a.sign() = _private::get_sign(result);
+	return a;
+}
+
+template <is_BigInt_like TRHS>
+BIGINT_TRACY_CONSTEXPR_AUTO
+operator%=(BigInt &a, const TRHS &b) -> BigInt& {
+	a = divmod<BigInt, TRHS, true, false>(a, b).r;
 	return a;
 }
 

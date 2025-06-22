@@ -209,13 +209,13 @@ pow_mod(const BASE& base, const EXP& exp, const MOD& mod) -> BigInt {
 			// result = (result * temp) % mod;
 			mult(temp2, result, temp);
 			// result = temp2 % mod;
-			result = _private::divmod<BigInt, MOD, true, false>(temp2, mod, temp_mod, std::move(result)).r;
+			_private::divmod<BigInt, MOD, true, false>(temp3, result, temp2, mod, temp_mod); // temp3 is a placeholder here and is never read from or written to.
 		}
 		if (i+1 < exp_bits) {
 			// temp = (temp * temp) % mod;
 			mult(temp3, temp, temp);
 			// temp = temp3 % mod;
-			temp = _private::divmod<BigInt, MOD, true, false>(temp3, mod, temp_mod, std::move(temp)).r;
+			_private::divmod<BigInt, MOD, true, false>(temp2, temp, temp3, mod, temp_mod); // temp2 is a placeholder here and is never read from or written to.
 		}
 	}
 	return result;

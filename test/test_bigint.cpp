@@ -289,6 +289,14 @@ TEST_DIV_OPERATOR(Mod, BigInt, int32_t, int32_t, a % b, get_all_mod_test_values(
 
 TEST_DIV_ASSIGN_OPERATOR_BIGINT(Mod, BigInt, a %= b, get_all_mod_test_values())
 
+TEST_DIV_ASSIGN_OPERATOR_BIGINT(Mod, uint64_t, a %= b, get_all_mod_test_values())
+
+TEST_DIV_ASSIGN_OPERATOR_BIGINT(Mod, int64_t, a %= b, get_all_mod_test_values())
+
+TEST_DIV_ASSIGN_OPERATOR_BIGINT(Mod, uint32_t, a %= b, get_all_mod_test_values())
+
+TEST_DIV_ASSIGN_OPERATOR_BIGINT(Mod, int32_t, a %= b, get_all_mod_test_values())
+
 }
 
 
