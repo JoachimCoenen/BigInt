@@ -48,19 +48,19 @@ namespace bigint {
 class BigInt;
 
 BIGINT_TRACY_CONSTEXPR_AUTO
-to_string_base2(const BigInt &v) -> std::string;
+to_string_base2(const is_BigInt_like auto& v) -> std::string;
 
 BIGINT_TRACY_CONSTEXPR_AUTO
-to_string_base8(const BigInt &v) -> std::string;
+to_string_base8(const is_BigInt_like auto& v) -> std::string;
 
 BIGINT_TRACY_CONSTEXPR_AUTO
-to_string_base10(const BigInt &v) -> std::string;
+to_string_base10(const is_BigInt_like auto& v) -> std::string;
 
 BIGINT_TRACY_CONSTEXPR_AUTO
-to_string_base16(const BigInt &v) -> std::string;
+to_string_base16(const is_BigInt_like auto& v) -> std::string;
 
 BIGINT_TRACY_CONSTEXPR_AUTO
-to_string(const BigInt &v) -> std::string;
+to_string(const is_BigInt_like auto& v) -> std::string;
 
 NODISCARD_AUTO
 to_debug_string(const is_BigInt_like auto& value) -> std::string;
@@ -1961,42 +1961,49 @@ to_string_padded_generic(uint64_t val) -> std::string {
 
 // to_string, from_string, & digit_sum:
 namespace bigint {
+namespace _private {
+	template <int base>
+	BIGINT_TRACY_CONSTEXPR_AUTO
+	to_string_ignore_sign(const utils::Span<const uint64_t> &v) -> std::string {
+		constexpr auto conv = base_conversion_32(base);
 
-// todo convert argument to BigIntLike
-template <int base = 10>
-BIGINT_TRACY_CONSTEXPR_AUTO
-to_string(const BigInt &v) -> std::string {
-	constexpr auto conv = _private::base_conversion_32(base);
+		std::string result;
+		if constexpr (conv.division_base != 0) {
+			DivModResult temp{BigInt{v, Sign::POS}, (uint32_t)0};
 
-	std::string result;
-	if constexpr (conv.division_base != 0) {
-		DivModResult temp{v, (uint32_t)0};
-		temp.d.sign() = Sign::POS;
-
-		while (temp.d > 0) {
-			temp = divmod(temp.d, conv.division_base);
-			auto& digs = temp.r;
-			result.insert(0, _private::to_string_padded_generic<base, conv.base_power>(digs));
-			temp.d.cleanup();
-		}
-	} else { // special case for when base is a divider of 32.
-		constexpr auto base_power = _private::base_conversion_64{base}.base_power;
-		result.append(base_power * v.size(), '0');
-		for (size_t i = v.size(); i --> 0;) {
-			uint64_t digs = v[v.size() - i - 1];
-			for (uint8_t j = base_power; j --> 0;) {
-				auto d = static_cast<uint8_t>(digs % base);
-				digs /= base;
-				result.at((i) * base_power + j) = _private::to_char(d);
+			while (temp.d > 0) {
+				temp = divmod(temp.d, conv.division_base);
+				auto& digs = temp.r;
+				result.insert(0, to_string_padded_generic<base, conv.base_power>(digs));
+				temp.d.cleanup();
+			}
+		} else { // special case for when base is a divider of 32.
+			constexpr auto base_power = base_conversion_64{base}.base_power;
+			result.append(base_power * v.size(), '0');
+			for (size_t i = v.size(); i --> 0;) {
+				uint64_t digs = v[v.size() - i - 1];
+				for (uint8_t j = base_power; j --> 0;) {
+					auto d = static_cast<uint8_t>(digs % base);
+					digs /= base;
+					result.at((i) * base_power + j) = to_char(d);
+				}
 			}
 		}
-	}
 
-	const auto index = result.find_first_of("123456789abcdefghijklmnopqrstuvwxyz");
-	result.erase(0, index);
-	if (result.empty()) {
-		result = "0";
+		const auto index = result.find_first_of("123456789abcdefghijklmnopqrstuvwxyz");
+		result.erase(0, index);
+		if (result.empty()) {
+			result = "0";
+		}
+		return result;
 	}
+}
+
+
+template <int base>
+BIGINT_TRACY_CONSTEXPR_AUTO
+to_string(const is_BigInt_like auto& v) -> std::string {
+	auto result = _private::to_string_ignore_sign<base>(v._span());
 	if (is_neg(v)) {
 		result.insert(0, "-");
 	}
@@ -2004,27 +2011,27 @@ to_string(const BigInt &v) -> std::string {
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
-to_string_base2(const BigInt &v) -> std::string {
+to_string_base2(const is_BigInt_like auto& v) -> std::string {
 	return to_string<2>(v);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
-to_string_base8(const BigInt &v) -> std::string {
+to_string_base8(const is_BigInt_like auto& v) -> std::string {
 	return to_string<8>(v);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
-to_string_base10(const BigInt &v) -> std::string {
+to_string_base10(const is_BigInt_like auto& v) -> std::string {
 	return to_string<10>(v);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
-to_string_base16(const BigInt &v) -> std::string {
+to_string_base16(const is_BigInt_like auto& v) -> std::string {
 	return to_string<16>(v);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
-to_string(const BigInt &v) -> std::string {
+to_string(const is_BigInt_like auto& v) -> std::string {
 	return to_string_base10(v);
 }
 
@@ -2123,8 +2130,7 @@ from_string(const std::string_view input) -> BigInt {
 }
 
 
- // todo convert argument to BigIntLike
-inline std::ostream & operator<<(std::ostream &ostream, const BigInt &val) {
+inline std::ostream & operator<<(std::ostream& ostream, const is_BigInt_like auto& val) {
 	return ostream << to_string(val);
 }
 
