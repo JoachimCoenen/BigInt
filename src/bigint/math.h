@@ -14,9 +14,8 @@ namespace bigint {
  * @return the integer square root of y.
  * @throws std::domain_error if y < 0
  */
-template<is_BigInt_like T>
 BIGINT_TRACY_CONSTEXPR_AUTO
-sqrt(const T& y) -> BigInt {
+sqrt(const is_BigInt_like auto& y) -> BigInt {
 	BIGINT_TRACY_ZONE_SCOPED;
 
 	if (is_neg(y)) {
@@ -42,9 +41,8 @@ sqrt(const T& y) -> BigInt {
 }
 
 namespace _private {
-template<is_BigInt_like BASE, is_BigInt_like T>
 BIGINT_TRACY_CONSTEXPR_AUTO
-calculate_squares(const BASE& base, const T& y) -> std::vector<BigInt> {
+calculate_squares(const is_BigInt_like auto& base, const is_BigInt_like auto& y) -> std::vector<BigInt> {
 	constexpr uint8_t exp_bits_max = 64;
 	std::vector<BigInt> squares;
 	squares.push_back(base);
@@ -67,9 +65,8 @@ calculate_squares(const BASE& base, const T& y) -> std::vector<BigInt> {
  * @return the integer logarithm of y.
  * @throws std::domain_error if base <= 1 or y <= 0
  */
-template<is_BigInt_like BASE, is_BigInt_like T>
 BIGINT_TRACY_CONSTEXPR_AUTO
-log(const BASE& base, const T& y) -> uint64_t {
+log(const is_BigInt_like auto& base, const is_BigInt_like auto& y) -> uint64_t {
 	if (base <= 1) {
 		throw std::domain_error{utils::error_msg("integer log for a base less or equal to one is undefined.")};
 	}
@@ -104,9 +101,8 @@ log(const BASE& base, const T& y) -> uint64_t {
  * @return the integer logarithm base 10 of y.
  * @throws std::domain_error if y <= 0
  */
-template<is_BigInt_like T>
 BIGINT_TRACY_CONSTEXPR_AUTO
-log10(const T& y) -> uint64_t {
+log10(const is_BigInt_like auto& y) -> uint64_t {
 	BIGINT_TRACY_ZONE_SCOPED;
 	if (!is_pos(y)) {
 		throw std::domain_error{utils::error_msg("integer log of a non-positive number is undefined.")};
@@ -122,9 +118,8 @@ log10(const T& y) -> uint64_t {
  * @return the integer logarithm base 2 of y.
  * @throws std::domain_error if y <= 0
  */
-template<is_BigInt_like T>
 BIGINT_TRACY_CONSTEXPR_AUTO
-log2(const T& y) -> uint64_t {
+log2(const is_BigInt_like auto& y) -> uint64_t {
 	BIGINT_TRACY_ZONE_SCOPED;
 	if (!is_pos(y)) {
 		throw std::domain_error{utils::error_msg("integer log of a non-positive number is undefined.")};
@@ -141,9 +136,8 @@ log2(const T& y) -> uint64_t {
  * @return base^exp.
  * @throws std::domain_error if base == exp == 0
  */
-template<is_BigInt_like BASE>
 BIGINT_TRACY_CONSTEXPR_AUTO
-pow(const BASE& base, uint64_t exp) -> BigInt {
+pow(const is_BigInt_like auto& base, uint64_t exp) -> BigInt {
 	BIGINT_TRACY_ZONE_SCOPED;
 	if (exp == 0) {
 		if (is_zero(base)) {
@@ -180,9 +174,8 @@ pow(const BASE& base, uint64_t exp) -> BigInt {
  * @return pow(base, exp) % mod.
  * @throws std::domain_error if base == exp == 0 or if mod == 0
  */
-template<is_BigInt_like BASE, is_BigInt_like EXP, is_BigInt_like MOD>
 BIGINT_TRACY_CONSTEXPR_AUTO
-pow_mod(const BASE& base, const EXP& exp, const MOD& mod) -> BigInt {
+pow_mod(const is_BigInt_like auto& base, const is_BigInt_like auto& exp, const is_BigInt_like auto& mod) -> BigInt {
 	BIGINT_TRACY_ZONE_SCOPED;
 	if (is_zero(exp)) {
 		if (is_zero(base)) {
@@ -209,13 +202,13 @@ pow_mod(const BASE& base, const EXP& exp, const MOD& mod) -> BigInt {
 			// result = (result * temp) % mod;
 			mult(temp2, result, temp);
 			// result = temp2 % mod;
-			_private::divmod<BigInt, MOD, true, false>(temp3, result, temp2, mod, temp_mod); // temp3 is a placeholder here and is never read from or written to.
+			_private::divmod<true, false>(temp3, result, temp2, mod, temp_mod); // temp3 is a placeholder here and is never read from or written to.
 		}
 		if (i+1 < exp_bits) {
 			// temp = (temp * temp) % mod;
 			mult(temp3, temp, temp);
 			// temp = temp3 % mod;
-			_private::divmod<BigInt, MOD, true, false>(temp2, temp, temp3, mod, temp_mod); // temp2 is a placeholder here and is never read from or written to.
+			_private::divmod<true, false>(temp2, temp, temp3, mod, temp_mod); // temp2 is a placeholder here and is never read from or written to.
 		}
 	}
 	return result;
