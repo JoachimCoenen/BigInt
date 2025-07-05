@@ -193,14 +193,11 @@ class BigInt : public IBigIntLike
 	append(uint64_t v) { _data.push_back(v); }
 
 	CONSTEXPR_VOID
-	insert_front(uint64_t v) { _data.insert(_data.cbegin(), v); }
-
-	CONSTEXPR_VOID
 	remove_last() {
 		if (_data.size() > 1) {
 			_data.pop_back();
 		} else {
-			_data.at(0) = 0;
+			_data[0] = 0;
 		}
 	}
 
@@ -210,14 +207,27 @@ class BigInt : public IBigIntLike
 		_private::cleanup(_data);
 	}
 
-	BIGINT_TRACY_CONSTEXPR_VOID
+	CONSTEXPR_VOID
 	resize(size_type size) {
-		BIGINT_TRACY_ZONE_SCOPED;
 		// size 0 clears the BigInt and sets its value to 0.
 		_data.resize(std::max<size_type>(1, size));
 		if (size == 0) {
 			_data[0] = 0;
 		}
+	}
+
+	CONSTEXPR_VOID
+	resize(size_type size, const uint64_t default_digit) {
+		// size 0 clears the BigInt and sets its value to 0.
+		_data.resize(std::max<size_type>(1, size), default_digit);
+		if (size == 0) {
+			_data[0] = 0;
+		}
+	}
+
+	CONSTEXPR_VOID
+	reserve(size_type size) {
+		_data.reserve(std::max<size_type>(1, size));
 	}
 
 	CONSTEXPR_AUTO
@@ -245,6 +255,39 @@ private:
 	Sign _sign; // adds another 8 bytes :(
 };
 
+}
+
+// IntegralAdapter
+namespace bigint::_private {
+
+class IntegralAdapter: public IBigIntLike {
+public:
+	using size_type = BigInt::size_type;
+
+	constexpr explicit
+	IntegralAdapter(const std::integral auto value)
+		: _value(utils::constexpr_abs(value)), _sign(get_sign(value))
+	{}
+
+	CONSTEXPR_AUTO
+	sign() const noexcept -> Sign {
+		return _sign;
+	}
+
+	CONSTEXPR_AUTO
+	size() const noexcept -> size_type {
+		return 1;
+	}
+
+	CONSTEXPR_AUTO
+	_span() const noexcept -> utils::Span<const uint64_t> {
+		return utils::Span{&_value, 1};
+	}
+
+private:
+	uint64_t _value;
+	Sign _sign;
+};
 }
 
 
@@ -625,7 +668,7 @@ operator<<(const  is_BigInt_like auto &a, uint64_t digits) -> BigInt {
 
 	const uint64_t start = digits / 64;
 	BigInt result{0, a.sign()};
-	result.resize(a.size() + start);
+	result.resize(a.size() + start, 0);
 	digits %= 64;
 	result.set(start, a[0] << digits);
 	for (uint64_t i = 1; i < a.size(); ++i) {
@@ -1008,6 +1051,18 @@ sub_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uin
 	}
 }
 
+BIGINT_TRACY_CONSTEXPR_AUTO
+add(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const Sign a_sign, const utils::Span<const uint64_t> &b, const Sign b_sign) -> Sign {
+	if (a_sign == b_sign) {
+		add_ignore_sign(result, a, b);
+		return a_sign;
+	}
+	if (a_sign == Sign::POS) {
+		return sub_ignore_sign(result, a, b);
+	}
+	return sub_ignore_sign(result, b, a);
+}
+
 }
 
 
@@ -1015,59 +1070,24 @@ sub_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uin
 namespace bigint {
 
 BIGINT_TRACY_CONSTEXPR_VOID
-add(is_BigInt_like auto &result, is_BigInt_like auto &a, const is_BigInt_like auto &b) {
+add(BigInt &result, is_BigInt_like auto &a, const is_BigInt_like auto &b) {
+	const auto a_size = a.size();
 	result.resize(std::max(a.size(), b.size()) + 1);
-	if (is_pos(a)) {
-		if (is_pos(b)) {
-			_private::add_ignore_sign(result._span(), a._span(), const_cast<decltype(b)&>(b)._span());
-		} else {
-			result.sign() = _private::sub_ignore_sign(result._span(), a._span(), const_cast<decltype(b)&>(b)._span());
-		}
-	} else {
-		if (is_pos(b)) {
-			result.sign() = _private::sub_ignore_sign(result._span(), const_cast<decltype(b)&>(b)._span(), a._span());
-		} else {
-			_private::add_ignore_sign(result._span(), a._span(), const_cast<decltype(b)&>(b)._span());
-			result.sign() = Sign::NEG;
-		}
-	}
-	result.cleanup();
-}
+	const auto a_span = a._span().first(a_size);
 
-
-BIGINT_TRACY_CONSTEXPR_VOID
-add(is_BigInt_like auto &result, is_BigInt_like auto &a, std::integral auto b) {
-	result.resize(a.size() + 1);
-
-	uint64_t abs_b = utils::constexpr_abs(b);
-	if (is_pos(a)) {
-		if (b > 0) {
-			_private::add_ignore_sign(result._span(), a._span(), utils::Span{&abs_b, 1});
-		} else {
-			result.sign() = _private::sub_ignore_sign(result._span(), a._span(), utils::Span{&abs_b, 1});
-		}
-	} else {
-		if (b > 0) {
-			result.sign() = _private::sub_ignore_sign(result._span(), utils::Span{&abs_b, 1}, a._span());
-		} else {
-			_private::add_ignore_sign(result._span(), a._span(), utils::Span{&abs_b, 1});
-			result.sign() = Sign::NEG;
-		}
-	}
+	result.sign() = _private::add(result._span(), a_span, a.sign(), b._span(), b.sign());
 	result.cleanup();
 }
 
 
 BIGINT_TRACY_CONSTEXPR_AUTO
-operator+(const  is_BigInt_like auto &a, std::integral auto b) -> BigInt {
-	BigInt result;
-	add(result, const_cast<decltype(a)&>(a), b);
-	return result;
+operator+(const is_BigInt_like auto &a, std::integral auto b) -> BigInt {
+	return a + _private::IntegralAdapter{b};
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator+(std::integral auto a, const is_BigInt_like auto &b) -> BigInt {
-	return b + a;
+	return b + _private::IntegralAdapter{a};
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
@@ -1078,13 +1098,13 @@ operator+(const is_BigInt_like auto &a, const is_BigInt_like auto &b) -> BigInt 
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
-operator+=(is_BigInt_like auto &a, std::integral auto b) -> decltype(a)& {
-	add(a, a, b);
+operator+=(BigInt &a, std::integral auto b) -> BigInt& {
+	add(a, a, _private::IntegralAdapter{b});
 	return a;
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
-operator+=(is_BigInt_like auto &a, const is_BigInt_like auto &b) -> decltype(a)& {
+operator+=(BigInt &a, const is_BigInt_like auto &b) -> BigInt& {
 	add(a, a, b);
 	return a;
 }
@@ -1096,60 +1116,23 @@ operator+=(is_BigInt_like auto &a, const is_BigInt_like auto &b) -> decltype(a)&
 namespace bigint {
 
 BIGINT_TRACY_CONSTEXPR_VOID
-sub(is_BigInt_like auto &result, is_BigInt_like auto &a, const is_BigInt_like auto &b) {
+sub(BigInt &result, is_BigInt_like auto &a, const is_BigInt_like auto &b) {
+	const auto a_size = a.size();
 	result.resize(std::max(a.size(), b.size()) + 1);
-	if (is_pos(a)) {
-		if (is_pos(b)) {
-			result.sign() = _private::sub_ignore_sign(result._span(), a._span(), const_cast<decltype(b)&>(b)._span());
-		} else {
-			_private::add_ignore_sign(result._span(), a._span(), const_cast<decltype(b)&>(b)._span());
-		}
-	} else {
-		if (is_pos(b)) {
-			_private::add_ignore_sign(result._span(), a._span(), const_cast<decltype(b)&>(b)._span());
-			result.sign() = Sign::NEG;
-		} else {
-			result.sign() = _private::sub_ignore_sign(result._span(), const_cast<decltype(b)&>(b)._span(), a._span());
-		}
-	}
-	result.cleanup();
-}
+	const auto a_span = a._span().first(a_size);
 
-BIGINT_TRACY_CONSTEXPR_VOID
-sub(is_BigInt_like auto &result, is_BigInt_like auto &a, std::integral auto b) {
-	result.resize(a.size() + 1);
-
-	uint64_t abs_b = utils::constexpr_abs(b);
-	if (is_pos(a)) {
-		if (b > 0) {
-			result.sign() = _private::sub_ignore_sign(result._span(), a._span(), utils::Span{&abs_b, 1});
-		} else {
-			_private::add_ignore_sign(result._span(), a._span(), utils::Span{&abs_b, 1});
-		}
-	} else {
-		if (b > 0) {
-			_private::add_ignore_sign(result._span(), a._span(), utils::Span{&abs_b, 1});
-			result.sign() = Sign::NEG;
-		} else {
-			result.sign() = _private::sub_ignore_sign(result._span(), utils::Span{&abs_b, 1}, a._span());
-		}
-	}
+	result.sign() = _private::add(result._span(), a_span, a.sign(), b._span(), _private::neg(b.sign()));
 	result.cleanup();
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
-operator-(const  is_BigInt_like auto &a, std::integral auto b) -> BigInt {
-	BigInt result;
-	sub(result, const_cast<decltype(a)&>(a), b);
-	return result;
+operator-(const is_BigInt_like auto &a, std::integral auto b) -> BigInt {
+	return a - _private::IntegralAdapter{b};
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator-(std::integral auto a, const is_BigInt_like auto &b) -> BigInt {
-	BigInt result;
-	sub(result, const_cast<decltype(b)&>(b), a);
-	result.sign() = _private::neg(result.sign());
-	return result;
+	return _private::IntegralAdapter{a} - b;
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
@@ -1160,13 +1143,13 @@ operator-(const is_BigInt_like auto &a, const is_BigInt_like auto &b) -> BigInt 
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
-operator-=(is_BigInt_like auto &a, std::integral auto b) -> decltype(a)& {
-	sub(a, a, b);
+operator-=(BigInt &a, std::integral auto b) -> BigInt& {
+	sub(a, a, _private::IntegralAdapter{b});
 	return a;
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
-operator-=(is_BigInt_like auto &a, const is_BigInt_like auto &b) -> decltype(a)& {
+operator-=(BigInt &a, const is_BigInt_like auto &b) -> BigInt& {
 	sub(a, a, b);
 	return a;
 }
@@ -1254,12 +1237,13 @@ BIGINT_TRACY_CONSTEXPR_VOID
 mult(is_BigInt_like auto &result, is_BigInt_like auto &a, uint64_t b) {
 	BIGINT_TRACY_ZONE_SCOPED;
 	if (b == 0 || is_zero(a)) {
-		result = BigInt{};
+		result.resize(0);
 		return;
 	}
-
+	const auto a_size = a.size();
 	result.resize(a.size() + 1);
-	_private::_mult_naive_ignore_sign(result._span(), a._span(), b);
+	const auto a_span = a._span().subspan(0, a_size);
+	_private::_mult_naive_ignore_sign(result._span(), a_span, b);
 	result.sign() = a.sign();
 	result.cleanup();
 }
@@ -1274,6 +1258,9 @@ mult(is_BigInt_like auto &result, is_BigInt_like auto &a, int64_t b) {
 
 
 namespace _private {
+	/**
+	 * @param temp_vec a temporary. Max size requirement: `temp.size() == a.size() + 1`.
+	 */
 	BIGINT_TRACY_CONSTEXPR_VOID
 	_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b, DigitsVec &temp_vec) {
 		BIGINT_TRACY_ZONE_SCOPED;
@@ -1287,7 +1274,7 @@ namespace _private {
 		// we don't need to fill all digits, because all subsequent digits are replaced by the carry of the previous addition.
 
 		temp_vec.resize(a.size() + 1, 0);
-		utils::Span temp(temp_vec);
+		utils::Span temp{temp_vec};
 		BigInt::size_type i = 0;
 		for (i = 0; i < b.size(); i++) {
 			_mult_naive_ignore_sign(temp, a, b[i]);
@@ -1398,14 +1385,16 @@ namespace _private {
 
 }
 
+/**
+ * @param temp a temporary. Max size requirement: `temp.size() == max(a.size(), b.size()) + 1`.
+ */
 BIGINT_TRACY_CONSTEXPR_VOID
-mult_naive(is_BigInt_like auto &result, const is_BigInt_like auto &lhs, const is_BigInt_like auto &rhs) {
+mult_naive(is_BigInt_like auto &result, const is_BigInt_like auto &lhs, const is_BigInt_like auto &rhs, DigitsVec& temp) {
 	result.resize(lhs.size() + rhs.size());
-	std::vector<uint64_t> temp_vec;
 	if (rhs.size() > lhs.size()) { // put the number with more digits first.
-		_private::_mult_naive_ignore_sign(result._span(), rhs._span(), lhs._span(), temp_vec);
+		_private::_mult_naive_ignore_sign(result._span(), rhs._span(), lhs._span(), temp);
 	} else {
-		_private::_mult_naive_ignore_sign(result._span(), lhs._span(), rhs._span(), temp_vec);
+		_private::_mult_naive_ignore_sign(result._span(), lhs._span(), rhs._span(), temp);
 	}
 	result.sign() = _private::mult_sign(lhs.sign(), rhs.sign());
 	result.cleanup();
@@ -1420,12 +1409,26 @@ mult_karatsuba(is_BigInt_like auto &result, const is_BigInt_like auto &lhs, cons
 	result.cleanup();
 }
 
+
+/**
+ * @param temp a temporary. Max size requirement: `temp.size() == max(a.size(), b.size()) + 1` (if `true == _private::should_use_karatsuba(a.size(), b.size())`, otherwise thereś no size requirement).
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+mult(is_BigInt_like auto &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b, DigitsVec& temp) {
+	if (_private::should_use_karatsuba(a.size(), b.size())) {
+		mult_karatsuba(result, a, b);
+	} else {
+		mult_naive(result, a, b, temp);
+	}
+}
+
 BIGINT_TRACY_CONSTEXPR_VOID
 mult(is_BigInt_like auto &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b) {
 	if (_private::should_use_karatsuba(a.size(), b.size())) {
 		mult_karatsuba(result, a, b);
 	} else {
-		mult_naive(result, a, b);
+		DigitsVec temp;
+		mult_naive(result, a, b, temp);
 	}
 }
 
@@ -1460,7 +1463,7 @@ BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
 operator*=(BigInt &a, const is_BigInt_like auto &b) -> BigInt& {
 	BigInt result;
 	mult(result, a, b);
-	a = std::move(result);
+	std::swap(a, result);
 	return a;
 }
 
@@ -1502,37 +1505,38 @@ _correct_d_and_subtract(const utils::Span<uint64_t> &x, const utils::Span<const 
 
 /**
  * @brief division algorithm adapted from "Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division" and adapted.
- * @param result the result will be put in here. Size requirement: `result.d.size() == a.size() - b.size() + 1 && `result.r.size() == a.size() + 1`.
+ * @param result the result will be put in here. \n
+ *        Size requirement: `result.d.size() == a.size() - b.size() + 1` if `ignore_quotient==true`, otherwise there's no size requirement at all. \n
+ *        Size requirement: `result.r.size() == a.size() + 1`.
  * @param a the dividend
  * @param b the divisor
  * @param e estimator (?) for the divisor
+ * @param temp a temporary. Size requirement: `temp.size() == b.size() + 1`
  * @return
  */
 template <bool ignore_quotient>
 BIGINT_TRACY_CONSTEXPR_VOID
-_divide_loop(const DivModResult<utils::Span<uint64_t>>& result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b, uint64_t e, std::vector<uint64_t>& temp) {
+_divide_loop(const DivModResult<utils::Span<uint64_t>>& result, const utils::Span<const uint64_t>& a, const utils::Span<const uint64_t>& b, uint64_t e, const utils::Span<uint64_t> temp) {
 	const auto na = a.size();
 	const auto nb = b.size();
 	/* na >= nb holds. */
-	assert(nb > 1); // single digit division must be handled by dedicated divmod_ignore_sign(DivModResult, Span uint64_t).
+	assert(nb > 1); // single digit division must be handled by dedicated divmod_ignore_sign_small(...).
 	if constexpr (!ignore_quotient) {
 		/* quotient can have maximum (na-nb+1) digits */
 		assert(result.d.size() == na - nb + 1);
 	}
 	assert(result.r.size() == na + 1);
+	assert(temp.size() == nb + 1);
 
 	std::ranges::copy(a, result.r.begin());
 	result.r.back() = 0;
 	auto x_span = result.r.subspan(na - nb + 1);
 
-	temp.resize(nb + 1);
-	auto temp_span = utils::Span{temp};
-
 	/* loop-invariant P: first m digits of ’a’ have been brought-down and processed. */
 	for (auto i = na - nb + 1; i --> 0;) {
 		x_span = utils::Span{x_span.data() - 1, static_cast<BigInt::size_type>(x_span.size() + 1)};
 		uint64_t d = utils::div_u128_saturate(x_span[nb], x_span[nb-1], e); // yz/e;
-		d = _correct_d_and_subtract(x_span, b, d, temp_span);
+		d = _correct_d_and_subtract(x_span, b, d, temp);
 		if constexpr (!ignore_quotient) {
 			result.d[i] = d;
 		}
@@ -1551,7 +1555,7 @@ _divide_loop(const DivModResult<utils::Span<uint64_t>>& result, const utils::Spa
  */
 template <bool ignore_quotient = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
-divmod_ignore_sign(const utils::Span<uint64_t> quotient, const utils::Span<const uint64_t>& a, one_of<uint32_t, uint64_t> auto b) -> decltype(b){
+divmod_ignore_sign_small(const utils::Span<uint64_t> quotient, const utils::Span<const uint64_t>& a, one_of<uint32_t, uint64_t> auto b) -> decltype(b){
 	BIGINT_TRACY_ZONE_SCOPED;
 	if (b == 0) {
 		throw std::domain_error{utils::error_msg("division by zero")};
@@ -1593,77 +1597,64 @@ divmod_ignore_sign(const utils::Span<uint64_t> quotient, const utils::Span<const
 
 template <bool ignore_quotient = false>
 BIGINT_TRACY_CONSTEXPR_VOID
-_resize_result_for_divide_loop(BigInt& quotient, BigInt& remainder, const BigInt::size_type na, const BigInt::size_type nb) {
+_resize_result_for_divide_loop(BigInt& quotient, BigInt& remainder, DigitsVec& temp, const BigInt::size_type na, const BigInt::size_type nb) {
 	if constexpr (!ignore_quotient) {
 		// quotient can have maximum (na-nb+1) digits
+		quotient.reserve(na - nb + 2);
 		quotient.resize(na - nb + 1);
 	}
 	remainder.resize(na + 1);
+	temp.resize(nb + 1);
 }
 
 
 /**
  * @brief division algorithm adapted from Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division
  *
- * @param aa the dividend
- * @param bb the divisor
- * @return the result
+ * @param quotient the quotient result, will be untouched if `ignore_quotient==true`. Max size requirement: `quotient.size() == a.size() - b.size() + 1` (only if `ignore_quotient==true`).
+ * @param remainder the dividend result, will be touched even if `ignore_remainder==true`! Max size requirement: `result.r.size() == a.size() + 2`.
+ * @param a the dividend
+ * @param b the divisor
+ *
+ * @param temp a temporary. Max size requirement: `temp.size() == b.size() + 2`.
+ * @param temp_af a temporary. Max size requirement: `temp_af.size() == a.size() + 1`.
+ * @param temp_bf a temporary. Max size requirement: `temp_bf.size() == b.size() + 1`.
  */
 template <bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_VOID
-divmod_ignore_sign(BigInt& quotient, BigInt& remainder, const utils::Span<const uint64_t>& aa, const utils::Span<const uint64_t>& bb, std::vector<uint64_t>& temp) {
+_divmod_ignore_sign_big(BigInt& quotient, BigInt& remainder, const utils::Span<const uint64_t>& a, const utils::Span<const uint64_t>& b, DigitsVec& temp, DigitsVec& temp_af, DigitsVec& temp_bf) {
 	BIGINT_TRACY_ZONE_SCOPED;
 
-	if (is_zero(bb)) {
-		throw std::domain_error{utils::error_msg("division by zero")};
-	}
-	if (is_zero(aa) || bb.size() > aa.size()) {
-		quotient.resize(0);
+	assert(!is_zero(b));
+	assert(!(is_zero(a) || b.size() > a.size()));
+	assert(b.size() > 1); // single digit division must be handled by dedicated divmod_ignore_sign_small(...).
 
-		if constexpr (!ignore_remainder) {
-			remainder.resize(aa.size());
-			std::ranges::copy(aa, remainder._span().begin());
-		} else {
-			remainder.resize(1);
-			// remainder could be any positive number. It's only used to signify that the remainder is non-zero.
-			// Used for correcting a negative quotient in divmod(...)
-			remainder.set(0, is_zero(aa) ? 0 : 1);
-		}
-		return;
-	}
-	if (bb.size() == 1) {
-		if constexpr (!ignore_quotient) {
-			quotient.resize(aa.size());
-		}
-		remainder.resize(1);
-		remainder.set(0, divmod_ignore_sign<ignore_quotient>(quotient._span(), aa, bb[0]));
-		return;
-	}
-
-	uint64_t e = bb.back();
-	if ((bb.size() > 1) && (e < 1ull<<63)) {
+	uint64_t e = b.back();
+	if (e < 1ull<<63) {
 		/* normalization */
 		const uint64_t f = utils::div_u128_saturate(1ull, 0ull, e + 1); // 1^64/(e + 1);
 
-		std::vector<uint64_t> af(aa.size() + 1);
-		_mult_naive_ignore_sign(utils::Span{af}, aa, f);
+		auto& af = temp_af;
+		af.resize(a.size() + 1);
+		_mult_naive_ignore_sign(utils::Span{af}, a, f);
 		cleanup(af);
 
-		std::vector<uint64_t> bf(bb.size() + 1);
-		_mult_naive_ignore_sign(utils::Span{bf}, bb, f);
+		auto& bf = temp_bf;
+		bf.resize(b.size() + 1);
+		_mult_naive_ignore_sign(utils::Span{bf}, b, f);
 		cleanup(bf);
 
 		e = bf.back();
 
-		_resize_result_for_divide_loop(quotient, remainder, af.size(), bf.size());
-		_divide_loop<ignore_quotient>(DivModResult{quotient._span(), remainder._span()}, utils::Span{af}, utils::Span{bf}, e, temp);
+		_resize_result_for_divide_loop<ignore_quotient>(quotient, remainder, temp, af.size(), bf.size());
+		_divide_loop<ignore_quotient>(DivModResult{quotient._span(), remainder._span()}, utils::Span{af}, utils::Span{bf}, e, utils::Span{temp});
 
 		if constexpr (!ignore_remainder) { // fix remainder:
-			[[maybe_unused]] auto rm = divmod_ignore_sign(remainder._span(), remainder._span(), f);
+			[[maybe_unused]] auto rm = divmod_ignore_sign_small(remainder._span(), remainder._span(), f);
 		}
 	} else {
-		_resize_result_for_divide_loop(quotient, remainder, aa.size(), bb.size());
-		_divide_loop<ignore_quotient>(DivModResult{quotient._span(), remainder._span()}, aa, bb, e, temp);
+		_resize_result_for_divide_loop<ignore_quotient>(quotient, remainder, temp, a.size(), b.size());
+		_divide_loop<ignore_quotient>(DivModResult{quotient._span(), remainder._span()}, a, b, e, utils::Span{temp});
 	}
 
 	if constexpr (!ignore_quotient) {
@@ -1673,21 +1664,92 @@ divmod_ignore_sign(BigInt& quotient, BigInt& remainder, const utils::Span<const 
 }
 
 
+/**
+ * @brief division algorithm adapted from Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division
+ *
+ * @param quotient the quotient result, will be untouched if `ignore_quotient==true`. Size requirement: `quotient.size() == a.size() - b.size() + 1` (only if `ignore_quotient==true`).
+ * @param remainder the dividend result, will be touched even if `ignore_remainder==true`! Size requirement: `result.r.size() == a.size() + 2`.
+ * @param a the dividend
+ * @param b the divisor
+ *
+ * @return `true` if a shortcut was taken successfully.
+ */
+template <bool ignore_quotient = false, bool ignore_remainder = false>
+BIGINT_TRACY_CONSTEXPR_AUTO
+_divmod_ignore_sign_big_shortcuts(BigInt& quotient, BigInt& remainder, const utils::Span<const uint64_t>& a, const utils::Span<const uint64_t>& b) -> bool {
+	BIGINT_TRACY_ZONE_SCOPED;
+
+	assert(!is_zero(b));
+
+	if (is_zero(a) || b.size() > a.size()) {
+		if constexpr (!ignore_quotient) {
+			quotient.resize(0);
+		}
+
+		if constexpr (!ignore_remainder) {
+			remainder.resize(a.size());
+			std::ranges::copy(a, remainder._span().begin());
+		} else {
+			remainder.resize(1);
+			// remainder could be any positive number. It's only used to signify that the remainder is non-zero.
+			// Used for correcting a negative quotient in divmod(...)
+			remainder.set(0, is_zero(a) ? 0 : 1);
+		}
+		return true;
+	}
+	if (b.size() == 1) {
+		if constexpr (!ignore_quotient) {
+			quotient.reserve(a.size() + 1);
+			quotient.resize(a.size());
+		}
+		remainder.resize(1);
+		remainder.set(0, divmod_ignore_sign_small<ignore_quotient>(quotient._span(), a, b[0]));
+		return true;
+	}
+
+	return false;
+}
+
+
+/**
+ * @brief division algorithm adapted from Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division
+ *
+ * @param quotient the quotient result, will be untouched if `ignore_quotient==true`. Max size requirement: `quotient.size() == a.size() - b.size() + 1` (only if `ignore_quotient==true`).
+ * @param remainder the dividend result, will be touched even if `ignore_remainder==true`! Max size requirement: `result.r.size() == a.size() + 2`.
+ * @param a the dividend
+ * @param b the divisor
+*
+ * @param temp a temporary. Max size requirement: `temp.size() == b.size() + 2`.
+ * @param temp_af a temporary. Max size requirement: `temp_af.size() == a.size() + 1`.
+ * @param temp_bf a temporary. Max size requirement: `temp_bf.size() == b.size() + 1`.
+ */
 template <bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_VOID
-divmod(BigInt& quotient, BigInt& remainder, const is_BigInt_like auto &a, const is_BigInt_like auto &b, std::vector<uint64_t>& temp) {
-	_private::divmod_ignore_sign<ignore_quotient, ignore_remainder>(quotient, remainder, a._span(), b._span(), temp);
+divmod_ignore_sign(BigInt& quotient, BigInt& remainder, const utils::Span<const uint64_t>& a, const utils::Span<const uint64_t>& b, DigitsVec& temp, DigitsVec& temp_af, DigitsVec& temp_bf) {
+	BIGINT_TRACY_ZONE_SCOPED;
+	if (is_zero(b)) {
+		throw std::domain_error{utils::error_msg("division by zero")};
+	}
+	if (_divmod_ignore_sign_big_shortcuts<ignore_quotient, ignore_remainder>(quotient, remainder, a, b)) {
+		return;
+	}
+	_divmod_ignore_sign_big<ignore_quotient, ignore_remainder>(quotient, remainder, a, b, temp, temp_af, temp_bf);
+}
 
+
+template <bool ignore_quotient = false, bool ignore_remainder = false>
+BIGINT_TRACY_CONSTEXPR_VOID
+_fix_divmod_signs(BigInt& quotient, BigInt& remainder, const Sign a_sign, const is_BigInt_like auto &b) {
 	if constexpr (!ignore_remainder) {
 		if (!is_zero(remainder)) {
-			remainder.sign() = a.sign();
-			if (a.sign() != b.sign()) {
+			remainder.sign() = a_sign;
+			if (a_sign != b.sign()) {
 				remainder += b;
 			}
 		}
 	}
 	if constexpr (!ignore_quotient) {
-		quotient.sign() = _private::mult_sign(a.sign(), b.sign());
+		quotient.sign() = _private::mult_sign(a_sign, b.sign());
 		if (!is_zero(remainder) and quotient.sign() == Sign::NEG) {
 			quotient -= 1;
 		}
@@ -1695,31 +1757,58 @@ divmod(BigInt& quotient, BigInt& remainder, const is_BigInt_like auto &a, const 
 	}
 }
 
-template <bool ignore_quotient = false, bool ignore_remainder = false>
-BIGINT_TRACY_CONSTEXPR_AUTO
-divmod(BigInt& quotient, const is_BigInt_like auto &a, one_of<int32_t, uint32_t, int64_t, uint64_t> auto b) -> decltype(b) {
-	if constexpr (!ignore_quotient) {
-		quotient.resize(a.size());
-	}
-	decltype(b) remainder = _private::divmod_ignore_sign<ignore_quotient>(quotient._span(), a._span(), utils::constexpr_abs(b));
 
+template <bool ignore_quotient = false, bool ignore_remainder = false, one_of<int32_t, uint32_t, int64_t, uint64_t> TRHS>
+BIGINT_TRACY_CONSTEXPR_VOID
+_fix_divmod_signs(BigInt& quotient, TRHS& remainder, const Sign a_sign, const TRHS &b) {
 	if constexpr (!ignore_remainder) {
 		if (remainder != 0) {
-			if (is_neg(a)) {
+			if (a_sign == Sign::NEG) {
 				remainder = -remainder;
 			}
-			if (a.sign() != _private::get_sign(b)) {
+			if (a_sign != _private::get_sign(b)) {
 				remainder += b;
 			}
 		}
 	}
 	if constexpr (!ignore_quotient) {
-		quotient.sign() = _private::mult_sign(a.sign(), _private::get_sign(b));
+		quotient.sign() = _private::mult_sign(a_sign, _private::get_sign(b));
 		if (remainder != 0 and quotient.sign() == Sign::NEG) {
 			quotient -= 1;
 		}
 		quotient.cleanup();
 	}
+}
+
+
+/**
+ * @brief division algorithm adapted from Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division
+ *
+ * @param quotient the quotient result, will be untouched if `ignore_quotient==true`. Max size requirement: `quotient.size() == a.size() - b.size() + 1` (only if `ignore_quotient==true`).
+ * @param remainder the dividend result, will be touched even if `ignore_remainder==true`! Max size requirement: `result.r.size() == a.size() + 2`.
+ * @param a the dividend
+ * @param b the divisor
+ *
+ * @param temp a temporary. Max size requirement: `temp.size() == b.size() + 2`.
+ * @param temp_af a temporary. Max size requirement: `temp_af.size() == a.size() + 1`.
+ * @param temp_bf a temporary. Max size requirement: `temp_bf.size() == b.size() + 1`.
+ */
+template <bool ignore_quotient = false, bool ignore_remainder = false>
+BIGINT_TRACY_CONSTEXPR_VOID
+divmod(BigInt& quotient, BigInt& remainder, const is_BigInt_like auto &a, const is_BigInt_like auto &b, DigitsVec& temp, DigitsVec& temp_af, DigitsVec& temp_bf) {
+	_private::divmod_ignore_sign<ignore_quotient, ignore_remainder>(quotient, remainder, a._span(), b._span(), temp, temp_af, temp_bf);
+	_private::_fix_divmod_signs<ignore_quotient, ignore_remainder>(quotient, remainder, a.sign(), b);
+}
+
+template <bool ignore_quotient = false, bool ignore_remainder = false>
+BIGINT_TRACY_CONSTEXPR_AUTO
+divmod(BigInt& quotient, const is_BigInt_like auto &a, one_of<int32_t, uint32_t, int64_t, uint64_t> auto b) -> decltype(b) {
+	if constexpr (!ignore_quotient) {
+			quotient.reserve(a.size() + 1);
+		quotient.resize(a.size());
+	}
+	decltype(b) remainder = _private::divmod_ignore_sign_small<ignore_quotient>(quotient._span(), a._span(), utils::constexpr_abs(b));
+	_private::_fix_divmod_signs<ignore_quotient, ignore_remainder>(quotient, remainder, a.sign(), b);
 	return remainder;
 }
 
@@ -1733,8 +1822,8 @@ template <bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod(const is_BigInt_like auto &a, const is_BigInt_like auto &b) -> DivModResult<BigInt> {
 	DivModResult<BigInt> result;
-	DigitsVec temp;
-	_private::divmod<ignore_quotient, ignore_remainder>(result.d, result.r, a, b, temp);
+	DigitsVec temp, temp_af, temp_bf;
+	_private::divmod<ignore_quotient, ignore_remainder>(result.d, result.r, a, b, temp, temp_af, temp_bf);
 	return result;
 }
 
@@ -2037,7 +2126,6 @@ to_debug_string(const is_BigInt_like auto& value) -> std::string {
 	const std::string sign = value.sign() == Sign::POS ? "POS" : "NEG";
 	return std::string{"IBigIntLike {_data: "} + _to_debug_string_data(value) + ", _sign: " + sign + "}";
 }
-
 
 template <int base = 10>
 BIGINT_TRACY_CONSTEXPR_AUTO

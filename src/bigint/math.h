@@ -191,24 +191,36 @@ pow_mod(const is_BigInt_like auto& base, const is_BigInt_like auto& exp, const i
 
 	const uint64_t exp_bits = (exp.size() - 1) * 64 + (64 - utils::clzll(exp[exp.size()-1]));
 
+	DigitsVec temp_mod;
+	DigitsVec temp_af;
+	DigitsVec temp_bf;
+	temp_mod.resize(mod.size() + 2);
+	temp_af.resize(mod.size() * 2 + 1);
+	temp_bf.resize(mod.size() + 1);
 	BigInt result{1};
-	BigInt temp = base % mod;
+	BigInt temp; // = base % mod;
 	BigInt temp2;
 	BigInt temp3;
-	DigitsVec temp_mod;
+
+	result.reserve(mod.size() * 2 + 2);
+	temp.reserve(mod.size() * 2 + 2);
+	temp2.reserve(mod.size() * 2);
+	temp3.reserve(mod.size() * 2);
+
+	// temp = base % mod;
+	_private::divmod<true, false>(result, temp, base, mod, temp_mod, temp_af, temp_bf); // result is just a placeholder here and is never read from or written to.
+
 	for (uint64_t i = 0; i < exp_bits; ++i) {
 		const auto mask = 1ull << (i % 64);
-		if (exp[i/64] & mask) {
+		if (exp[i / 64] & mask) {
 			// result = (result * temp) % mod;
-			mult(temp2, result, temp);
-			// result = temp2 % mod;
-			_private::divmod<true, false>(temp3, result, temp2, mod, temp_mod); // temp3 is a placeholder here and is never read from or written to.
+			mult(temp2, result, temp, temp_bf);
+			_private::divmod<true, false>(temp3, result, temp2, mod, temp_mod, temp_af, temp_bf); // temp3 is just a placeholder here and is never read from or written to.
 		}
-		if (i+1 < exp_bits) {
+		if (i + 1 < exp_bits) { // don´t square at the end of the last loop, it just wasts CPU cycles.
 			// temp = (temp * temp) % mod;
-			mult(temp3, temp, temp);
-			// temp = temp3 % mod;
-			_private::divmod<true, false>(temp2, temp, temp3, mod, temp_mod); // temp2 is a placeholder here and is never read from or written to.
+			mult(temp3, temp, temp, temp_bf);
+			_private::divmod<true, false>(temp2, temp, temp3, mod, temp_mod, temp_af, temp_bf); // temp2 is just a placeholder here and is never read from or written to.
 		}
 	}
 	return result;
@@ -349,10 +361,10 @@ lehmer(BigInt& U, BigInt& V) {
 	}
 
 	// We know q,,..., qi-l were correct, qi as incorrect.
-	auto R = x_i * U + y_i * V;
+	BigInt R = x_i * U + y_i * V;
 	U *= x_im1;
 	U += y_im1 * V;
-	V = std::move(R);
+	std::swap(V, R);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
@@ -371,8 +383,8 @@ gcd_internal(const BigInt& Uu, const BigInt& Vv) -> BigInt {
 		}
 
 		auto R = U % V;
-		U = std::move(V);
-		V = std::move(R);
+		std::swap(U, V);
+		std::swap(V, R);
 	}
 
 	return U;
