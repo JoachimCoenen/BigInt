@@ -38,6 +38,7 @@ concept is_BigInt_like = std::is_base_of_v<IBigIntLike, T>;
 
 using utils::one_of;
 
+using DigitsVec = std::vector<uint64_t>;
 }
 
 
@@ -79,7 +80,7 @@ get_sign(std::integral auto v) noexcept -> Sign {
 }
 
 CONSTEXPR_VOID
-cleanup(std::vector<uint64_t>& data) {
+cleanup(DigitsVec& data) {
 	if (data.empty()) {
 		data.resize(1);
 		data[0] = 0;
@@ -103,6 +104,8 @@ namespace bigint {
 
 class BigInt : public IBigIntLike
 {
+ public:
+	using size_type = DigitsVec::size_type;
 
  public:
 	constexpr
@@ -133,9 +136,8 @@ class BigInt : public IBigIntLike
 	}
 
 	explicit constexpr
-	BigInt(std::vector<uint64_t> &&v, Sign sign=Sign::POS)
+	BigInt(DigitsVec &&v, Sign sign=Sign::POS)
 		: _data(std::move(v)), _sign(sign) {
-		std::copy(v.begin(), v.end(), _data.begin());
 		if (_data.empty()) {
 			_data.push_back(0);
 		}
@@ -144,7 +146,7 @@ class BigInt : public IBigIntLike
 	explicit constexpr
 	BigInt(const is_BigInt_like auto &v)
 		: _data(v.size()), _sign(v.sign()) {
-		for (size_t i = 0; i < v.size(); ++i) {
+		for (size_type i = 0; i < v.size(); ++i) {
 			_data[i] = v[i];
 		}
 		if (_data.empty()) {
@@ -170,17 +172,17 @@ class BigInt : public IBigIntLike
 	}
 
 	CONSTEXPR_AUTO
-	size() const noexcept -> std::size_t {
+	size() const noexcept -> size_type {
 		return _data.size();
 	}
 
 	CONSTEXPR_AUTO
-	operator[](std::size_t index) const noexcept -> uint64_t {
+	operator[](size_type index) const noexcept -> uint64_t {
 		return index >= size() ? 0 : _data[index];
 	}
 
 	CONSTEXPR_VOID
-	set(std::size_t index, uint64_t digit) {
+	set(size_type index, uint64_t digit) {
 #if BIGINT_ENABLE_BOUNDS_CHECKS
 		utils::check_bounds(index, size());
 #endif
@@ -209,10 +211,10 @@ class BigInt : public IBigIntLike
 	}
 
 	BIGINT_TRACY_CONSTEXPR_VOID
-	resize(std::size_t size) {
+	resize(size_type size) {
 		BIGINT_TRACY_ZONE_SCOPED;
 		// size 0 clears the BigInt and sets its value to 0.
-		_data.resize(std::max<size_t>(1, size), 0);
+		_data.resize(std::max<size_type>(1, size));
 		if (size == 0) {
 			_data[0] = 0;
 		}
@@ -230,14 +232,16 @@ class BigInt : public IBigIntLike
 
 public:
 	[[nodiscard]] auto
-	__data_for_testing_only() const -> std::vector<uint64_t>{
-		auto result = _data;
-		result.push_back(is_neg(*this) ? 1 : 0);
+	__data_for_testing_only() const -> DigitsVec {
+		DigitsVec result = _data;
+		result.resize(size() + 1);
+		std::copy(_data.begin(), _data.end(), result.begin());
+		result.back() = is_neg(*this) ? 1 : 0;
 		return result;
 	}
 
 private:
-	std::vector<uint64_t> _data;
+	[[no_unique_address]] DigitsVec _data;;
 	Sign _sign; // adds another 8 bytes :(
 };
 
@@ -252,7 +256,7 @@ is_zero(const utils::Span<const uint64_t> &value) -> bool {
 	if (value.empty() || value.size() == 1 && value[0] == 0)
 		return true;
 
-	for (size_t i = value.size(); i --> 0;) {
+	for (BigInt::size_type i = value.size(); i --> 0;) {
 		if (value[i])
 			return false;
 	}
@@ -413,6 +417,9 @@ class BigIntAbsNeg;
 
 class BigIntAbs: IBigIntLike {
 public:
+	using size_type = BigInt::size_type;
+
+public:
 	explicit constexpr
 	BigIntAbs(const BigInt& lhs) :
 		_lhs(lhs) {}
@@ -423,12 +430,12 @@ public:
 	}
 
 	CONSTEXPR_AUTO
-	size() const noexcept -> std::size_t {
+	size() const noexcept -> size_type {
 		return lhs().size();
 	}
 
 	CONSTEXPR_AUTO
-	operator[](std::size_t index) const -> uint64_t {
+	operator[](size_type index) const -> uint64_t {
 		return lhs()[index];
 	}
 
@@ -451,6 +458,9 @@ private:
 
 class BigIntNeg: IBigIntLike {
 public:
+	using size_type = BigInt::size_type;
+
+public:
 
 	explicit constexpr
 	BigIntNeg(const BigInt& lhs) :
@@ -462,12 +472,12 @@ public:
 	}
 
 	CONSTEXPR_AUTO
-	size() const noexcept -> std::size_t {
+	size() const noexcept -> size_type {
 		return lhs().size();
 	}
 
 	CONSTEXPR_AUTO
-	operator[](std::size_t index) const -> uint64_t {
+	operator[](size_type index) const -> uint64_t {
 		return lhs()[index];
 	}
 
@@ -490,6 +500,9 @@ private:
 
 class BigIntAbsNeg: IBigIntLike {
 public:
+	using size_type = BigInt::size_type;
+
+public:
 	explicit constexpr
 	BigIntAbsNeg(const BigInt& lhs) :
 		_lhs(lhs) {}
@@ -500,12 +513,12 @@ public:
 	}
 
 	CONSTEXPR_AUTO
-	size() const noexcept -> std::size_t {
+	size() const noexcept -> size_type {
 		return lhs().size();
 	}
 
 	CONSTEXPR_AUTO
-	operator[](std::size_t index) const -> uint64_t {
+	operator[](size_type index) const -> uint64_t {
 		return lhs()[index];
 	}
 
@@ -729,16 +742,16 @@ operator<=>(const utils::Span<const uint64_t> &a, const utils::Span<const uint64
 	if (!is_zero(a) && !is_zero(b)) {
 
 		if (a.size() > b.size()) {
-			for (size_t i = a.size(); i --> b.size();) {
+			for (BigInt::size_type i = a.size(); i --> b.size();) {
 				if (a[i]) { return std::strong_ordering::greater; }
 			}
 		} else if (b.size() > a.size()) {
-			for (size_t i = b.size(); i --> a.size();) {
+			for (BigInt::size_type i = b.size(); i --> a.size();) {
 				if (b[i]) { return std::strong_ordering::less; }
 			}
 		}
 
-		size_t i;
+		BigInt::size_type i;
 		for (i = std::min(a.size(), b.size()); i --> 1 && a[i] == b[i];) {
 			// do nothing
 		}
@@ -854,7 +867,7 @@ _add_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const ui
 	assert(result.size() >= a.size());
 
 	bool c = false; // carry
-	size_t i = 0;
+	BigInt::size_type i = 0;
 	for (; i < b.size(); ++i) {
 		const auto ai = a[i];
 		auto result_i = ai + b[i];
@@ -925,7 +938,7 @@ _sub_ignore_sign_no_negative_result(const utils::Span<uint64_t> &result, const u
 	assert(result.size() >= std::max(a.size(), b.size()));
 
 	bool c = false; // carry
-	size_t i = 0;
+	BigInt::size_type i = 0;
 	const auto min_size = std::min(a.size(), b.size());
 	for (; i < min_size; ++i) {
 		const auto ai = a[i];
@@ -1217,7 +1230,7 @@ namespace _private {
 	_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, uint64_t b) {
 		BIGINT_TRACY_ZONE_SCOPED;
 		uint64_t c = 0; // carry
-		size_t i = 0;
+		BigInt::size_type i = 0;
 		for (; i < a.size(); i++) {
 			const auto rc = mult(a[i], b);
 			auto result_i = rc.lo + c;
@@ -1262,7 +1275,7 @@ mult(is_BigInt_like auto &result, is_BigInt_like auto &a, int64_t b) {
 
 namespace _private {
 	BIGINT_TRACY_CONSTEXPR_VOID
-	_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b, std::vector<uint64_t> &temp_vec) {
+	_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b, DigitsVec &temp_vec) {
 		BIGINT_TRACY_ZONE_SCOPED;
 		if (is_zero(a) || is_zero(b)) {
 			std::ranges::fill(result, 0);
@@ -1270,12 +1283,12 @@ namespace _private {
 		}
 
 		// fill first digits with zeros, so we do not add to what ever garbage was in there.
-		std::fill_n(result.begin(), std::min(a.size() + 1, result.size()), 0);
+		std::fill_n(result.begin(), std::min<BigInt::size_type>(a.size() + 1, result.size()), 0);
 		// we don't need to fill all digits, because all subsequent digits are replaced by the carry of the previous addition.
 
 		temp_vec.resize(a.size() + 1, 0);
 		utils::Span temp(temp_vec);
-		size_t i = 0;
+		BigInt::size_type i = 0;
 		for (i = 0; i < b.size(); i++) {
 			_mult_naive_ignore_sign(temp, a, b[i]);
 			_add_ignore_sign(rmasked(result, i, temp.size() + 1), rmasked(result, i, temp.size()), temp);
@@ -1289,11 +1302,11 @@ namespace _private {
 	}
 
 	struct KaratsubaStepTemps {
-		std::vector<uint64_t> ac;
-		std::vector<uint64_t> bd;
-		std::vector<uint64_t> ab_cd;
-		std::vector<uint64_t> a_b;
-		std::vector<uint64_t> c_d;
+		DigitsVec ac;
+		DigitsVec bd;
+		DigitsVec ab_cd;
+		DigitsVec a_b;
+		DigitsVec c_d;
 
 		utils::UniquePtr<KaratsubaStepTemps> local_temps;
 
@@ -1310,7 +1323,7 @@ namespace _private {
 	};
 
 	CONSTEXPR_AUTO
-	should_use_karatsuba(size_t a_size, size_t b_size) -> bool {
+	should_use_karatsuba(BigInt::size_type a_size, BigInt::size_type b_size) -> bool {
 		const auto min_size = std::min(a_size, b_size);
 		const auto max_size = std::max(a_size, b_size);
 		return max_size >= MIN_DIGITS_FOR_MULT_KARATSUBA && (min_size >= MIN_DIGITS_FOR_MULT_KARATSUBA || min_size > max_size >> 1);
@@ -1517,7 +1530,7 @@ _divide_loop(const DivModResult<utils::Span<uint64_t>>& result, const utils::Spa
 
 	/* loop-invariant P: first m digits of ’a’ have been brought-down and processed. */
 	for (auto i = na - nb + 1; i --> 0;) {
-		x_span = utils::Span{x_span.data() - 1, x_span.size() + 1};
+		x_span = utils::Span{x_span.data() - 1, static_cast<BigInt::size_type>(x_span.size() + 1)};
 		uint64_t d = utils::div_u128_saturate(x_span[nb], x_span[nb-1], e); // yz/e;
 		d = _correct_d_and_subtract(x_span, b, d, temp_span);
 		if constexpr (!ignore_quotient) {
@@ -1580,7 +1593,7 @@ divmod_ignore_sign(const utils::Span<uint64_t> quotient, const utils::Span<const
 
 template <bool ignore_quotient = false>
 BIGINT_TRACY_CONSTEXPR_VOID
-_resize_result_for_divide_loop(BigInt& quotient, BigInt& remainder, const size_t na, const size_t nb) {
+_resize_result_for_divide_loop(BigInt& quotient, BigInt& remainder, const BigInt::size_type na, const BigInt::size_type nb) {
 	if constexpr (!ignore_quotient) {
 		// quotient can have maximum (na-nb+1) digits
 		quotient.resize(na - nb + 1);
@@ -1720,7 +1733,7 @@ template <bool ignore_quotient = false, bool ignore_remainder = false>
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod(const is_BigInt_like auto &a, const is_BigInt_like auto &b) -> DivModResult<BigInt> {
 	DivModResult<BigInt> result;
-	std::vector<uint64_t> temp;
+	DigitsVec temp;
 	_private::divmod<ignore_quotient, ignore_remainder>(result.d, result.r, a, b, temp);
 	return result;
 }
@@ -1941,7 +1954,7 @@ namespace _private {
 		} else { // special case for when base is a divider of 32.
 			constexpr auto base_power = base_conversion_64{base}.base_power;
 			result.append(base_power * v.size(), '0');
-			for (size_t i = v.size(); i --> 0;) {
+			for (BigInt::size_type i = v.size(); i --> 0;) {
 				uint64_t digs = v[v.size() - i - 1];
 				for (uint8_t j = base_power; j --> 0;) {
 					auto d = static_cast<uint8_t>(digs % base);
@@ -2005,7 +2018,7 @@ _to_debug_string_data(const is_BigInt_like auto& value) -> std::string {
 		std::ostringstream oss;
 		oss << "{";
 
-		size_t i = 0;
+		BigInt::size_type i = 0;
 		// add the first element with no delimiter
 		oss << value[i];
 		++i;
@@ -2037,10 +2050,10 @@ from_string(const std::string_view input) -> BigInt {
 		return result;
 	}
 
-	const size_t i0 = input[0] == '-' or input[0] == '+' ? 1 : 0;
+	const BigInt::size_type i0 = input[0] == '-' or input[0] == '+' ? 1 : 0;
 
 	if constexpr (conv.division_base != 0) {
-		for (size_t i = i0; i < input.size(); i += conv.base_power) {
+		for (BigInt::size_type i = i0; i < input.size(); i += conv.base_power) {
 			auto substr = std::string_view(input).substr(i, conv.base_power);
 			auto mul = substr.size() == conv.base_power ? conv.division_base : utils::ipow(base, static_cast<uint8_t>(substr.size()));
 			auto add = utils::stoull(substr, base);
@@ -2051,12 +2064,12 @@ from_string(const std::string_view input) -> BigInt {
 	} else { // special case for when base is a divider of 32.
 
 		const auto digit_count = input.size() - i0;
-		const auto big_int_digit_count = std::max<size_t>(0, digit_count / conv.base_power + (digit_count % conv.base_power > 0 ? 1 : 0));
+		const auto big_int_digit_count = std::max<BigInt::size_type>(0, digit_count / conv.base_power + (digit_count % conv.base_power > 0 ? 1 : 0));
 		result.resize(big_int_digit_count);
 
-		size_t i = input.size();
-		for (size_t k = 0; k < result.size(); k += 1, i -= conv.base_power) {
-			const auto window_size = std::min(i - i0, static_cast<size_t>(conv.base_power));
+		BigInt::size_type i = input.size();
+		for (BigInt::size_type k = 0; k < result.size(); k += 1, i -= conv.base_power) {
+			const auto window_size = std::min<BigInt::size_type>(i - i0, conv.base_power);
 			auto substr = std::string_view(input).substr(i - window_size, window_size);
 			auto add = utils::stoull(substr, base);
 			result.set(k, add);

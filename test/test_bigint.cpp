@@ -15,7 +15,7 @@ using namespace test_data;
 // Constructors
 namespace {
 
-inline void expectSimpleInt(const std::vector<uint64_t>&actual, const std::vector<uint64_t>& expectedData) {
+inline void expectSimpleInt(const DigitsVec& actual, const DigitsVec& expectedData) {
 	EXPECT_EQ(actual, expectedData);
 }
 
@@ -304,7 +304,7 @@ TEST_DIV_ASSIGN_OPERATOR_BIGINT(Mod, int32_t, a %= b, get_all_mod_test_values())
 namespace {
 
 template<typename RT>
-using Divmod_RT = std::tuple<std::vector<uint64_t>, RT>;
+using Divmod_RT = std::tuple<DigitsVec, RT>;
 
 template<typename R>
 using Divmod_R = DivModResult<BigInt, R>;
@@ -312,7 +312,7 @@ using Divmod_R = DivModResult<BigInt, R>;
 #define TEST_DIVMOD(NAME, O1, O2, OP, RT, GET_RT) \
 TEST_DIV_OPERATOR(NAME, O1, O2, Divmod_R<O2>, OP, get_all_divmod_test_values(), Divmod_RT<RT>, std::tuple(res.d.__data_for_testing_only(), GET_RT))
 
-TEST_DIVMOD(Divmod, BigInt, BigInt, divmod(a, b), std::vector<uint64_t>, res.r.__data_for_testing_only())
+TEST_DIVMOD(Divmod, BigInt, BigInt, divmod(a, b), DigitsVec, res.r.__data_for_testing_only())
 
 TEST_DIVMOD(Divmod, BigInt, uint64_t, divmod(a, b), uint64_t, res.r)
 

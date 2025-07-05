@@ -119,7 +119,7 @@ log10(const is_BigInt_like auto& y) -> uint64_t {
  * @throws std::domain_error if y <= 0
  */
 BIGINT_TRACY_CONSTEXPR_AUTO
-log2(const is_BigInt_like auto& y) -> uint64_t {
+log2(const is_BigInt_like auto& y) -> BigInt::size_type {
 	BIGINT_TRACY_ZONE_SCOPED;
 	if (!is_pos(y)) {
 		throw std::domain_error{utils::error_msg("integer log of a non-positive number is undefined.")};
@@ -195,7 +195,7 @@ pow_mod(const is_BigInt_like auto& base, const is_BigInt_like auto& exp, const i
 	BigInt temp = base % mod;
 	BigInt temp2;
 	BigInt temp3;
-	std::vector<uint64_t> temp_mod;
+	DigitsVec temp_mod;
 	for (uint64_t i = 0; i < exp_bits; ++i) {
 		const auto mask = 1ull << (i % 64);
 		if (exp[i/64] & mask) {
@@ -438,9 +438,9 @@ digit_sum(const BigInt& v) -> uint64_t {
 	} else { // special case for when base is a divider of 32.
 		const auto base_power = _private::base_conversion_64{base}.base_power;
 		uint64_t sum = 0ull;
-		for (size_t i = 0; i < v.size(); ++i) {
+		for (BigInt::size_type i = 0; i < v.size(); ++i) {
 			uint64_t digs = v[i];
-			for (size_t j = 0; j < base_power; ++j) {
+			for (BigInt::size_type j = 0; j < base_power; ++j) {
 				sum += digs % base;
 				digs /= base;
 			}

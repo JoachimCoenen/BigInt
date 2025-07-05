@@ -59,7 +59,7 @@ TEST_VALUES\
 }
 
 #define TEST_UNARY_OPERATOR_BIGINT(NAME, O1, OP, TEST_VALUES) \
-TEST_UNARY_OPERATOR(NAME, O1, BigInt, OP, TEST_VALUES, std::vector<uint64_t>, res.__data_for_testing_only())
+TEST_UNARY_OPERATOR(NAME, O1, BigInt, OP, TEST_VALUES, DigitsVec, res.__data_for_testing_only())
 
 
 
@@ -73,7 +73,7 @@ TEST_VALUES\
 }
 
 #define TEST_BINARY_OPERATOR_BIGINT(NAME, O1, O2, OP, TEST_VALUES) \
-TEST_BINARY_OPERATOR(NAME, O1, O2, BigInt, OP, TEST_VALUES, std::vector<uint64_t>, res.__data_for_testing_only())
+TEST_BINARY_OPERATOR(NAME, O1, O2, BigInt, OP, TEST_VALUES, DigitsVec, res.__data_for_testing_only())
 
 
 #define TEST_ASSIGN_OPERATOR(NAME, O1, O2, OP, TEST_VALUES, RT, GET_RT) \
@@ -86,7 +86,7 @@ TEST_VALUES\
 }
 
 #define TEST_ASSIGN_OPERATOR_BIGINT(NAME, O2, OP, TEST_VALUES) \
-TEST_ASSIGN_OPERATOR(NAME, BigInt, O2, OP, TEST_VALUES, std::vector<uint64_t>, res.__data_for_testing_only())
+TEST_ASSIGN_OPERATOR(NAME, BigInt, O2, OP, TEST_VALUES, DigitsVec, res.__data_for_testing_only())
 
 
 
@@ -100,4 +100,4 @@ TEST_VALUES\
 }
 
 #define TEST_TRINARY_OPERATOR_BIGINT(NAME, O1, O2, O3, OP, TEST_VALUES) \
-TEST_TRINARY_OPERATOR(NAME, O1, O2, O3, BigInt, OP,TEST_VALUES, std::vector<uint64_t>, res.__data_for_testing_only())
+TEST_TRINARY_OPERATOR(NAME, O1, O2, O3, BigInt, OP,TEST_VALUES, DigitsVec, res.__data_for_testing_only())
