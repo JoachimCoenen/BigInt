@@ -348,7 +348,7 @@ lehmer_step(uint64_t& u_, uint64_t& v_, int64_t& x_im1, int64_t& x_i, int64_t& y
 
 template<int k>
 BIGINT_TRACY_CONSTEXPR_VOID
-lehmer(BigInt& U, BigInt& V) {
+lehmer(BigInt& U, BigInt& V, BigInt& R, BigInt& temp) {
 	BIGINT_TRACY_ZONE_SCOPED;
 
 	auto h = log2(U) < k-1 ? 0 : log2(U) + 1 - k;
@@ -369,9 +369,14 @@ lehmer(BigInt& U, BigInt& V) {
 	}
 
 	// We know q,,..., qi-l were correct, qi as incorrect.
-	BigInt R = x_i * U + y_i * V;
+	mult(R, U, x_i);
+	mult(temp, V, y_i);
+	R += temp;
+
 	U *= x_im1;
-	U += y_im1 * V;
+	mult(temp, V, y_im1);
+	U += temp;
+
 	std::swap(V, R);
 }
 
@@ -384,15 +389,16 @@ gcd_internal(const BigInt& Uu, const BigInt& Vv) -> BigInt {
 
 	BigInt U = Uu; U.sign() = Sign::POS;
 	BigInt V = Vv; V.sign() = Sign::POS;
+	BigInt R, temp; // temporaries
 
 	while (!is_zero(V)) {
 		if (log2(U) - log2(V) <= k/2) {
-			_private::lehmer<k>(U, V);
+			_private::lehmer<k>(U, V, R, temp);
 		}
 
-		auto R = U % V;
+		mod(temp, U, V); // temp = U % V;
 		std::swap(U, V);
-		std::swap(V, R);
+		std::swap(V, temp);
 	}
 
 	return U;
