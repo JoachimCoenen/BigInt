@@ -240,6 +240,14 @@ class BigInt : public IBigIntLike
 		return utils::Span{_data.data(), _data.size()};
 	}
 
+	/**
+	 * @return the underlying BigInt instance.
+	 */
+	CONSTEXPR_AUTO
+	_bigint() const noexcept -> const BigInt& {
+		return *this;
+	}
+
 public:
 	[[nodiscard]] auto
 	__data_for_testing_only() const -> DigitsVec {
@@ -474,17 +482,12 @@ public:
 
 	CONSTEXPR_AUTO
 	size() const noexcept -> size_type {
-		return lhs().size();
+		return _lhs.size();
 	}
 
 	CONSTEXPR_AUTO
 	operator[](size_type index) const -> uint64_t {
-		return lhs()[index];
-	}
-
-	CONSTEXPR_AUTO
-	_span() noexcept -> utils::Span<const uint64_t> {
-		return _lhs._span();
+		return _lhs[index];
 	}
 
 	CONSTEXPR_AUTO
@@ -492,8 +495,11 @@ public:
 		return _lhs._span();
 	}
 
+	/**
+	 * @return the underlying BigInt instance.
+	 */
 	CONSTEXPR_AUTO
-	lhs() const -> const BigInt& { return _lhs; }
+	_bigint() const noexcept -> const BigInt& { return _lhs; }
 
 private:
 	const BigInt& _lhs;
@@ -511,31 +517,28 @@ public:
 
 	CONSTEXPR_AUTO
 	sign() const noexcept -> Sign {
-		return _private::neg(lhs().sign());
+		return _private::neg(_lhs.sign());
 	}
 
 	CONSTEXPR_AUTO
 	size() const noexcept -> size_type {
-		return lhs().size();
+		return _lhs.size();
 	}
 
 	CONSTEXPR_AUTO
 	operator[](size_type index) const -> uint64_t {
-		return lhs()[index];
+		return _lhs[index];
 	}
-
-	CONSTEXPR_AUTO
-	_span() noexcept -> utils::Span<const uint64_t> {
-		return _lhs._span();
-	}
-
 	CONSTEXPR_AUTO
 	_span() const noexcept -> utils::Span<const uint64_t> {
 		return _lhs._span();
 	}
 
+	/**
+	 * @return the underlying BigInt instance.
+	 */
 	CONSTEXPR_AUTO
-	lhs() const -> const BigInt& { return _lhs; }
+	_bigint() const noexcept -> const BigInt& { return _lhs; }
 
 private:
 	const BigInt& _lhs;
@@ -557,17 +560,12 @@ public:
 
 	CONSTEXPR_AUTO
 	size() const noexcept -> size_type {
-		return lhs().size();
+		return _lhs.size();
 	}
 
 	CONSTEXPR_AUTO
 	operator[](size_type index) const -> uint64_t {
-		return lhs()[index];
-	}
-
-	CONSTEXPR_AUTO
-	_span() noexcept -> utils::Span<const uint64_t> {
-		return _lhs._span();
+		return _lhs[index];
 	}
 
 	CONSTEXPR_AUTO
@@ -575,8 +573,11 @@ public:
 		return _lhs._span();
 	}
 
+	/**
+	 * @return the underlying BigInt instance.
+	 */
 	CONSTEXPR_AUTO
-	lhs() const -> const BigInt& { return _lhs; }
+	_bigint() const noexcept -> const BigInt& { return _lhs; }
 
 private:
 	const BigInt& _lhs;
@@ -595,12 +596,12 @@ abs(const _private::BigIntAbs& a) -> _private::BigIntAbs {
 
 CONSTEXPR_AUTO
 abs(const _private::BigIntNeg& a) -> _private::BigIntAbs {
-	return _private::BigIntAbs(a.lhs());
+	return _private::BigIntAbs(a._bigint());
 }
 
 CONSTEXPR_AUTO
 abs(const _private::BigIntAbsNeg& a) -> _private::BigIntAbs {
-	return _private::BigIntAbs(a.lhs());
+	return _private::BigIntAbs(a._bigint());
 }
 
 CONSTEXPR_AUTO
@@ -616,17 +617,17 @@ abs(BigInt&& a) -> BigInt {
 
 CONSTEXPR_AUTO
 operator-(const _private::BigIntNeg& a) -> BigInt {
-	return a.lhs();
+	return a._bigint();
 }
 
 CONSTEXPR_AUTO
 operator-(const _private::BigIntAbs& a) -> _private::BigIntAbsNeg {
-	return _private::BigIntAbsNeg(a.lhs());
+	return _private::BigIntAbsNeg(a._bigint());
 }
 
 CONSTEXPR_AUTO
 operator-(const _private::BigIntAbsNeg& a) -> _private::BigIntAbs {
-	return _private::BigIntAbs(a.lhs());
+	return _private::BigIntAbs(a._bigint());
 }
 
 CONSTEXPR_AUTO
@@ -1558,6 +1559,8 @@ mult(BigInt &result, is_BigInt_like auto &a, std::signed_integral auto b) {
  */
 BIGINT_TRACY_CONSTEXPR_VOID
 mult_naive(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_like auto &rhs, DigitsVec& temp) {
+	assert_release_msg(&result != &lhs._bigint(), "result and first argument must be separate instances");
+	assert_release_msg(&result != &rhs._bigint(), "result and second argument must be separate instances");
 	if (_private::_mult_ignore_sign_shortcuts(result, lhs._span(), rhs._span())) {
 		return;
 	}
@@ -1580,6 +1583,8 @@ mult_naive(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_like 
  */
 BIGINT_TRACY_CONSTEXPR_VOID
 mult_karatsuba(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_like auto &rhs, KaratsubaStepTemps& temps) {
+	assert_release_msg(&result != &lhs._bigint(), "result and first argument must be separate instances");
+	assert_release_msg(&result != &rhs._bigint(), "result and second argument must be separate instances");
 	if (_private::_mult_ignore_sign_shortcuts(result, lhs._span(), rhs._span())) {
 		return;
 	}
@@ -1605,6 +1610,8 @@ mult_karatsuba(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_l
  */
 BIGINT_TRACY_CONSTEXPR_VOID
 mult(BigInt &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b, DigitsVec& temp, utils::UniquePtr<KaratsubaStepTemps>& karatsuba_temps) {
+	assert_release_msg(&result != &a._bigint(), "result and first argument must be separate instances");
+	assert_release_msg(&result != &b._bigint(), "result and second argument must be separate instances");
 	result.resize(a.size() + b.size());
 	_private::mult_ignore_sign(result._span(), a._span(), b._span(), temp, karatsuba_temps);
 	result.sign() = _private::mult_sign(a.sign(), b.sign());
@@ -2007,6 +2014,14 @@ divmod(BigInt& quotient, const is_BigInt_like auto &a, one_of<int32_t, uint32_t,
 template <bool ignore_quotient, bool ignore_remainder>
 BIGINT_TRACY_CONSTEXPR_VOID
 divmod(BigInt& quotient, BigInt& remainder, const is_BigInt_like auto &a, const is_BigInt_like auto &b, DigitsVec& temp, DigitsVec& temp_af, DigitsVec& temp_bf) {
+	if constexpr (!ignore_quotient) {
+		assert_release_msg(&quotient != &a._bigint(), "quotient and first argument must be separate instances");
+		assert_release_msg(&quotient != &b._bigint(), "quotient and second argument must be separate instances");
+		assert_release_msg(&quotient != &remainder, "remainder and second argument must be separate instances");
+	}
+	assert_release_msg(&remainder != &a._bigint(), "remainder and first argument must be separate instances");
+	assert_release_msg(&remainder != &b._bigint(), "remainder and second argument must be separate instances");
+
 	_private::divmod_ignore_sign<ignore_quotient, ignore_remainder>(quotient, remainder, a._span(), b._span(), temp, temp_af, temp_bf);
 	_private::_fix_divmod_signs<ignore_quotient, ignore_remainder>(quotient, remainder, a.sign(), b);
 }
@@ -2197,7 +2212,7 @@ mod(TRHS &result, const is_BigInt_like auto &a, TRHS b) {
  */
 BIGINT_TRACY_CONSTEXPR_VOID
 mod(BigInt& result, const is_BigInt_like auto &a, const is_BigInt_like auto &b, DigitsVec& temp, DigitsVec& temp_af, DigitsVec& temp_bf) {
-	BigInt quotient;
+	BigInt& quotient = result; // quotient won't be written to.
 	_private::divmod<true, false>(quotient, result, a, b, temp, temp_af, temp_bf);
 }
 
