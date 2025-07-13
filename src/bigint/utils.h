@@ -311,7 +311,7 @@ struct UniquePtr {
 	CONSTEXPR_AUTO
 	operator ->() const noexcept -> T* { return ptr; }
 
-	[[nodiscard]] inline
+	[[nodiscard]] constexpr
 	explicit operator bool() const noexcept { return ptr != nullptr; }
 private:
 	T* ptr;
