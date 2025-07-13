@@ -151,15 +151,22 @@ pow(const is_BigInt_like auto& base, uint64_t exp) -> BigInt {
 
 	BigInt result{1};
 	BigInt temp{base};
+	BigInt temp2;
+
+	DigitsVec temp_mult;
+	utils::UniquePtr<KaratsubaStepTemps> karatsuba_temps;
 
 	const auto exp_bits = static_cast<uint8_t>(64 - utils::clzll(exp));
 	for (uint8_t i = 0; i < exp_bits; ++i) {
 		const auto mask = 1ull << i;
 		if (exp & mask) {
-			result *= temp;
+			//result *= temp;
+			mult(temp2, result, temp, temp_mult, karatsuba_temps);
+			std::swap(result, temp2);
 		}
 		if (i+1 < exp_bits) {
-			temp = temp * temp;
+			mult(temp2, temp, temp, temp_mult, karatsuba_temps);
+			std::swap(temp, temp2);
 		}
 	}
 	return result;
