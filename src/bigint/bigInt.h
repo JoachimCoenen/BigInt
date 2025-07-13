@@ -1313,132 +1313,132 @@ mult_sign(Sign a, Sign b) -> Sign {
 }
 
 
-	/**
-	 * @brief multiples `a` and `b`. Supports assignment operations `_mult_naive_ignore_sign(a, a, b)`.
-	 * @param result the result will be put in here. Size requirement: `result.size() == a.size() + 1`.
-	 * @param a the first operand.
-	 * @param b the second operand.
-	 */
-	BIGINT_TRACY_CONSTEXPR_VOID
-	_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, uint64_t b) {
-		assert(result.size() >= a.size() + 1);
-		uint64_t c = 0; // carry
-		BigInt::size_type i = 0;
-		for (; i < a.size(); i++) {
-			const auto rc = mult(a[i], b);
-			auto result_i = rc.lo + c;
-			result[i] = result_i;
-			c = rc.hi + (result_i < c ? 1 : 0); // account for addition overflow
-		}
+/**
+ * @brief multiples `a` and `b`. Supports assignment operations `_mult_naive_ignore_sign(a, a, b)`.
+ * @param result the result will be put in here. Size requirement: `result.size() == a.size() + 1`.
+ * @param a the first operand.
+ * @param b the second operand.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, uint64_t b) {
+	assert(result.size() >= a.size() + 1);
+	uint64_t c = 0; // carry
+	BigInt::size_type i = 0;
+	for (; i < a.size(); i++) {
+		const auto rc = mult(a[i], b);
+		auto result_i = rc.lo + c;
+		result[i] = result_i;
+		c = rc.hi + (result_i < c ? 1 : 0); // account for addition overflow
+	}
 
-		if (c) {
-			result[i] = c;
-			++i;
-		}
+	if (c) {
+		result[i] = c;
+		++i;
+	}
 
-		for (; i < result.size(); ++i) {
-			result[i] = 0;
+	for (; i < result.size(); ++i) {
+		result[i] = 0;
+	}
+}
+
+/**
+ * @brief multiples `a` and `b` ignoring their signs.
+ * @param result the result will be put in here. Size requirement: `result.size() == a.size() + b.size()`.
+ * @param a the operand with the most digits.
+ * @param b the operand with the least digits.
+ * @param temp_vec a temporary. Max size requirement: `temp.size() == a.size() + 1`.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b, DigitsVec &temp_vec) {
+	BIGINT_TRACY_ZONE_SCOPED;
+	BigInt::size_type temp_size = a.size() + 1;
+
+	// first iteration step (performed inline):
+	_mult_naive_ignore_sign(rmasked(result, 0, temp_size + 1), a, b[0]);
+
+	// all other iteration steps:
+	BigInt::size_type i = 1;
+	if (b.size() > 1) {
+		temp_vec.resize(temp_size, 0);
+		utils::Span<uint64_t> temp{temp_vec};
+		for (; i < b.size(); i++) {
+			_mult_naive_ignore_sign(temp, a, b[i]);
+			_add_ignore_sign(rmasked(result, i, temp_size + 1), rmasked(result, i, temp_size), temp);
 		}
 	}
 
-	/**
-	 * @brief multiples `a` and `b` ignoring their signs.
-	 * @param result the result will be put in here. Size requirement: `result.size() == a.size() + b.size()`.
-	 * @param a the operand with the most digits.
-	 * @param b the operand with the least digits.
-	 * @param temp_vec a temporary. Max size requirement: `temp.size() == a.size() + 1`.
-	 */
-	BIGINT_TRACY_CONSTEXPR_VOID
-	_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b, DigitsVec &temp_vec) {
-		BIGINT_TRACY_ZONE_SCOPED;
-		BigInt::size_type temp_size = a.size() + 1;
+	i += temp_size + 1;
+	for (; i < result.size(); ++i) {
+		result[i] = 0;
+	}
+}
 
-		// first iteration step (performed inline):
-		_mult_naive_ignore_sign(rmasked(result, 0, temp_size + 1), a, b[0]);
+// forward declaration:
+BIGINT_TRACY_CONSTEXPR_VOID
+mult_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a_, const utils::Span<const uint64_t> &b_, DigitsVec& temp, utils::UniquePtr<KaratsubaStepTemps>& karatsuba_temps);
 
-		// all other iteration steps:
-		BigInt::size_type i = 1;
-		if (b.size() > 1) {
-			temp_vec.resize(temp_size, 0);
-			utils::Span<uint64_t> temp{temp_vec};
-			for (; i < b.size(); i++) {
-				_mult_naive_ignore_sign(temp, a, b[i]);
-				_add_ignore_sign(rmasked(result, i, temp_size + 1), rmasked(result, i, temp_size), temp);
-			}
-		}
+/**
+ * @brief multiplies two integers ignoring their sign using the Karatsuba algorithm. `a.size()` *must* be equal or greater than `b.size()`.
+ * @param result the result will be put in here. Size requirement: `result.size() >= max(a.size(), b.size())`, if we know that there is no overflow, otherwise `result.size() > max(a.size(), b.size())`.
+ * @param lhs the operand with the most digits.
+ * @param rhs the operand with the least digits.
+ * @param temps temporaries for karatsuba multiplication.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+_mult_karatsuba_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &lhs, const utils::Span<const uint64_t> &rhs, KaratsubaStepTemps& temps) {
+	BIGINT_TRACY_ZONE_SCOPED;
+	// xx = mm(ac) + m((a+b) * (c+d) - ac - bd) + (bd)
+	assert(lhs.size() >= rhs.size());
 
-		i += temp_size + 1;
-		for (; i < result.size(); ++i) {
-			result[i] = 0;
-		}
+	if (!temps.local_temps) {
+		temps.local_temps = utils::UniquePtr(new KaratsubaStepTemps());
 	}
 
-	// forward declaration:
-	BIGINT_TRACY_CONSTEXPR_VOID
-	mult_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a_, const utils::Span<const uint64_t> &b_, DigitsVec& temp, utils::UniquePtr<KaratsubaStepTemps>& karatsuba_temps);
+	auto n = std::max(lhs.size(), rhs.size());
+	const auto mid = n >> 1;
 
-	/**
-	 * @brief multiplies two integers ignoring their sign using the Karatsuba algorithm. `a.size()` *must* be equal or greater than `b.size()`.
-	 * @param result the result will be put in here. Size requirement: `result.size() >= max(a.size(), b.size())`, if we know that there is no overflow, otherwise `result.size() > max(a.size(), b.size())`.
-	 * @param lhs the operand with the most digits.
-	 * @param rhs the operand with the least digits.
-	 * @param temps temporaries for karatsuba multiplication.
-	 */
-	BIGINT_TRACY_CONSTEXPR_VOID
-	_mult_karatsuba_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &lhs, const utils::Span<const uint64_t> &rhs, KaratsubaStepTemps& temps) {
-		BIGINT_TRACY_ZONE_SCOPED;
-		// xx = mm(ac) + m((a+b) * (c+d) - ac - bd) + (bd)
-		assert(lhs.size() >= rhs.size());
+	const auto a = rmasked(lhs, mid, lhs.size());
+	const auto b = rmasked(lhs, 0, mid);
+	const auto c = rmasked(rhs, mid, rhs.size());
+	const auto d = rmasked(rhs, 0, mid);
 
-		if (!temps.local_temps) {
-			temps.local_temps = utils::UniquePtr(new KaratsubaStepTemps());
-		}
+	auto &local_temps = temps.local_temps;
 
-		auto n = std::max(lhs.size(), rhs.size());
-		const auto mid = n >> 1;
+	temps.ac.resize(a.size() + c.size());
+	mult_ignore_sign(temps.ac_span(), a, c, local_temps->ab_cd, local_temps);
+	cleanup(temps.ac);
 
-		const auto a = rmasked(lhs, mid, lhs.size());
-		const auto b = rmasked(lhs, 0, mid);
-		const auto c = rmasked(rhs, mid, rhs.size());
-		const auto d = rmasked(rhs, 0, mid);
-
-		auto &local_temps = temps.local_temps;
-
-		temps.ac.resize(a.size() + c.size());
-		mult_ignore_sign(temps.ac_span(), a, c, local_temps->ab_cd, local_temps);
-		cleanup(temps.ac);
-
-		temps.bd.resize(b.size() + d.size());
-		mult_ignore_sign(temps.bd_span(), b, d, local_temps->ab_cd, local_temps);
-		cleanup(temps.bd);
+	temps.bd.resize(b.size() + d.size());
+	mult_ignore_sign(temps.bd_span(), b, d, local_temps->ab_cd, local_temps);
+	cleanup(temps.bd);
 
 
-		temps.a_b.resize(std::max(a.size(), b.size()) + 1);
-		add_ignore_sign(temps.a_b_span(), a, b);
-		cleanup(temps.a_b);
+	temps.a_b.resize(std::max(a.size(), b.size()) + 1);
+	add_ignore_sign(temps.a_b_span(), a, b);
+	cleanup(temps.a_b);
 
-		temps.c_d.resize(std::max(c.size(), d.size()) + 1);
-		add_ignore_sign(temps.c_d_span(), c, d);
-		cleanup(temps.c_d);
+	temps.c_d.resize(std::max(c.size(), d.size()) + 1);
+	add_ignore_sign(temps.c_d_span(), c, d);
+	cleanup(temps.c_d);
 
-		temps.ab_cd.resize(temps.a_b.size() + temps.c_d.size());
-		mult_ignore_sign(temps.ab_cd_span(), temps.a_b_span(), temps.c_d_span(), local_temps->ab_cd, local_temps);
-		cleanup(temps.ab_cd);
+	temps.ab_cd.resize(temps.a_b.size() + temps.c_d.size());
+	mult_ignore_sign(temps.ab_cd_span(), temps.a_b_span(), temps.c_d_span(), local_temps->ab_cd, local_temps);
+	cleanup(temps.ab_cd);
 
-		[[maybe_unused]] auto sign = sub_ignore_sign(temps.ab_cd_span(), temps.ab_cd_span(), temps.ac_span());
-		cleanup(temps.ab_cd);
-		[[maybe_unused]] auto sign2 = sub_ignore_sign(temps.ab_cd_span(), temps.ab_cd_span(), temps.bd_span());
-		cleanup(temps.ab_cd);
+	[[maybe_unused]] auto sign = sub_ignore_sign(temps.ab_cd_span(), temps.ab_cd_span(), temps.ac_span());
+	cleanup(temps.ab_cd);
+	[[maybe_unused]] auto sign2 = sub_ignore_sign(temps.ab_cd_span(), temps.ab_cd_span(), temps.bd_span());
+	cleanup(temps.ab_cd);
 
-		std::ranges::copy(temps.bd, result.begin());
-		std::fill(result.begin() + temps.bd.size(), result.end(), 0);
+	std::ranges::copy(temps.bd, result.begin());
+	std::fill(result.begin() + temps.bd.size(), result.end(), 0);
 
-		const auto result_shifted1 = rshifted(result, mid);
-		_add_ignore_sign(result_shifted1, result_shifted1, temps.ab_cd_span().subspan_trunc(0, result_shifted1.size()));
+	const auto result_shifted1 = rshifted(result, mid);
+	_add_ignore_sign(result_shifted1, result_shifted1, temps.ab_cd_span().subspan_trunc(0, result_shifted1.size()));
 
-		const auto result_shifted2 = rshifted(result, mid << 1);
-		_add_ignore_sign(result_shifted2, result_shifted2, temps.ac_span().subspan_trunc(0, result_shifted2.size()));
-	}
+	const auto result_shifted2 = rshifted(result, mid << 1);
+	_add_ignore_sign(result_shifted2, result_shifted2, temps.ac_span().subspan_trunc(0, result_shifted2.size()));
+}
 
 
 /**
