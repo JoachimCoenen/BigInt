@@ -215,11 +215,11 @@ str_to_int(const std::string_view str_value) {
 		return bigint::BigInt(str_value);
 	} else if constexpr (std::is_same_v<T, std::string>) {
 		return std::string{str_value};
-	} else if constexpr (std::is_same_v<T, bigint::DivModResult<typename T::DD, typename T::RR>>) {
+	} else if constexpr (std::is_same_v<T, bigint::DivModResult<typename T::QQ, typename T::RR>>) {
 		auto delimiter = str_value.find('|');
 		auto d = str_value.substr(0, delimiter);
 		auto r = str_value.substr(delimiter + 1);
-		return bigint::DivModResult{str_to_int<typename T::DD>(d), str_to_int<typename T::RR>(r)};
+		return bigint::DivModResult{str_to_int<typename T::QQ>(d), str_to_int<typename T::RR>(r)};
 	} else {
 		static_assert(false, "unhandeled type provided");
 	}

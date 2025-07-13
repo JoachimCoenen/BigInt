@@ -1673,11 +1673,11 @@ operator*=(BigInt &a, const is_BigInt_like auto &b) -> BigInt& {
 // DivModResult:
 namespace bigint {
 
-template<class D, class R=D>
+template<class Q, class R=Q>
 struct DivModResult {
-	typedef D DD;
+	typedef Q QQ;
 	typedef R RR;
-	D d; R r;
+	Q q; R r;
 };
 
 }
@@ -1706,7 +1706,7 @@ _correct_d_and_subtract(const utils::Span<uint64_t> &x, const utils::Span<const 
 /**
  * @brief division algorithm adapted from "Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division" and adapted.
  * @param result the result will be put in here. \n
- *        Size requirement: `result.d.size() == a.size() - b.size() + 1` if `ignore_quotient==true`, otherwise there's no size requirement at all. \n
+ *        Size requirement: `result.q.size() == a.size() - b.size() + 1` if `ignore_quotient==true`, otherwise there's no size requirement at all. \n
  *        Size requirement: `result.r.size() == a.size() + 1`.
  * @param a the dividend
  * @param b the divisor
@@ -1723,7 +1723,7 @@ _divide_loop(const DivModResult<utils::Span<uint64_t>>& result, const utils::Spa
 	assert(nb > 1); // single digit division must be handled by dedicated divmod_ignore_sign_small(...).
 	if constexpr (!ignore_quotient) {
 		/* quotient can have maximum (na-nb+1) digits */
-		assert(result.d.size() == na - nb + 1);
+		assert(result.q.size() == na - nb + 1);
 	}
 	assert(result.r.size() == na + 1);
 	assert(temp.size() == nb + 1);
@@ -1738,7 +1738,7 @@ _divide_loop(const DivModResult<utils::Span<uint64_t>>& result, const utils::Spa
 		uint64_t d = utils::div_u128_saturate(x_span[nb], x_span[nb-1], e); // yz/e;
 		d = _correct_d_and_subtract(x_span, b, d, temp);
 		if constexpr (!ignore_quotient) {
-			result.d[i] = d;
+			result.q[i] = d;
 		}
 	}
 	/* (loop-invariant P) AND (m=na) holds. */
@@ -1749,7 +1749,7 @@ _divide_loop(const DivModResult<utils::Span<uint64_t>>& result, const utils::Spa
 /**
  * @brief division & modulo ignoring any sign.
  * @param quotient the quotient will be put in here. Size requirement: `result.size() == a.size()`.
- * @param a the dividend. Can be the same span as the quotient of the result (`result.d.data() == a.data()`).
+ * @param a the dividend. Can be the same span as the quotient of the result (`result.q.data() == a.data()`).
  * @param b the divisor. Either `uint32_t` or `uint64_t`.
  * @return the remainder
  */
@@ -2055,7 +2055,7 @@ divmod(BigInt& quotient, const is_BigInt_like auto &a, one_of<int32_t, uint32_t,
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod(const is_BigInt_like auto &a, one_of<int32_t, uint32_t, int64_t, uint64_t> auto b) -> DivModResult<BigInt, decltype(b)> {
 	DivModResult<BigInt, decltype(b)> result;
-	result.r = divmod(result.d, a, b);
+	result.r = divmod(result.q, a, b);
 	return result;
 }
 
@@ -2088,7 +2088,7 @@ BIGINT_TRACY_CONSTEXPR_AUTO
 divmod(const is_BigInt_like auto &a, const is_BigInt_like auto &b) -> DivModResult<BigInt> {
 	DivModResult<BigInt> result;
 	DigitsVec temp, temp_af, temp_bf;
-	_private::divmod<false, false>(result.d, result.r, a, b, temp, temp_af, temp_bf);
+	_private::divmod<false, false>(result.q, result.r, a, b, temp, temp_af, temp_bf);
 	return result;
 }
 
@@ -2387,11 +2387,11 @@ namespace _private {
 		if constexpr (conv.division_base != 0) {
 			DivModResult temp{BigInt{v, Sign::POS}, (uint32_t)0};
 
-			while (temp.d > 0) {
-				temp = divmod(temp.d, conv.division_base);
+			while (temp.q > 0) {
+				temp = divmod(temp.q, conv.division_base);
 				auto& digs = temp.r;
 				result.insert(0, to_string_padded_generic<base, conv.base_power>(digs));
-				temp.d.cleanup();
+				temp.q.cleanup();
 			}
 		} else { // special case for when base is a divider of 32.
 			constexpr auto base_power = base_conversion_64{base}.base_power;

@@ -423,20 +423,20 @@ template<typename R>
 using Divmod_R = DivModResult<BigInt, R>;
 
 #define TEST_DIVMOD(NAME, O1, O2, OP, RT, GET_RT) \
-TEST_DIV_OPERATOR(NAME, O1, O2, Divmod_R<O2>, OP, get_all_divmod_test_values(), Divmod_RT<RT>, std::tuple(res.d.__data_for_testing_only(), GET_RT))
+TEST_DIV_OPERATOR(NAME, O1, O2, Divmod_R<O2>, OP, get_all_divmod_test_values(), Divmod_RT<RT>, std::tuple(res.q.__data_for_testing_only(), GET_RT))
 
 #define TEST_DIVMOD_F(NAME, O1, O2, OP, RT, GET_RT) \
-TEST_DIV_OPERATOR_F(NAME, O1, O2, Divmod_R<O2>, OP, get_all_divmod_test_values(), Divmod_RT<RT>, std::tuple(res.d.__data_for_testing_only(), GET_RT))
+TEST_DIV_OPERATOR_F(NAME, O1, O2, Divmod_R<O2>, OP, get_all_divmod_test_values(), Divmod_RT<RT>, std::tuple(res.q.__data_for_testing_only(), GET_RT))
 
-TEST_DIVMOD_F(Divmod, BigInt, BigInt, DigitsVec temp; DigitsVec temp_af; DigitsVec temp_bf; divmod(res.d, res.r, a, b, temp, temp_af, temp_bf), DigitsVec, res.r.__data_for_testing_only())
+TEST_DIVMOD_F(Divmod, BigInt, BigInt, DigitsVec temp; DigitsVec temp_af; DigitsVec temp_bf; divmod(res.q, res.r, a, b, temp, temp_af, temp_bf), DigitsVec, res.r.__data_for_testing_only())
 
-TEST_DIVMOD_F(Divmod, BigInt, uint64_t, res.r = divmod(res.d, a, b), uint64_t, res.r)
+TEST_DIVMOD_F(Divmod, BigInt, uint64_t, res.r = divmod(res.q, a, b), uint64_t, res.r)
 
-TEST_DIVMOD_F(Divmod, BigInt, int64_t, res.r = divmod(res.d, a, b), int64_t, res.r)
+TEST_DIVMOD_F(Divmod, BigInt, int64_t, res.r = divmod(res.q, a, b), int64_t, res.r)
 
-TEST_DIVMOD_F(Divmod, BigInt, uint32_t, res.r = divmod(res.d, a, b), uint32_t, res.r)
+TEST_DIVMOD_F(Divmod, BigInt, uint32_t, res.r = divmod(res.q, a, b), uint32_t, res.r)
 
-TEST_DIVMOD_F(Divmod, BigInt, int32_t, res.r = divmod(res.d, a, b), int32_t, res.r)
+TEST_DIVMOD_F(Divmod, BigInt, int32_t, res.r = divmod(res.q, a, b), int32_t, res.r)
 
 TEST_DIVMOD(Divmod, BigInt, BigInt, divmod(a, b), DigitsVec, res.r.__data_for_testing_only())
 

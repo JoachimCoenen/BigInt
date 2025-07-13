@@ -447,17 +447,17 @@ digit_sum(const BigInt& v) -> uint64_t {
 
 	if (division_base != 0) {
 		DivModResult temp {v, (uint32_t)0};
-		temp.d.sign() = Sign::POS;
+		temp.q.sign() = Sign::POS;
 
 		uint64_t sum = 0ull;
-		while (!is_zero(temp.d)) {
-			temp = divmod(temp.d, division_base);
+		while (!is_zero(temp.q)) {
+			temp = divmod(temp.q, division_base);
 			uint32_t& digs = temp.r;
 			while (digs > 0) {
 				sum += digs % base;
 				digs /= base;
 			}
-			temp.d.cleanup();
+			temp.q.cleanup();
 		}
 		return sum;
 
