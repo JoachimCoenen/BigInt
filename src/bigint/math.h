@@ -201,6 +201,7 @@ pow_mod(const is_BigInt_like auto& base, const is_BigInt_like auto& exp, const i
 	BigInt temp; // = base % mod;
 	BigInt temp2;
 	BigInt temp3;
+	utils::UniquePtr<KaratsubaStepTemps> karatsuba_temps;
 
 	result.reserve(mod.size() * 2 + 2);
 	temp.reserve(mod.size() * 2 + 2);
@@ -214,12 +215,12 @@ pow_mod(const is_BigInt_like auto& base, const is_BigInt_like auto& exp, const i
 		const auto mask = 1ull << (i % 64);
 		if (exp[i / 64] & mask) {
 			// result = (result * temp) % mod;
-			mult(temp2, result, temp, temp_bf);
+			mult(temp2, result, temp, temp_bf, karatsuba_temps);
 			_private::divmod<true, false>(temp3, result, temp2, mod, temp_mod, temp_af, temp_bf); // temp3 is just a placeholder here and is never read from or written to.
 		}
 		if (i + 1 < exp_bits) { // don´t square at the end of the last loop, it just wasts CPU cycles.
 			// temp = (temp * temp) % mod;
-			mult(temp3, temp, temp, temp_bf);
+			mult(temp3, temp, temp, temp_bf, karatsuba_temps);
 			_private::divmod<true, false>(temp2, temp, temp3, mod, temp_mod, temp_af, temp_bf); // temp2 is just a placeholder here and is never read from or written to.
 		}
 	}

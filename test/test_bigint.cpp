@@ -118,6 +118,26 @@ TEST_ASSIGN_OPERATOR_BIGINT(RShift, uint64_t, a >>= b, get_all_rshift_test_value
 // Addition
 namespace {
 
+TEST_BINARY_OPERATOR_BIGINT_F(Add, BigInt, BigInt, add(res, a, b), get_all_add_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Add, BigInt, uint64_t, add(res, a, b), get_all_add_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Add, BigInt, int64_t, add(res, a, b), get_all_add_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Add, BigInt, uint32_t, add(res, a, b), get_all_add_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Add, BigInt, int32_t, add(res, a, b), get_all_add_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(Add, BigInt, add(a, a, b), get_all_add_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(Add, uint64_t, add(a, a, b), get_all_add_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(Add, int64_t, add(a, a, b), get_all_add_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(Add, uint32_t, add(a, a, b), get_all_add_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(Add, int32_t, add(a, a, b), get_all_add_test_values())
+
 TEST_BINARY_OPERATOR_BIGINT(Add, BigInt, BigInt, a + b, get_all_add_test_values())
 
 TEST_BINARY_OPERATOR_BIGINT(Add, BigInt, uint64_t, a + b, get_all_add_test_values())
@@ -152,6 +172,34 @@ TEST_ASSIGN_OPERATOR_BIGINT(Add, int32_t, a += b, get_all_add_test_values())
 // Subtraction
 namespace {
 
+TEST_BINARY_OPERATOR_BIGINT_F(Sub, BigInt, BigInt, sub(res, a, b), get_all_sub_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Sub, BigInt, uint64_t, sub(res, a, b), get_all_sub_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Sub, BigInt, int64_t, sub(res, a, b), get_all_sub_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Sub, BigInt, uint32_t, sub(res, a, b), get_all_sub_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Sub, BigInt, int32_t, sub(res, a, b), get_all_sub_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Sub, uint64_t, BigInt, sub(res, a, b), get_all_sub_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Sub, int64_t, BigInt, sub(res, a, b), get_all_sub_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Sub, uint32_t, BigInt, sub(res, a, b), get_all_sub_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Sub, int32_t, BigInt, sub(res, a, b), get_all_sub_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(Sub, BigInt, sub(a, a, b), get_all_sub_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(Sub, uint64_t, sub(a, a, b), get_all_sub_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(Sub, int64_t, sub(a, a, b), get_all_sub_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(Sub, uint32_t, sub(a, a, b), get_all_sub_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(Sub, int32_t, sub(a, a, b), get_all_sub_test_values())
+
 TEST_BINARY_OPERATOR_BIGINT(Sub, BigInt, BigInt, a - b, get_all_sub_test_values())
 
 TEST_BINARY_OPERATOR_BIGINT(Sub, BigInt, uint64_t, a - b, get_all_sub_test_values())
@@ -185,6 +233,32 @@ TEST_ASSIGN_OPERATOR_BIGINT(Sub, int32_t, a -= b, get_all_sub_test_values())
 
 // Multiplication
 namespace {
+
+TEST_BINARY_OPERATOR_BIGINT_F(Mul, BigInt, uint64_t, mult(res, a, b), get_all_mul_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Mul, BigInt, int64_t, mult(res, a, b), get_all_mul_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Mul, BigInt, uint32_t, mult(res, a, b), get_all_mul_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Mul, BigInt, int32_t, mult(res, a, b), get_all_mul_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(MulNaive, BigInt, BigInt, DigitsVec tmp; mult_naive(res, a, b, tmp), get_all_mul_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(MulKaratsuba_f1, BigInt, BigInt, KaratsubaStepTemps tmp; mult_karatsuba(res, a, b, tmp), get_all_mul_test_values())
+TEST_BINARY_OPERATOR_BIGINT_F(MulKaratsuba_f2, BigInt, BigInt, KaratsubaStepTemps tmp; mult_karatsuba(res, a, b, tmp), get_all_mul_karatsuba_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Mul_f1, BigInt, BigInt, mult(res, a, b), get_all_mul_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(Mul_f2, BigInt, BigInt, DigitsVec tmp; utils::UniquePtr<KaratsubaStepTemps> tmp2; mult(res, a, b, tmp, tmp2), get_all_mul_test_values())
+TEST_BINARY_OPERATOR_BIGINT_F(Mul_f3, BigInt, BigInt, DigitsVec tmp; utils::UniquePtr<KaratsubaStepTemps> tmp2; mult(res, a, b, tmp, tmp2), get_all_mul_karatsuba_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(Mul, uint64_t, mult(a, a, b), get_all_mul_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(Mul, int64_t, mult(a, a, b), get_all_mul_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(Mul, uint32_t, mult(a, a, b), get_all_mul_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(Mul, int32_t, mult(a, a, b), get_all_mul_test_values())
 
 TEST_BINARY_OPERATOR_BIGINT(Mul, BigInt, BigInt, a * b, get_all_mul_test_values())
 
@@ -223,33 +297,62 @@ TEST_ASSIGN_OPERATOR_BIGINT(Mul, int32_t, a *= b, get_all_mul_test_values())
 }
 
 
-#define TEST_DIV_BY_ZERO(NAME, O1, O2, OP) \
+#define _TEST_DIV_BY_ZERO(NAME, O1, O2, OP) \
 TEST(HelloTest, Test##NAME##ByZero_##O1##_##O2) {\
 	O1 a = str_to_int<O1>("15");\
 	const O2 b = str_to_int<O2>("0");\
-	EXPECT_THROW([[maybe_unused]] auto x = OP, std::domain_error);\
+	EXPECT_THROW([[maybe_unused]] auto x = [&](){OP;}(), std::domain_error);\
 }\
 TEST(HelloTest, Test##NAME##ZeroByZero_##O1##_##O2) {\
 	O1 a = str_to_int<O1>("0");\
 	const O2 b = str_to_int<O2>("0");\
-	EXPECT_THROW([[maybe_unused]] auto y = OP, std::domain_error);\
+	EXPECT_THROW([[maybe_unused]] auto x = [&](){OP;}(), std::domain_error);\
 }
-
 
 #define TEST_DIV_OPERATOR(NAME, O1, O2, R, OP, TEST_VALUES, RT, GET_RT) \
 TEST_BINARY_OPERATOR(NAME, O1, O2, R, OP, TEST_VALUES, RT, GET_RT)\
-TEST_DIV_BY_ZERO(NAME, O1, O2, OP)
+_TEST_DIV_BY_ZERO(NAME, O1, O2, return OP)
+
+#define TEST_DIV_OPERATOR_F(NAME, O1, O2, R, OP, TEST_VALUES, RT, GET_RT) \
+TEST_BINARY_OPERATOR_F(NAME, O1, O2, R, OP, TEST_VALUES, RT, GET_RT) \
+_TEST_DIV_BY_ZERO(F##NAME, O1, O2, R res; OP; return res)
 
 #define TEST_DIV_OPERATOR_BIGINT(NAME, O1, O2, OP, TEST_VALUES) \
 TEST_BINARY_OPERATOR_BIGINT(NAME, O1, O2, OP, TEST_VALUES)\
-TEST_DIV_BY_ZERO(NAME, O1, O2, OP)
+_TEST_DIV_BY_ZERO(NAME, O1, O2, return OP)
+
+#define TEST_DIV_OPERATOR_BIGINT_F(NAME, O1, O2, OP, TEST_VALUES) \
+TEST_BINARY_OPERATOR_BIGINT_F(NAME, O1, O2, OP, TEST_VALUES)\
+_TEST_DIV_BY_ZERO(F##NAME, O1, O2, BigInt res; OP; return res)
 
 #define TEST_DIV_ASSIGN_OPERATOR_BIGINT(NAME, O2, OP, TEST_VALUES) \
 TEST_ASSIGN_OPERATOR_BIGINT(NAME, O2, OP, TEST_VALUES)\
-TEST_DIV_BY_ZERO(I##NAME, BigInt, O2, OP)
+_TEST_DIV_BY_ZERO(I##NAME, BigInt, O2, return OP)
+
+#define TEST_DIV_ASSIGN_OPERATOR_BIGINT_F(NAME, O2, OP, TEST_VALUES) \
+TEST_ASSIGN_OPERATOR_BIGINT_F(NAME, O2, OP, TEST_VALUES)\
+_TEST_DIV_BY_ZERO(IF##NAME, BigInt, O2, OP; return a)
 
 // Division
 namespace {
+
+TEST_DIV_OPERATOR_BIGINT_F(Div, BigInt, BigInt, div(res, a, b), get_all_div_test_values())
+
+TEST_DIV_OPERATOR_BIGINT_F(Div, BigInt, uint64_t, div(res, a, b), get_all_div_test_values())
+
+TEST_DIV_OPERATOR_BIGINT_F(Div, BigInt, int64_t, div(res, a, b), get_all_div_test_values())
+
+TEST_DIV_OPERATOR_BIGINT_F(Div, BigInt, uint32_t, div(res, a, b), get_all_div_test_values())
+
+TEST_DIV_OPERATOR_BIGINT_F(Div, BigInt, int32_t, div(res, a, b), get_all_div_test_values())
+
+TEST_DIV_ASSIGN_OPERATOR_BIGINT_F(Div, uint64_t, div(a, a, b), get_all_div_test_values())
+
+TEST_DIV_ASSIGN_OPERATOR_BIGINT_F(Div, int64_t, div(a, a, b), get_all_div_test_values())
+
+TEST_DIV_ASSIGN_OPERATOR_BIGINT_F(Div, uint32_t, div(a, a, b), get_all_div_test_values())
+
+TEST_DIV_ASSIGN_OPERATOR_BIGINT_F(Div, int32_t, div(a, a, b), get_all_div_test_values())
 
 TEST_DIV_OPERATOR_BIGINT(Div, BigInt, BigInt, a / b, get_all_div_test_values())
 
@@ -276,6 +379,16 @@ TEST_DIV_ASSIGN_OPERATOR_BIGINT(Div, int32_t, a /= b, get_all_div_test_values())
 
 // Modulo
 namespace {
+
+TEST_DIV_OPERATOR_BIGINT_F(Mod, BigInt, BigInt, mod(res, a, b), get_all_mod_test_values())
+
+TEST_DIV_OPERATOR_F(Mod, BigInt, uint64_t, uint64_t, mod(res, a, b), get_all_mod_test_values(), uint64_t, res)
+
+TEST_DIV_OPERATOR_F(Mod, BigInt, int64_t, int64_t, mod(res, a, b), get_all_mod_test_values(), int64_t, res)
+
+TEST_DIV_OPERATOR_F(Mod, BigInt, uint32_t, uint32_t, mod(res, a, b), get_all_mod_test_values(), uint32_t, res)
+
+TEST_DIV_OPERATOR_F(Mod, BigInt, int32_t, int32_t, mod(res, a, b), get_all_mod_test_values(), int32_t, res)
 
 TEST_DIV_OPERATOR_BIGINT(Mod, BigInt, BigInt, a % b, get_all_mod_test_values())
 
@@ -311,6 +424,19 @@ using Divmod_R = DivModResult<BigInt, R>;
 
 #define TEST_DIVMOD(NAME, O1, O2, OP, RT, GET_RT) \
 TEST_DIV_OPERATOR(NAME, O1, O2, Divmod_R<O2>, OP, get_all_divmod_test_values(), Divmod_RT<RT>, std::tuple(res.d.__data_for_testing_only(), GET_RT))
+
+#define TEST_DIVMOD_F(NAME, O1, O2, OP, RT, GET_RT) \
+TEST_DIV_OPERATOR_F(NAME, O1, O2, Divmod_R<O2>, OP, get_all_divmod_test_values(), Divmod_RT<RT>, std::tuple(res.d.__data_for_testing_only(), GET_RT))
+
+TEST_DIVMOD_F(Divmod, BigInt, BigInt, DigitsVec temp; DigitsVec temp_af; DigitsVec temp_bf; divmod(res.d, res.r, a, b, temp, temp_af, temp_bf), DigitsVec, res.r.__data_for_testing_only())
+
+TEST_DIVMOD_F(Divmod, BigInt, uint64_t, res.r = divmod(res.d, a, b), uint64_t, res.r)
+
+TEST_DIVMOD_F(Divmod, BigInt, int64_t, res.r = divmod(res.d, a, b), int64_t, res.r)
+
+TEST_DIVMOD_F(Divmod, BigInt, uint32_t, res.r = divmod(res.d, a, b), uint32_t, res.r)
+
+TEST_DIVMOD_F(Divmod, BigInt, int32_t, res.r = divmod(res.d, a, b), int32_t, res.r)
 
 TEST_DIVMOD(Divmod, BigInt, BigInt, divmod(a, b), DigitsVec, res.r.__data_for_testing_only())
 

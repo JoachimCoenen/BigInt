@@ -897,11 +897,10 @@ operator!=(const is_BigInt_like auto &a, std::integral auto b) -> bool {
 namespace bigint::_private {
 
 /**
- * @brief adds two integers ignoring their sign. `a.size()` *must* be equal or greater than `b.size()`.
- * @param result the result will be put in here.
+ * @brief adds two integers ignoring their sign. `a.size()` *must* be equal or greater than `b.size()`. Supports assignment operations `_add_ignore_sign(a, a, b)` or even `_add_ignore_sign(a, a, a)`.
+ * @param result the result will be put in here. Size requirement: `result.size() >= max(a.size(), b.size())`, if we know that there is no overflow, otherwise `result.size() > max(a.size(), b.size())`.
  * @param a the operand with the most digits.
  * @param b the operand with the least digits.
- * @return carry
  */
 BIGINT_TRACY_CONSTEXPR_VOID
 _add_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b) {
@@ -970,8 +969,8 @@ _sub_ignore_sign_no_negative_result(
 
 
 /**
- * @brief subtracts `b` from `a` ignoring their sign. `abs(a)` *must* be equal or greater than `abs(b)`.
- * @param result the result will be put in here.
+ * @brief subtracts `b` from `a` ignoring their sign. `abs(a)` *must* be equal or greater than `abs(b)`. Supports assignment operations `_sub_ignore_sign_no_negative_result(a, a, b)`.
+ * @param result the result will be put in here. Size requirement: `result.size() >= max(a.size(), b.size())`.
  * @param a the first operand.
  * @param b the second operand.
  */
@@ -1017,11 +1016,10 @@ _sub_ignore_sign_no_negative_result(const utils::Span<uint64_t> &result, const u
 }
 
 /**
- * @brief adds two integers ignoring their sign.
- * @param result the result will be put in here.
+ * @brief adds two integers ignoring their sign. Supports assignment operations `add_ignore_sign(a, a, b)`.
+ * @param result the result will be put in here. Size requirement: `result.size() >= max(a.size(), b.size())`, if we know that there is no overflow, otherwise `result.size() > max(a.size(), b.size())`.
  * @param a the first operand.
  * @param b the second operand.
- * @return carry
  */
 BIGINT_TRACY_CONSTEXPR_VOID
 add_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b) {
@@ -1033,8 +1031,8 @@ add_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uin
 }
 
 /**
- * @brief subtracts `b` from `a` ignoring their sign.
- * @param result the result will be put in here.
+ * @brief subtracts `b` from `a` ignoring their sign. Supports assignment operations `sub_ignore_sign(a, a, b)`.
+ * @param result the result will be put in here. Size requirement: `result.size() >= max(a.size(), b.size())`.
  * @param a the first operand.
  * @param b the second operand.
  */
@@ -1051,8 +1049,16 @@ sub_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uin
 	}
 }
 
+/**
+ * @brief adds two integers. Supports assignment operations `add(a, a, b)` or even `add(a, a, a)`.
+ * @param result the result will be put in here. Size requirement: `result.size() >= max(a.size(), b.size())`, if we know that there is no overflow, otherwise `result.size() > max(a.size(), b.size())`.
+ * @param a the first operand.
+ * @param b the second operand.
+ * @param a_sign sign of the first operand.
+ * @param b_sign sign of the second operand.
+ */
 BIGINT_TRACY_CONSTEXPR_AUTO
-add(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const Sign a_sign, const utils::Span<const uint64_t> &b, const Sign b_sign) -> Sign {
+add(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b, const Sign a_sign, const Sign b_sign) -> Sign {
 	if (a_sign == b_sign) {
 		add_ignore_sign(result, a, b);
 		return a_sign;
@@ -1069,16 +1075,32 @@ add(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, c
 // addition:
 namespace bigint {
 
+/**
+ * @brief adds `a` to `b`. Supports assignment operations `add(a, a, b)` or even `add(a, a, a)`.
+ * @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
+ */
 BIGINT_TRACY_CONSTEXPR_VOID
 add(BigInt &result, is_BigInt_like auto &a, const is_BigInt_like auto &b) {
 	const auto a_size = a.size();
 	result.resize(std::max(a.size(), b.size()) + 1);
 	const auto a_span = a._span().first(a_size);
 
-	result.sign() = _private::add(result._span(), a_span, a.sign(), b._span(), b.sign());
+	result.sign() = _private::add(result._span(), a_span, b._span(), a.sign(), b.sign());
 	result.cleanup();
 }
 
+/**
+ * @brief adds `a` to `b`. Supports assignment operations `add(a, a, b)` or even `add(a, a, a)`.
+ * @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+add(BigInt &result, is_BigInt_like auto &a, const std::integral auto &b) {
+	add(result, a, _private::IntegralAdapter{b});
+}
 
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator+(const is_BigInt_like auto &a, std::integral auto b) -> BigInt {
@@ -1115,14 +1137,44 @@ operator+=(BigInt &a, const is_BigInt_like auto &b) -> BigInt& {
 // subtraction:
 namespace bigint {
 
+
+/**
+ * @brief subtracts `b` from `a`. Supports assignment operations `sub(a, a, b)` or even `sub(a, a, a)`.
+ * @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
+ */
 BIGINT_TRACY_CONSTEXPR_VOID
 sub(BigInt &result, is_BigInt_like auto &a, const is_BigInt_like auto &b) {
 	const auto a_size = a.size();
 	result.resize(std::max(a.size(), b.size()) + 1);
 	const auto a_span = a._span().first(a_size);
 
-	result.sign() = _private::add(result._span(), a_span, a.sign(), b._span(), _private::neg(b.sign()));
+	result.sign() = _private::add(result._span(), a_span, b._span(), a.sign(), _private::neg(b.sign()));
 	result.cleanup();
+}
+
+/**
+ * @brief subtracts `b` from `a`. Supports assignment operations `add(a, a, b)` or even `add(a, a, a)`.
+ * @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+sub(BigInt &result, is_BigInt_like auto &a, const std::integral auto &b) {
+	sub(result, a, _private::IntegralAdapter{b});
+}
+
+/**
+ * @brief subtracts `b` from `a`. Supports assignment operations `add(a, a, b)` or even `add(a, a, a)`.
+ * @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+sub(BigInt &result, std::integral auto &a, const is_BigInt_like auto &b) {
+	auto a_ = _private::IntegralAdapter{a};
+	sub(result, a_, b);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
@@ -1158,17 +1210,7 @@ operator-=(BigInt &a, const is_BigInt_like auto &b) -> BigInt& {
 }
 
 
-// sign handing for multiplication & division:
-namespace bigint::_private {
-
-CONSTEXPR_AUTO
-mult_sign(Sign a, Sign b) -> Sign {
-	return a != b ? Sign::NEG : Sign::POS;
-}
-
-}
-
-// multiplication:
+// multiplication uint64_t x uint64_t:
 namespace bigint {
 
 struct MultResult {
@@ -1182,9 +1224,14 @@ struct MultResult {
 	}
 };
 
+/**
+ * @brief multiples `a` and `b`.
+ * @param a the first operand.
+ * @param b the second operand.
+ * @return the two-digit result.
+ */
 BIGINT_TRACY_CONSTEXPR_AUTO
 mult(uint64_t a, uint64_t b) -> MultResult {
-	BIGINT_TRACY_ZONE_SCOPED;
 	const auto a_0 = a & 0xFFFFFFFFull;
 	const auto a_1 = a >> 32;
 	const auto b_0 = b & 0xFFFFFFFFull;
@@ -1207,11 +1254,73 @@ mult(uint64_t a, uint64_t b) -> MultResult {
 	return MultResult{r, c};
 }
 
-namespace _private {
+}
 
+// multiplication helpers:
+namespace bigint {
+enum class MultiplicationAlgorithm {
+	NAIVE = 0,
+	KARATSUBA = 1,
+};
+
+/**
+ * @brief heuristic to determine what multiplication algorithm to use.
+ * @param a_size size of the first operand.
+ * @param b_size size of the second operand.
+ * @return the multiplication algorithm to use.
+ */
+CONSTEXPR_AUTO
+determine_multiplication_algorithm(BigInt::size_type a_size, BigInt::size_type b_size) -> MultiplicationAlgorithm {
+	const auto min_size = std::min(a_size, b_size);
+	const auto max_size = std::max(a_size, b_size);
+	bool const use_karatsuba = max_size >= _private::MIN_DIGITS_FOR_MULT_KARATSUBA && (min_size >= _private::MIN_DIGITS_FOR_MULT_KARATSUBA || min_size > max_size >> 1);
+	return use_karatsuba ? MultiplicationAlgorithm::KARATSUBA : MultiplicationAlgorithm::NAIVE;
+}
+
+/**
+ * Holds temporaries used during Karatsuba multiplication.
+ */
+struct KaratsubaStepTemps {
+	DigitsVec ac;
+	DigitsVec bd;
+	DigitsVec ab_cd;
+	DigitsVec a_b;
+	DigitsVec c_d;
+
+	utils::UniquePtr<KaratsubaStepTemps> local_temps;
+
+	CONSTEXPR_AUTO
+	ac_span() -> utils::Span<uint64_t> { return utils::Span<uint64_t>{ac}; };
+	CONSTEXPR_AUTO
+	bd_span() -> utils::Span<uint64_t> { return utils::Span<uint64_t>{bd}; };
+	CONSTEXPR_AUTO
+	ab_cd_span() -> utils::Span<uint64_t> { return utils::Span<uint64_t>{ab_cd}; };
+	CONSTEXPR_AUTO
+	a_b_span() -> utils::Span<uint64_t> { return utils::Span<uint64_t>{a_b}; };
+	CONSTEXPR_AUTO
+	c_d_span() -> utils::Span<uint64_t> { return utils::Span<uint64_t>{c_d}; };
+};
+
+}
+
+// multiplication:
+namespace bigint::_private {
+
+CONSTEXPR_AUTO
+mult_sign(Sign a, Sign b) -> Sign {
+	return a != b ? Sign::NEG : Sign::POS;
+}
+
+
+	/**
+	 * @brief multiples `a` and `b`. Supports assignment operations `_mult_naive_ignore_sign(a, a, b)`.
+	 * @param result the result will be put in here. Size requirement: `result.size() == a.size() + 1`.
+	 * @param a the first operand.
+	 * @param b the second operand.
+	 */
 	BIGINT_TRACY_CONSTEXPR_VOID
 	_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, uint64_t b) {
-		BIGINT_TRACY_ZONE_SCOPED;
+		assert(result.size() >= a.size() + 1);
 		uint64_t c = 0; // carry
 		BigInt::size_type i = 0;
 		for (; i < a.size(); i++) {
@@ -1231,107 +1340,54 @@ namespace _private {
 		}
 	}
 
-}
-
-BIGINT_TRACY_CONSTEXPR_VOID
-mult(is_BigInt_like auto &result, is_BigInt_like auto &a, uint64_t b) {
-	BIGINT_TRACY_ZONE_SCOPED;
-	if (b == 0 || is_zero(a)) {
-		result.resize(0);
-		return;
-	}
-	const auto a_size = a.size();
-	result.resize(a.size() + 1);
-	const auto a_span = a._span().subspan(0, a_size);
-	_private::_mult_naive_ignore_sign(result._span(), a_span, b);
-	result.sign() = a.sign();
-	result.cleanup();
-}
-
-BIGINT_TRACY_CONSTEXPR_VOID
-mult(is_BigInt_like auto &result, is_BigInt_like auto &a, int64_t b) {
-	mult(result, a, static_cast<uint64_t>(llabs(b)));
-	if (b < 0) {
-		result.sign() = _private::neg(result.sign());
-	}
-}
-
-
-namespace _private {
 	/**
+	 * @brief multiples `a` and `b` ignoring their signs.
+	 * @param result the result will be put in here. Size requirement: `result.size() == a.size() + b.size()`.
+	 * @param a the operand with the most digits.
+	 * @param b the operand with the least digits.
 	 * @param temp_vec a temporary. Max size requirement: `temp.size() == a.size() + 1`.
 	 */
 	BIGINT_TRACY_CONSTEXPR_VOID
 	_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b, DigitsVec &temp_vec) {
 		BIGINT_TRACY_ZONE_SCOPED;
-		if (is_zero(a) || is_zero(b)) {
-			std::ranges::fill(result, 0);
-			return;
+		BigInt::size_type temp_size = a.size() + 1;
+
+		// first iteration step (performed inline):
+		_mult_naive_ignore_sign(rmasked(result, 0, temp_size + 1), a, b[0]);
+
+		// all other iteration steps:
+		BigInt::size_type i = 1;
+		if (b.size() > 1) {
+			temp_vec.resize(temp_size, 0);
+			utils::Span<uint64_t> temp{temp_vec};
+			for (; i < b.size(); i++) {
+				_mult_naive_ignore_sign(temp, a, b[i]);
+				_add_ignore_sign(rmasked(result, i, temp_size + 1), rmasked(result, i, temp_size), temp);
+			}
 		}
 
-		// fill first digits with zeros, so we do not add to what ever garbage was in there.
-		std::fill_n(result.begin(), std::min<BigInt::size_type>(a.size() + 1, result.size()), 0);
-		// we don't need to fill all digits, because all subsequent digits are replaced by the carry of the previous addition.
-
-		temp_vec.resize(a.size() + 1, 0);
-		utils::Span temp{temp_vec};
-		BigInt::size_type i = 0;
-		for (i = 0; i < b.size(); i++) {
-			_mult_naive_ignore_sign(temp, a, b[i]);
-			_add_ignore_sign(rmasked(result, i, temp.size() + 1), rmasked(result, i, temp.size()), temp);
-		}
-
-		i += temp.size() + 1;
-
+		i += temp_size + 1;
 		for (; i < result.size(); ++i) {
 			result[i] = 0;
 		}
 	}
 
-	struct KaratsubaStepTemps {
-		DigitsVec ac;
-		DigitsVec bd;
-		DigitsVec ab_cd;
-		DigitsVec a_b;
-		DigitsVec c_d;
-
-		utils::UniquePtr<KaratsubaStepTemps> local_temps;
-
-		CONSTEXPR_AUTO
-		ac_span() -> utils::Span<uint64_t> { return utils::Span{ac}; };
-		CONSTEXPR_AUTO
-		bd_span() -> utils::Span<uint64_t> { return utils::Span{bd}; };
-		CONSTEXPR_AUTO
-		ab_cd_span() -> utils::Span<uint64_t> { return utils::Span{ab_cd}; };
-		CONSTEXPR_AUTO
-		a_b_span() -> utils::Span<uint64_t> { return utils::Span{a_b}; };
-		CONSTEXPR_AUTO
-		c_d_span() -> utils::Span<uint64_t> { return utils::Span{c_d}; };
-	};
-
-	CONSTEXPR_AUTO
-	should_use_karatsuba(BigInt::size_type a_size, BigInt::size_type b_size) -> bool {
-		const auto min_size = std::min(a_size, b_size);
-		const auto max_size = std::max(a_size, b_size);
-		return max_size >= MIN_DIGITS_FOR_MULT_KARATSUBA && (min_size >= MIN_DIGITS_FOR_MULT_KARATSUBA || min_size > max_size >> 1);
-	}
-
+	// forward declaration:
 	BIGINT_TRACY_CONSTEXPR_VOID
-	_mult_karatsuba_step(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &lhs_, const utils::Span<const uint64_t> &rhs_, KaratsubaStepTemps& temps) {
+	mult_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a_, const utils::Span<const uint64_t> &b_, DigitsVec& temp, utils::UniquePtr<KaratsubaStepTemps>& karatsuba_temps);
+
+	/**
+	 * @brief multiplies two integers ignoring their sign using the Karatsuba algorithm. `a.size()` *must* be equal or greater than `b.size()`.
+	 * @param result the result will be put in here. Size requirement: `result.size() >= max(a.size(), b.size())`, if we know that there is no overflow, otherwise `result.size() > max(a.size(), b.size())`.
+	 * @param lhs the operand with the most digits.
+	 * @param rhs the operand with the least digits.
+	 * @param temps temporaries for karatsuba multiplication.
+	 */
+	BIGINT_TRACY_CONSTEXPR_VOID
+	_mult_karatsuba_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &lhs, const utils::Span<const uint64_t> &rhs, KaratsubaStepTemps& temps) {
 		BIGINT_TRACY_ZONE_SCOPED;
 		// xx = mm(ac) + m((a+b) * (c+d) - ac - bd) + (bd)
-		auto [lhs, rhs] = lhs_.size() >= rhs_.size() ? std::tie(lhs_, rhs_) : std::tie(rhs_, lhs_);
-
 		assert(lhs.size() >= rhs.size());
-
-		if (is_zero(rhs)) {
-			std::ranges::fill(result, 0);
-			return;
-		}
-		if (!should_use_karatsuba(lhs.size(), rhs.size())) {
-			_mult_naive_ignore_sign(result, rhs, lhs, temps.ab_cd);
-			return;
-		}
 
 		if (!temps.local_temps) {
 			temps.local_temps = utils::UniquePtr(new KaratsubaStepTemps());
@@ -1345,14 +1401,14 @@ namespace _private {
 		const auto c = rmasked(rhs, mid, rhs.size());
 		const auto d = rmasked(rhs, 0, mid);
 
-		KaratsubaStepTemps &local_temps = *temps.local_temps;
+		auto &local_temps = temps.local_temps;
 
 		temps.ac.resize(a.size() + c.size());
-		_mult_karatsuba_step(temps.ac_span(), a, c, local_temps);
+		mult_ignore_sign(temps.ac_span(), a, c, local_temps->ab_cd, local_temps);
 		cleanup(temps.ac);
 
 		temps.bd.resize(b.size() + d.size());
-		_mult_karatsuba_step(temps.bd_span(), b, d, local_temps);
+		mult_ignore_sign(temps.bd_span(), b, d, local_temps->ab_cd, local_temps);
 		cleanup(temps.bd);
 
 
@@ -1365,7 +1421,7 @@ namespace _private {
 		cleanup(temps.c_d);
 
 		temps.ab_cd.resize(temps.a_b.size() + temps.c_d.size());
-		_mult_karatsuba_step(temps.ab_cd_span(), temps.a_b_span(), temps.c_d_span(), local_temps);
+		mult_ignore_sign(temps.ab_cd_span(), temps.a_b_span(), temps.c_d_span(), local_temps->ab_cd, local_temps);
 		cleanup(temps.ab_cd);
 
 		[[maybe_unused]] auto sign = sub_ignore_sign(temps.ab_cd_span(), temps.ab_cd_span(), temps.ac_span());
@@ -1383,53 +1439,190 @@ namespace _private {
 		_add_ignore_sign(result_shifted2, result_shifted2, temps.ac_span().subspan_trunc(0, result_shifted2.size()));
 	}
 
+
+/**
+ * @brief shortcuts for multiplication.
+ *
+* @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
+ *
+ * @return `true` if a shortcut was taken successfully.
+ */
+BIGINT_TRACY_CONSTEXPR_AUTO
+_mult_ignore_sign_shortcuts(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t>& a, const utils::Span<const uint64_t>& b) -> bool {
+	if (is_zero(a) || is_zero(b)) {
+		std::ranges::fill(result, 0);
+		return true;
+	}
+	return false;
 }
 
 /**
+ * @brief shortcuts for multiplication.
+ *
+* @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
+ *
+ * @return `true` if a shortcut was taken successfully.
+ */
+BIGINT_TRACY_CONSTEXPR_AUTO
+_mult_ignore_sign_shortcuts(BigInt &result, const utils::Span<const uint64_t>& a, const utils::Span<const uint64_t>& b) -> bool {
+	if (is_zero(a) || is_zero(b)) {
+		result.resize(0);
+		return true;
+	}
+	return false;
+}
+
+
+/**
+ * @brief multiples `a` and `b`.
+ * @param result the result will be put in here. Size requirement: `result.size() == a.size() + b.size()`.
+ * @param a_ the first operand.
+ * @param b_ the second operand.
+ * @param temp a temporary. Max size requirement: `temp.size() == max(a.size(), b.size()) + 1` if
+ *             `MultiplicationAlgorithm::NAIVE == determine_multiplication_algorithm(a.size(), b.size())`, otherwise
+ *             there's no size requirement.
+ * @param karatsuba_temps temporaries for karatsuba multiplication. Can be a nullptr. Will be filled only if needed.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+mult_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a_, const utils::Span<const uint64_t> &b_, DigitsVec& temp, utils::UniquePtr<KaratsubaStepTemps>& karatsuba_temps) {
+	if (_mult_ignore_sign_shortcuts(result, a_, b_)) {
+		return;
+	}
+
+	auto [a, b] = a_.size() >= b_.size() ? std::tie(a_, b_) : std::tie(b_, a_);
+	assert(a.size() >= b.size());
+
+	switch (determine_multiplication_algorithm(a.size(), b.size())) {
+	case MultiplicationAlgorithm::NAIVE:
+		_mult_naive_ignore_sign(result, a, b, temp);
+		return;
+	case MultiplicationAlgorithm::KARATSUBA:
+		if (!karatsuba_temps) {
+			karatsuba_temps = utils::UniquePtr(new KaratsubaStepTemps());
+		}
+		_mult_karatsuba_ignore_sign(result, a, b, *karatsuba_temps);
+		return;
+	}
+}
+
+
+}
+
+// multiplication:
+namespace bigint {
+
+/**
+ * @brief multiples `a` and `b`. Supports assignment operations `mult(a, a, b)`.
+ * @param result the result will be put in here. can be the same address as `a`.
+ * @param a the first operand.
+ * @param b the second operand.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+mult(BigInt &result, is_BigInt_like auto &a, std::unsigned_integral auto b) {
+	if (b == 0 || is_zero(a)) {
+		result.resize(0);
+		return;
+	}
+	const auto a_size = a.size();
+	result.resize(a.size() + 1);
+	const auto a_span = a._span().subspan(0, a_size);
+	_private::_mult_naive_ignore_sign(result._span(), a_span, b);
+	result.sign() = a.sign();
+	result.cleanup();
+}
+
+/**
+ * @brief multiples `a` and `b`. Supports assignment operations `mult(a, a, b)`.
+ * @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+mult(BigInt &result, is_BigInt_like auto &a, std::signed_integral auto b) {
+	mult(result, a, static_cast<uint64_t>(llabs(b)));
+	if (b < 0) {
+		result.sign() = _private::neg(result.sign());
+	}
+}
+
+/**
+ * @brief multiples two integers using the naïve multiplication algorithm.
+ * @param result the result will be put in here.
+ * @param lhs the first operand.
+ * @param rhs the second operand.
  * @param temp a temporary. Max size requirement: `temp.size() == max(a.size(), b.size()) + 1`.
  */
 BIGINT_TRACY_CONSTEXPR_VOID
-mult_naive(is_BigInt_like auto &result, const is_BigInt_like auto &lhs, const is_BigInt_like auto &rhs, DigitsVec& temp) {
+mult_naive(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_like auto &rhs, DigitsVec& temp) {
+	if (_private::_mult_ignore_sign_shortcuts(result, lhs._span(), rhs._span())) {
+		return;
+	}
 	result.resize(lhs.size() + rhs.size());
+	result.sign() = _private::mult_sign(lhs.sign(), rhs.sign());
 	if (rhs.size() > lhs.size()) { // put the number with more digits first.
 		_private::_mult_naive_ignore_sign(result._span(), rhs._span(), lhs._span(), temp);
 	} else {
 		_private::_mult_naive_ignore_sign(result._span(), lhs._span(), rhs._span(), temp);
 	}
-	result.sign() = _private::mult_sign(lhs.sign(), rhs.sign());
 	result.cleanup();
 }
 
+/**
+ * @brief multiples two integers using the Karatsuba multiplication algorithm.
+ * @param result the result will be put in here.
+ * @param lhs the first operand.
+ * @param rhs the second operand.
+ * @param temps temporaries used by the algorithm.
+ */
 BIGINT_TRACY_CONSTEXPR_VOID
-mult_karatsuba(is_BigInt_like auto &result, const is_BigInt_like auto &lhs, const is_BigInt_like auto &rhs) {
+mult_karatsuba(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_like auto &rhs, KaratsubaStepTemps& temps) {
+	if (_private::_mult_ignore_sign_shortcuts(result, lhs._span(), rhs._span())) {
+		return;
+	}
 	result.resize(lhs.size() + rhs.size());
-	_private::KaratsubaStepTemps local_temps;
-	_private::_mult_karatsuba_step(result._span(), lhs._span(), rhs._span(), local_temps);
 	result.sign() = _private::mult_sign(lhs.sign(), rhs.sign());
+	if (rhs.size() > lhs.size()) { // put the number with more digits first.
+		_private::_mult_karatsuba_ignore_sign(result._span(), rhs._span(), lhs._span(), temps);
+	} else {
+		_private::_mult_karatsuba_ignore_sign(result._span(), lhs._span(), rhs._span(), temps);
+	}
+	result.cleanup();
+}
+
+/**
+ * @brief multiples two integers.
+ * @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
+ * @param temp a temporary. Max size requirement: `temp.size() == max(a.size(), b.size()) + 1` if
+ *             `MultiplicationAlgorithm::NAIVE == determine_multiplication_algorithm(a.size(), b.size())`, otherwise
+ *             there's no size requirement.
+ * @param karatsuba_temps temporaries for karatsuba multiplication. Can be a nullptr. Will be filled only if needed.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+mult(BigInt &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b, DigitsVec& temp, utils::UniquePtr<KaratsubaStepTemps>& karatsuba_temps) {
+	result.resize(a.size() + b.size());
+	_private::mult_ignore_sign(result._span(), a._span(), b._span(), temp, karatsuba_temps);
+	result.sign() = _private::mult_sign(a.sign(), b.sign());
 	result.cleanup();
 }
 
 
 /**
- * @param temp a temporary. Max size requirement: `temp.size() == max(a.size(), b.size()) + 1` (if `true == _private::should_use_karatsuba(a.size(), b.size())`, otherwise thereś no size requirement).
+ * @brief multiples two integers.
+ * @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
  */
 BIGINT_TRACY_CONSTEXPR_VOID
-mult(is_BigInt_like auto &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b, DigitsVec& temp) {
-	if (_private::should_use_karatsuba(a.size(), b.size())) {
-		mult_karatsuba(result, a, b);
-	} else {
-		mult_naive(result, a, b, temp);
-	}
-}
-
-BIGINT_TRACY_CONSTEXPR_VOID
 mult(is_BigInt_like auto &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b) {
-	if (_private::should_use_karatsuba(a.size(), b.size())) {
-		mult_karatsuba(result, a, b);
-	} else {
-		DigitsVec temp;
-		mult_naive(result, a, b, temp);
-	}
+	DigitsVec temp;
+	utils::UniquePtr<KaratsubaStepTemps> temps;
+	mult(result, a, b, temp, temps);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
@@ -1553,7 +1746,7 @@ _divide_loop(const DivModResult<utils::Span<uint64_t>>& result, const utils::Spa
  * @param b the divisor. Either `uint32_t` or `uint64_t`.
  * @return the remainder
  */
-template <bool ignore_quotient = false>
+template <bool ignore_quotient>
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod_ignore_sign_small(const utils::Span<uint64_t> quotient, const utils::Span<const uint64_t>& a, one_of<uint32_t, uint64_t> auto b) -> decltype(b){
 	BIGINT_TRACY_ZONE_SCOPED;
@@ -1595,7 +1788,7 @@ divmod_ignore_sign_small(const utils::Span<uint64_t> quotient, const utils::Span
 }
 
 
-template <bool ignore_quotient = false>
+template <bool ignore_quotient>
 BIGINT_TRACY_CONSTEXPR_VOID
 _resize_result_for_divide_loop(BigInt& quotient, BigInt& remainder, DigitsVec& temp, const BigInt::size_type na, const BigInt::size_type nb) {
 	if constexpr (!ignore_quotient) {
@@ -1620,7 +1813,7 @@ _resize_result_for_divide_loop(BigInt& quotient, BigInt& remainder, DigitsVec& t
  * @param temp_af a temporary. Max size requirement: `temp_af.size() == a.size() + 1`.
  * @param temp_bf a temporary. Max size requirement: `temp_bf.size() == b.size() + 1`.
  */
-template <bool ignore_quotient = false, bool ignore_remainder = false>
+template <bool ignore_quotient, bool ignore_remainder>
 BIGINT_TRACY_CONSTEXPR_VOID
 _divmod_ignore_sign_big(BigInt& quotient, BigInt& remainder, const utils::Span<const uint64_t>& a, const utils::Span<const uint64_t>& b, DigitsVec& temp, DigitsVec& temp_af, DigitsVec& temp_bf) {
 	BIGINT_TRACY_ZONE_SCOPED;
@@ -1636,25 +1829,25 @@ _divmod_ignore_sign_big(BigInt& quotient, BigInt& remainder, const utils::Span<c
 
 		auto& af = temp_af;
 		af.resize(a.size() + 1);
-		_mult_naive_ignore_sign(utils::Span{af}, a, f);
+		_mult_naive_ignore_sign(utils::Span<uint64_t>{af}, a, f);
 		cleanup(af);
 
 		auto& bf = temp_bf;
 		bf.resize(b.size() + 1);
-		_mult_naive_ignore_sign(utils::Span{bf}, b, f);
+		_mult_naive_ignore_sign(utils::Span<uint64_t>{bf}, b, f);
 		cleanup(bf);
 
 		e = bf.back();
 
 		_resize_result_for_divide_loop<ignore_quotient>(quotient, remainder, temp, af.size(), bf.size());
-		_divide_loop<ignore_quotient>(DivModResult{quotient._span(), remainder._span()}, utils::Span{af}, utils::Span{bf}, e, utils::Span{temp});
+		_divide_loop<ignore_quotient>(DivModResult{quotient._span(), remainder._span()}, utils::Span<uint64_t>{af}, utils::Span<uint64_t>{bf}, e, utils::Span<uint64_t>{temp});
 
 		if constexpr (!ignore_remainder) { // fix remainder:
-			[[maybe_unused]] auto rm = divmod_ignore_sign_small(remainder._span(), remainder._span(), f);
+			[[maybe_unused]] auto rm = divmod_ignore_sign_small<false>(remainder._span(), remainder._span(), f);
 		}
 	} else {
 		_resize_result_for_divide_loop<ignore_quotient>(quotient, remainder, temp, a.size(), b.size());
-		_divide_loop<ignore_quotient>(DivModResult{quotient._span(), remainder._span()}, a, b, e, utils::Span{temp});
+		_divide_loop<ignore_quotient>(DivModResult{quotient._span(), remainder._span()}, a, b, e, utils::Span<uint64_t>{temp});
 	}
 
 	if constexpr (!ignore_quotient) {
@@ -1665,7 +1858,7 @@ _divmod_ignore_sign_big(BigInt& quotient, BigInt& remainder, const utils::Span<c
 
 
 /**
- * @brief division algorithm adapted from Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division
+ * @brief shortcuts for division.
  *
  * @param quotient the quotient result, will be untouched if `ignore_quotient==true`. Size requirement: `quotient.size() == a.size() - b.size() + 1` (only if `ignore_quotient==true`).
  * @param remainder the dividend result, will be touched even if `ignore_remainder==true`! Size requirement: `result.r.size() == a.size() + 2`.
@@ -1674,11 +1867,9 @@ _divmod_ignore_sign_big(BigInt& quotient, BigInt& remainder, const utils::Span<c
  *
  * @return `true` if a shortcut was taken successfully.
  */
-template <bool ignore_quotient = false, bool ignore_remainder = false>
+template <bool ignore_quotient, bool ignore_remainder>
 BIGINT_TRACY_CONSTEXPR_AUTO
 _divmod_ignore_sign_big_shortcuts(BigInt& quotient, BigInt& remainder, const utils::Span<const uint64_t>& a, const utils::Span<const uint64_t>& b) -> bool {
-	BIGINT_TRACY_ZONE_SCOPED;
-
 	assert(!is_zero(b));
 
 	if (is_zero(a) || b.size() > a.size()) {
@@ -1712,7 +1903,7 @@ _divmod_ignore_sign_big_shortcuts(BigInt& quotient, BigInt& remainder, const uti
 
 
 /**
- * @brief division algorithm adapted from Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division
+ * @brief division with remainder ignoring sign.
  *
  * @param quotient the quotient result, will be untouched if `ignore_quotient==true`. Max size requirement: `quotient.size() == a.size() - b.size() + 1` (only if `ignore_quotient==true`).
  * @param remainder the dividend result, will be touched even if `ignore_remainder==true`! Max size requirement: `result.r.size() == a.size() + 2`.
@@ -1723,7 +1914,7 @@ _divmod_ignore_sign_big_shortcuts(BigInt& quotient, BigInt& remainder, const uti
  * @param temp_af a temporary. Max size requirement: `temp_af.size() == a.size() + 1`.
  * @param temp_bf a temporary. Max size requirement: `temp_bf.size() == b.size() + 1`.
  */
-template <bool ignore_quotient = false, bool ignore_remainder = false>
+template <bool ignore_quotient, bool ignore_remainder>
 BIGINT_TRACY_CONSTEXPR_VOID
 divmod_ignore_sign(BigInt& quotient, BigInt& remainder, const utils::Span<const uint64_t>& a, const utils::Span<const uint64_t>& b, DigitsVec& temp, DigitsVec& temp_af, DigitsVec& temp_bf) {
 	BIGINT_TRACY_ZONE_SCOPED;
@@ -1737,7 +1928,7 @@ divmod_ignore_sign(BigInt& quotient, BigInt& remainder, const utils::Span<const 
 }
 
 
-template <bool ignore_quotient = false, bool ignore_remainder = false>
+template <bool ignore_quotient, bool ignore_remainder>
 BIGINT_TRACY_CONSTEXPR_VOID
 _fix_divmod_signs(BigInt& quotient, BigInt& remainder, const Sign a_sign, const is_BigInt_like auto &b) {
 	if constexpr (!ignore_remainder) {
@@ -1758,7 +1949,7 @@ _fix_divmod_signs(BigInt& quotient, BigInt& remainder, const Sign a_sign, const 
 }
 
 
-template <bool ignore_quotient = false, bool ignore_remainder = false, one_of<int32_t, uint32_t, int64_t, uint64_t> TRHS>
+template <bool ignore_quotient, bool ignore_remainder, one_of<int32_t, uint32_t, int64_t, uint64_t> TRHS>
 BIGINT_TRACY_CONSTEXPR_VOID
 _fix_divmod_signs(BigInt& quotient, TRHS& remainder, const Sign a_sign, const TRHS &b) {
 	if constexpr (!ignore_remainder) {
@@ -1780,9 +1971,29 @@ _fix_divmod_signs(BigInt& quotient, TRHS& remainder, const Sign a_sign, const TR
 	}
 }
 
+/**
+ * @brief division with remainder.
+ *
+ * @param quotient the quotient result, will be untouched if `ignore_quotient==true`. Max size requirement: `quotient.size() == a.size() - b.size() + 1` (only if `ignore_quotient==true`).
+ * @param a the dividend
+ * @param b the divisor
+ * @return the remainder
+ */
+template <bool ignore_quotient, bool ignore_remainder>
+BIGINT_TRACY_CONSTEXPR_AUTO
+divmod(BigInt& quotient, const is_BigInt_like auto &a, one_of<int32_t, uint32_t, int64_t, uint64_t> auto b) -> decltype(b) {
+	if constexpr (!ignore_quotient) {
+		quotient.reserve(a.size() + 1);
+		quotient.resize(a.size());
+	}
+	decltype(b) remainder = _private::divmod_ignore_sign_small<ignore_quotient>(quotient._span(), a._span(), utils::constexpr_abs(b));
+	_private::_fix_divmod_signs<ignore_quotient, ignore_remainder>(quotient, remainder, a.sign(), b);
+	return remainder;
+}
+
 
 /**
- * @brief division algorithm adapted from Nitin Verma, 2021, Implementing Basic Arithmetic for Large Integers: Division
+ * @brief integer division with remainder.
  *
  * @param quotient the quotient result, will be untouched if `ignore_quotient==true`. Max size requirement: `quotient.size() == a.size() - b.size() + 1` (only if `ignore_quotient==true`).
  * @param remainder the dividend result, will be touched even if `ignore_remainder==true`! Max size requirement: `result.r.size() == a.size() + 2`.
@@ -1793,23 +2004,11 @@ _fix_divmod_signs(BigInt& quotient, TRHS& remainder, const Sign a_sign, const TR
  * @param temp_af a temporary. Max size requirement: `temp_af.size() == a.size() + 1`.
  * @param temp_bf a temporary. Max size requirement: `temp_bf.size() == b.size() + 1`.
  */
-template <bool ignore_quotient = false, bool ignore_remainder = false>
+template <bool ignore_quotient, bool ignore_remainder>
 BIGINT_TRACY_CONSTEXPR_VOID
 divmod(BigInt& quotient, BigInt& remainder, const is_BigInt_like auto &a, const is_BigInt_like auto &b, DigitsVec& temp, DigitsVec& temp_af, DigitsVec& temp_bf) {
 	_private::divmod_ignore_sign<ignore_quotient, ignore_remainder>(quotient, remainder, a._span(), b._span(), temp, temp_af, temp_bf);
 	_private::_fix_divmod_signs<ignore_quotient, ignore_remainder>(quotient, remainder, a.sign(), b);
-}
-
-template <bool ignore_quotient = false, bool ignore_remainder = false>
-BIGINT_TRACY_CONSTEXPR_AUTO
-divmod(BigInt& quotient, const is_BigInt_like auto &a, one_of<int32_t, uint32_t, int64_t, uint64_t> auto b) -> decltype(b) {
-	if constexpr (!ignore_quotient) {
-			quotient.reserve(a.size() + 1);
-		quotient.resize(a.size());
-	}
-	decltype(b) remainder = _private::divmod_ignore_sign_small<ignore_quotient>(quotient._span(), a._span(), utils::constexpr_abs(b));
-	_private::_fix_divmod_signs<ignore_quotient, ignore_remainder>(quotient, remainder, a.sign(), b);
-	return remainder;
 }
 
 }
@@ -1818,20 +2017,63 @@ divmod(BigInt& quotient, const is_BigInt_like auto &a, one_of<int32_t, uint32_t,
 // divmod:
 namespace bigint {
 
-template <bool ignore_quotient = false, bool ignore_remainder = false>
+/**
+ * @brief integer division with remainder.
+ *
+ * @param quotient the quotient result. Max size requirement: `quotient.size() == a.size() - b.size() + 1`.
+ * @param a the dividend
+ * @param b the divisor
+ * @return the remainder
+ */
+BIGINT_TRACY_CONSTEXPR_AUTO
+divmod(BigInt& quotient, const is_BigInt_like auto &a, one_of<int32_t, uint32_t, int64_t, uint64_t> auto b) -> decltype(b) {
+	return _private::divmod<false, false>(quotient, a, b);
+}
+
+/**
+ * @brief integer division with remainder.
+ *
+ * @param a the dividend
+ * @param b the divisor
+ * @return the quotient and remainder
+ */
+BIGINT_TRACY_CONSTEXPR_AUTO
+divmod(const is_BigInt_like auto &a, one_of<int32_t, uint32_t, int64_t, uint64_t> auto b) -> DivModResult<BigInt, decltype(b)> {
+	DivModResult<BigInt, decltype(b)> result;
+	result.r = divmod(result.d, a, b);
+	return result;
+}
+
+
+/**
+ * @brief integer division with remainder.
+ *
+ * @param quotient the quotient result. Max size requirement: `quotient.size() == a.size() - b.size() + 1`.
+ * @param remainder the dividend result. Max size requirement: `result.r.size() == a.size() + 2`.
+ * @param a the dividend
+ * @param b the divisor
+ *
+ * @param temp a temporary. Max size requirement: `temp.size() == b.size() + 2`.
+ * @param temp_af a temporary. Max size requirement: `temp_af.size() == a.size() + 1`.
+ * @param temp_bf a temporary. Max size requirement: `temp_bf.size() == b.size() + 1`.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+divmod(BigInt& quotient, BigInt& remainder, const is_BigInt_like auto &a, const is_BigInt_like auto &b, DigitsVec& temp, DigitsVec& temp_af, DigitsVec& temp_bf) {
+	_private::divmod<false, false>(quotient, remainder, a, b, temp, temp_af, temp_bf);
+}
+
+/**
+ * @brief integer division with remainder.
+ *
+ * @param a the dividend
+ * @param b the divisor
+ * @return the quotient and remainder
+ */
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod(const is_BigInt_like auto &a, const is_BigInt_like auto &b) -> DivModResult<BigInt> {
 	DivModResult<BigInt> result;
 	DigitsVec temp, temp_af, temp_bf;
-	_private::divmod<ignore_quotient, ignore_remainder>(result.d, result.r, a, b, temp, temp_af, temp_bf);
-	return result;
-}
-
-template <bool ignore_quotient = false, bool ignore_remainder = false>
-BIGINT_TRACY_CONSTEXPR_AUTO
-divmod(const is_BigInt_like auto &a, one_of<int32_t, uint32_t, int64_t, uint64_t> auto b) -> DivModResult<BigInt, decltype(b)> {
-	DivModResult<BigInt, decltype(b)> result;
-	result.r = _private::divmod<ignore_quotient, ignore_remainder>(result.d, a, b);
+	_private::divmod<false, false>(result.d, result.r, a, b, temp, temp_af, temp_bf);
 	return result;
 }
 
@@ -1841,34 +2083,82 @@ divmod(const is_BigInt_like auto &a, one_of<int32_t, uint32_t, int64_t, uint64_t
 // division:
 namespace bigint {
 
+/**
+ * @brief integer division.
+ *
+ * @param result the quotient result.
+ * @param a the dividend
+ * @param b the divisor
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+div(BigInt &result, const is_BigInt_like auto &a, one_of<int32_t, uint32_t, int64_t, uint64_t> auto b) {
+	[[maybe_unused]]auto remainder = _private::divmod<false, true>(result, a, b);
+}
+
+/**
+ * @brief integer division.
+ *
+ * @param result the quotient result. Max size requirement: `quotient.size() == a.size() - b.size() + 1`.
+ * @param a the dividend
+ * @param b the divisor
+ *
+ * @param temp a temporary. Max size requirement: `temp.size() == b.size() + 2`.
+ * @param temp_af a temporary. Max size requirement: `temp_af.size() == a.size() + 1`.
+ * @param temp_bf a temporary. Max size requirement: `temp_bf.size() == b.size() + 1`.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+div(BigInt& result, const is_BigInt_like auto &a, const is_BigInt_like auto &b, DigitsVec& temp, DigitsVec& temp_af, DigitsVec& temp_bf) {
+	BigInt remainder;
+	_private::divmod<false, true>(result, remainder, a._span(), b._span(), temp, temp_af, temp_bf);
+}
+
+/**
+ * @brief integer division.
+ *
+ * @param result the quotient result. Max size requirement: `quotient.size() == a.size() - b.size() + 1`.
+ * @param a the dividend
+ * @param b the divisor
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+div(BigInt& result, const is_BigInt_like auto &a, const is_BigInt_like auto &b) {
+	BigInt remainder;
+	DigitsVec temp, temp_af, temp_bf;
+	_private::divmod<false, true>(result, remainder, a, b, temp, temp_af, temp_bf);
+}
+
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator/(const is_BigInt_like auto &a, one_of<uint32_t, int32_t, uint64_t, int64_t> auto b) -> BigInt {
-	return divmod<false, true>(a, b).d;
+	BigInt result;
+	div(result, a, b);
+	return result;
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator/(const is_BigInt_like auto &a, const is_BigInt_like auto &b) -> BigInt {
-	return divmod<false, true>(a, b).d;
+	BigInt result;
+	div(result, a, b);
+	return result;
 }
 
 
 BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
 operator/=(BigInt &a, one_of<uint32_t, int32_t, uint64_t, int64_t> auto b) -> BigInt& {
-	[[maybe_unused]]auto remainder = _private::divmod<false, true>(a, a, b);
+	div(a, a, b);
 	return a;
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
 operator/=(BigInt &a, const is_BigInt_like auto &b) -> BigInt& {
 	if (b.size() == 1) { // we can perform division inplace:
-		auto remainder = _private::divmod<false, true>(a, a, b[0]);
+		auto remainder = divmod(a, a, b[0]);
 		a.sign() = _private::mult_sign(a.sign(), b.sign());
 		// correct wrong corrections, caused by wrong sign of `b` supplied above:
 		if (remainder != 0 && b.sign() == Sign::NEG) {
 			a -= 1;
 		}
 	} else { // we cannot do it inplace:
-		const auto result = divmod<false, true>(a, b).d;
+		BigInt result;
+		div(result, a, b);
 		a = std::move(result);
 	}
 	return a;
@@ -1880,19 +2170,67 @@ operator/=(BigInt &a, const is_BigInt_like auto &b) -> BigInt& {
 // Modulo:
 namespace bigint {
 
+/**
+ * @brief integer modulo.
+ *
+ * @param result the modulo result. Max size requirement: `result.r.size() == a.size() + 2`.
+ * @param a the dividend
+ * @param b the divisor
+ */
+template <one_of<int32_t, uint32_t, int64_t, uint64_t> TRHS>
+BIGINT_TRACY_CONSTEXPR_VOID
+mod(TRHS &result, const is_BigInt_like auto &a, TRHS b) {
+	BigInt quotient;
+	result = _private::divmod<true, false>(quotient, a, b);
+}
+
+/**
+ * @brief integer modulo.
+ *
+ * @param result the modulo result. Max size requirement: `result.r.size() == a.size() + 2`.
+ * @param a the dividend
+ * @param b the divisor
+ *
+ * @param temp a temporary. Max size requirement: `temp.size() == b.size() + 2`.
+ * @param temp_af a temporary. Max size requirement: `temp_af.size() == a.size() + 1`.
+ * @param temp_bf a temporary. Max size requirement: `temp_bf.size() == b.size() + 1`.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+mod(BigInt& result, const is_BigInt_like auto &a, const is_BigInt_like auto &b, DigitsVec& temp, DigitsVec& temp_af, DigitsVec& temp_bf) {
+	BigInt quotient;
+	_private::divmod<true, false>(quotient, result, a, b, temp, temp_af, temp_bf);
+}
+
+/**
+ * @brief integer modulo.
+ *
+ * @param result the modulo result. Max size requirement: `result.r.size() == a.size() + 2`.
+ * @param a the dividend
+ * @param b the divisor
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+mod(BigInt& result, const is_BigInt_like auto &a, const is_BigInt_like auto &b) {
+	DigitsVec temp, temp_af, temp_bf;
+	mod(result, a, b, temp, temp_af, temp_bf);
+}
+
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator%(const is_BigInt_like auto &a, one_of<uint32_t, int32_t, uint64_t, int64_t> auto b) -> decltype(b) {
-	return divmod<true, false>(a, b).r;
+	decltype(b) result;
+	mod(result, a, b);
+	return result;
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator%(const is_BigInt_like auto &a, const is_BigInt_like auto &b) -> BigInt {
-	return divmod<true, false>(a, b).r;
+	BigInt result;
+	mod(result, a, b);
+	return result;
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator%=(BigInt &a, const one_of<uint32_t, int32_t, uint64_t, int64_t> auto &b) -> BigInt& {
-	auto result = divmod<true, false>(a, b).r;
+	auto result = a % b;
 	a.resize(1);
 	a.set(0, utils::constexpr_abs(result));
 	a.sign() = _private::get_sign(result);
@@ -1901,7 +2239,7 @@ operator%=(BigInt &a, const one_of<uint32_t, int32_t, uint64_t, int64_t> auto &b
 
 BIGINT_TRACY_CONSTEXPR_AUTO
 operator%=(BigInt &a, const is_BigInt_like auto &b) -> BigInt& {
-	a = divmod<true, false>(a, b).r;
+	a = a % b;
 	return a;
 }
 
