@@ -177,13 +177,12 @@ ipow(uint32_t base, uint8_t exponent) -> uint64_t {
 /**
  * @brief like std::abs(), but constexpr. (std::abs() is only constexpr since c++23.)
  */
-template <std::integral T>
 CONSTEXPR_AUTO
-constexpr_abs(T x) -> std::make_unsigned_t<T> {
-	if constexpr (std::is_unsigned_v<T>) {
+constexpr_abs(std::integral auto x) -> std::make_unsigned_t<decltype(x)> {
+	if constexpr (std::is_unsigned_v<decltype(x)>) {
 		return x;
 	} else {
-		return std::make_unsigned_t<T>(x < 0 ? -x : x);
+		return std::make_unsigned_t<decltype(x)>(x < 0 ? -x : x);
 	}
 }
 
@@ -287,8 +286,8 @@ namespace bigint::utils {
  * @param size size of the array/vector/span/etc. to be indexed
  * @throw std::invalid_argument if `index` is out of bounds.
  */
-CONSTEXPR_AUTO
-check_bounds(size_t index, size_t size) {
+CONSTEXPR_VOID
+check_bounds(std::integral auto index, decltype(index) size) {
 	if (index >= size) {
 		auto msg = concat(
 			"index out of bound.",
@@ -334,12 +333,10 @@ private:
 
 namespace bigint::utils {
 
-inline constexpr size_t full_extent = static_cast<size_t>(-1);
-
 template <typename T>
 class Span {
-
 public:
+	using size_type = std::size_t;
 
 	// constructors, copy and assignment
 
@@ -349,25 +346,25 @@ public:
 	{ }
 
 	constexpr
-	Span(T* data, size_t size) noexcept
+	Span(T* data, size_type size) noexcept
 		: _data(data), _size(size)
 	{ }
 
-	template <size_t N>
+	template <size_type N>
 	explicit constexpr
 	Span (std::type_identity_t<T>(&arr)[N])
 	noexcept
 	: Span (static_cast<T*>(arr), N)
 	{ }
 
-	template <size_t N>
+	template <size_type N>
 	requires std::is_const_v<T>
 	explicit constexpr
 	Span(const std::array<std::remove_const_t<T>, N>& arr) noexcept
 		: Span(arr.data(), N)
 	{ }
 
-	template <size_t N>
+	template <size_type N>
 	requires (!std::is_const_v<T>)
 	explicit constexpr
 	Span(std::array<T, N>& arr) noexcept
@@ -397,10 +394,10 @@ public:
 	// observers
 
 	CONSTEXPR_AUTO
-	size() const noexcept -> size_t { return _size; }
+	size() const noexcept -> size_type { return _size; }
 
 	CONSTEXPR_AUTO
-	size_bytes() const noexcept -> size_t { return _size * sizeof(T); }
+	size_bytes() const noexcept -> size_type { return _size * sizeof(T); }
 
 	CONSTEXPR_AUTO
 	empty() const noexcept -> bool { return size() == 0; }
@@ -420,7 +417,7 @@ public:
 	}
 
 	CONSTEXPR_AUTO
-	operator[](size_t idx) const noexcept -> T& {
+	operator[](size_type idx) const noexcept -> T& {
 		assert(idx < _size);
 		return *(_data + idx);
 	}
@@ -439,19 +436,24 @@ public:
 	// subviews
 
 	CONSTEXPR_AUTO
-	first(size_t count) const noexcept -> Span {
+	first(size_type count) const noexcept -> Span {
 		assert(count <= _size);
 		return {_data, count};
 	}
 
 	CONSTEXPR_AUTO
-	last(size_t count) const noexcept -> Span {
+	last(size_type count) const noexcept -> Span {
 		assert(count <= _size);
 		return {_data + (_size - count), count};
 	}
 
+private:
+	static constexpr size_type full_extent = static_cast<size_t>(-1);
+
+public:
+
 	CONSTEXPR_AUTO
-	subspan(size_t offset, size_t count = full_extent) const noexcept -> Span {
+	subspan(size_type offset, size_type count = full_extent) const noexcept -> Span {
 		assert(offset <= _size);
 		if (count == full_extent)
 			count = _size - offset;
@@ -469,16 +471,16 @@ public:
 	 * @return
 	 */
 	CONSTEXPR_AUTO
-	subspan_trunc(size_t offset, size_t count = full_extent) const noexcept -> Span {
+	subspan_trunc(size_type offset, size_type count = full_extent) const noexcept -> Span {
 		offset = _size > offset ? offset : _size;
-		count = std::min(_size - offset, count);
+		count = std::min<size_type>(_size - offset, count);
 		return subspan(offset, count);
 		// return {_data + offset, count};
 	}
 
 private:
 	T* _data;
-	size_t _size;
+	size_type _size;
 };
 
 }
