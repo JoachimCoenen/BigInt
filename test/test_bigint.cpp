@@ -113,6 +113,36 @@ TEST_ASSIGN_OPERATOR_BIGINT(RShift, uint64_t, a >>= b, get_all_rshift_test_value
 
 }
 
+// Bitwise AND, OR, XOR
+namespace {
+TEST_BINARY_OPERATOR_BIGINT_F(BitwiseAnd, BigInt, BigInt, bitwise_and(res, a, b), get_all_bitwise_and_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(BitwiseAnd, BigInt, bitwise_and(a, a, b), get_all_bitwise_and_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT(BitwiseAnd, BigInt, BigInt, a & b, get_all_bitwise_and_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT(BitwiseAnd, BigInt, a &= b, get_all_bitwise_and_test_values())
+
+
+TEST_BINARY_OPERATOR_BIGINT_F(BitwiseOr, BigInt, BigInt, bitwise_or(res, a, b), get_all_bitwise_or_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(BitwiseOr, BigInt, bitwise_or(a, a, b), get_all_bitwise_or_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT(BitwiseOr, BigInt, BigInt, a | b, get_all_bitwise_or_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT(BitwiseOr, BigInt, a |= b, get_all_bitwise_or_test_values())
+
+
+TEST_BINARY_OPERATOR_BIGINT_F(BitwiseXOr, BigInt, BigInt, bitwise_xor(res, a, b), get_all_bitwise_xor_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(BitwiseXOr, BigInt, bitwise_xor(a, a, b), get_all_bitwise_xor_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT(BitwiseXor, BigInt, BigInt, a ^ b, get_all_bitwise_xor_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT(BitwiseXor, BigInt, a ^= b, get_all_bitwise_xor_test_values())
+
+}
+
 
 
 // Addition

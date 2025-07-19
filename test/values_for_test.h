@@ -48,6 +48,9 @@ get_all_##OP_NAME##_test_values() { return load_testdata<N>(join_path(test_data_
 
 DECLARE_LOAD_TESTDATA_FUNC(lshift, 2)
 DECLARE_LOAD_TESTDATA_FUNC(rshift, 2)
+DECLARE_LOAD_TESTDATA_FUNC(bitwise_and, 2)
+DECLARE_LOAD_TESTDATA_FUNC(bitwise_or, 2)
+DECLARE_LOAD_TESTDATA_FUNC(bitwise_xor, 2)
 DECLARE_LOAD_TESTDATA_FUNC(add, 2)
 DECLARE_LOAD_TESTDATA_FUNC(sub, 2)
 DECLARE_LOAD_TESTDATA_FUNC(mul, 2)

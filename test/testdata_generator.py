@@ -295,13 +295,19 @@ BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
 	BinOperation('gcd',    lambda a, b:    math.gcd(a, b)),
 	BinOperation('lcm',    lambda a, b:    math.lcm(a, b)),
 
+	# UnaOperation('bitwise_not', lambda a:    ~abs(a) * (-1 if not a < 0 else +1)),
+	BinOperation('bitwise_and', lambda a, b: (abs(a) & abs(b)) * (-1 if (a < 0) and (b < 0) else +1)),
+	BinOperation('bitwise_or',  lambda a, b: (abs(a) | abs(b)) * (-1 if (a < 0) or (b < 0) else +1)),
+	BinOperation('bitwise_xor', lambda a, b: (abs(a) ^ abs(b)) * (-1 if (a < 0) != (b < 0) else +1)),
+
+
 	UnaOperation('digit_sum_10', lambda a: digit_sum_10(a)),
 	UnaOperation('digit_sum_16', lambda a: digit_sum_16(a)),
 	UnaOperation('to_string_10', lambda a: a),
 	UnaOperation('to_string_16', lambda a: ('-' if a < 0 else '') + f'{abs(a):x}'),
 
-	BinOperation('huge',   lambda a, b: 0, testdata=TestdataSet.HUGE),
-	BinOperation('mix',    lambda a, b: 0, testdata=TestdataSet.MIX),
+	BinOperation('huge',   lambda a, b: 0, testdata=TestdataSet.HUGE),  # can be used for crude performance test
+	BinOperation('mix',    lambda a, b: 0, testdata=TestdataSet.MIX),   # can be used for crude performance test
 ]
 
 

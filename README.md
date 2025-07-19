@@ -174,7 +174,7 @@ Divides `a` by `b`. The division assignment operation is only performed in-place
 Dividing by a 32-bit integer is 1.26 times faster than dividing by a 64-bit one (`myBigInt / 7` is faster than `myBigInt / 7ull`).
 
 #### Modulo (%, %=, mod)
-calculates the reminder of dividing `a` by `b`. The modulo assignment operation is *never* performed in-place.  
+Calculates the reminder of dividing `a` by `b`. The modulo assignment operation is *never* performed in-place.  
 Dividing by a 32-bit integer is 1.26 times faster than dividing by a 64-bit one (`myBigInt % 7` is faster than `myBigInt % 7ull`).
 
 #### divmod(a, b)
@@ -183,6 +183,10 @@ Dividing by a 32-bit integer is 1.26 times faster than dividing by a 64-bit one 
 
 #### Left-shift, Right-shift (<<, >>, <<=, >>=)
 Shifts the given integer by n bits left or right, filling with zeros. The shift assignment operations are always performed in-place.
+
+#### bitwise AND, OR, XOR (&, |, ^, &=, |=, ^=)
+Bitwise AND, bitwise OR, and bitwise XOR operations. The bitwise assignment operations are always performed in-place.  
+The signs are handled independently of the digits. A negative sign is treated as a binary `1`. 
 
 #### Negation (-), abs
  Both operations return a view of the underlying BigInt with the sign changed accordingly.

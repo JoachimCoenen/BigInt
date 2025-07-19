@@ -894,6 +894,189 @@ operator!=(const is_BigInt_like auto &a, std::integral auto b) -> bool {
 }
 
 
+
+// bitwise AND, OR, XOR ignoring sign:
+namespace bigint::_private {
+
+/**
+ * @brief bitwise-ANDs two integers ignoring their sign. `a.size()` *must* be equal or greater than `b.size()`. Supports assignment operations `bitwise_and_ignore_sign(a, a, b)` or even `bitwise_and_ignore_sign(a, a, a)`.
+ * @param result the result will be put in here. Size requirement: `result.size() >= min(a.size(), b.size())`.
+ * @param a the operand with the most digits.
+ * @param b the operand with the least digits.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+bitwise_and_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b) {
+	assert(a.size() >= b.size());
+	assert(result.size() >= b.size());
+
+	uint64_t i = 0;
+	for (; i < b.size(); ++i) {
+		result[i] = a[i] & b[i];
+	}
+
+	for (; i < result.size(); ++i) {
+		result[i] = 0;
+	}
+}
+
+/**
+ * @brief bitwise-ORs two integers ignoring their sign. `a.size()` *must* be equal or greater than `b.size()`. Supports assignment operations `bitwise_or_ignore_sign(a, a, b)` or even `bitwise_or_ignore_sign(a, a, a)`.
+ * @param result the result will be put in here. Size requirement: `result.size() >= max(a.size(), b.size())`.
+ * @param a the operand with the most digits.
+ * @param b the operand with the least digits.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+bitwise_or_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b) {
+	assert(a.size() >= b.size());
+	assert(result.size() >= a.size());
+
+	uint64_t i = 0;
+	for (; i < b.size(); ++i) {
+		result[i] = a[i] | b[i];
+	}
+
+	for (; i < a.size(); ++i) {
+		result[i] = a[i];
+	}
+
+	for (; i < result.size(); ++i) {
+		result[i] = 0;
+	}
+}
+
+/**
+ * @brief bitwise-XORs two integers ignoring their sign. `a.size()` *must* be equal or greater than `b.size()`. Supports assignment operations `bitwise_xor_ignore_sign(a, a, b)` or even `bitwise_xor_ignore_sign(a, a, a)`.
+ * @param result the result will be put in here. Size requirement: `result.size() >= max(a.size(), b.size())`.
+ * @param a the operand with the most digits.
+ * @param b the operand with the least digits.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+bitwise_xor_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b) {
+	assert(a.size() >= b.size());
+	assert(result.size() >= a.size());
+
+	uint64_t i = 0;
+	for (; i < b.size(); ++i) {
+		result[i] = a[i] ^ b[i];
+	}
+
+	for (; i < a.size(); ++i) {
+		result[i] = a[i];
+	}
+
+	for (; i < result.size(); ++i) {
+		result[i] = 0;
+	}
+}
+
+}
+
+
+// bitwise AND, OR, XOR operations:
+namespace bigint {
+
+/**
+ * @brief bitwise-ANDs two integers. Supports assignment operations `bitwise_and(a, a, b)` or even `bitwise_and(a, a, a)`.
+ * @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+bitwise_and(BigInt& result, is_BigInt_like auto& a, const is_BigInt_like auto& b) {
+	result.sign() = is_neg(a) && is_neg(b) ? Sign::NEG : Sign::POS;
+
+	result.resize(std::min(a.size(), b.size()));
+	if (b.size() > a.size()) { // put the number with more digits first.
+		_private::bitwise_and_ignore_sign(result._span(), b._span(), a._span());
+	} else {
+		_private::bitwise_and_ignore_sign(result._span(), a._span(), b._span());
+	}
+	result.cleanup();
+}
+
+/**
+ * @brief bitwise-ORs two integers. Supports assignment operations `bitwise_or(a, a, b)` or even `bitwise_or(a, a, a)`.
+ * @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+bitwise_or(BigInt& result, is_BigInt_like auto& a, const is_BigInt_like auto& b) {
+	result.sign() = is_neg(a) || is_neg(b) ? Sign::NEG : Sign::POS;
+
+	const auto a_size = a.size();
+	result.resize(std::max(a.size(), b.size()));
+	const auto a_span = a._span().first(a_size);
+	if (b.size() > a_size) { // put the number with more digits first.
+		_private::bitwise_or_ignore_sign(result._span(), b._span(), a_span);
+	} else {
+		_private::bitwise_or_ignore_sign(result._span(), a_span, b._span());
+	}
+	result.cleanup();
+}
+
+/**
+ * @brief bitwise-XORs two integers. Supports assignment operations `bitwise_xor(a, a, b)` or even `bitwise_xor(a, a, a)`.
+ * @param result the result will be put in here.
+ * @param a the first operand.
+ * @param b the second operand.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+bitwise_xor(BigInt& result, is_BigInt_like auto& a, const is_BigInt_like auto& b) {
+	result.sign() = is_neg(a) ^ is_neg(b) ? Sign::NEG : Sign::POS;
+
+	const auto a_size = a.size();
+	result.resize(std::max(a.size(), b.size()));
+	const auto a_span = a._span().first(a_size);
+	if (b.size() > a_size) { // put the number with more digits first.
+		_private::bitwise_xor_ignore_sign(result._span(), b._span(), a_span);
+	} else {
+		_private::bitwise_xor_ignore_sign(result._span(), a_span, b._span());
+	}
+	result.cleanup();
+}
+
+BIGINT_TRACY_CONSTEXPR_AUTO
+operator&(const is_BigInt_like auto &a, const is_BigInt_like auto &b) -> BigInt {
+	BigInt result;
+	bitwise_and(result, const_cast<decltype(a)&>(a), b);
+	return result;
+}
+
+BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
+operator&=(BigInt &a, const is_BigInt_like auto &b) -> BigInt& {
+	bitwise_and(a, a, b);
+	return a;
+}
+
+BIGINT_TRACY_CONSTEXPR_AUTO
+operator|(const is_BigInt_like auto &a, const is_BigInt_like auto &b) -> BigInt {
+	BigInt result;
+	bitwise_or(result, const_cast<decltype(a)&>(a), b);
+	return result;
+}
+
+BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
+operator|=(BigInt &a, const is_BigInt_like auto &b) -> BigInt& {
+	bitwise_or(a, a, b);
+	return a;
+}
+
+BIGINT_TRACY_CONSTEXPR_AUTO
+operator^(const is_BigInt_like auto &a, const is_BigInt_like auto &b) -> BigInt {
+	BigInt result;
+	bitwise_xor(result, const_cast<decltype(a)&>(a), b);
+	return result;
+}
+
+BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
+operator^=(BigInt &a, const is_BigInt_like auto &b) -> BigInt& {
+	bitwise_xor(a, a, b);
+	return a;
+}
+
+}
+
 // add / sub ignoring sign:
 namespace bigint::_private {
 
