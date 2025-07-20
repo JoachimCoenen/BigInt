@@ -1,6 +1,10 @@
 # BigInt
 
-Fast integers without a size limit.
+BigInt is a header only library for working with large integer values bigger than the hardware limit.  
+BigInt has no additional dependencies and is designed to be easy to use without unnecessary performance compromises.  
+The numbers a represented in base 18,446,744,073,709,551,616 (= 2<sup>64</sup>) to maximize memory efficiency and speed.  
+It is fully `constexpr'd` and therefore partial result and constants can be calculated at compile time.
+
 ```c++
 std::cout << pow(3_big, 300) << std::endl;
 // Outputs: 136891479058588375991326027382088315966463695625337436471480190078368997177499076593800206155688941388250484440597994042813512732765695774566001
@@ -14,8 +18,6 @@ std::cout << pow_mod(factorial(1'234), exponent, modulo) << std::endl;
 // Output: 955391665608243513043495538268296899246954874924245089498096340386524437251196295593632931870943445678985991483313879138959709401500844805410810607296464582774490874013709940054275218772361289955459653818656219765760709299934396995532169939354231695893970363402071593393495046800780926026819156480445145233271399911835703191946704894204303615159583761628413020404794196445954148107605863666947472398848363387245204458841242987895624650042798222996369039484448398527371843137678236664622967933301930477163587296318204309316905541442171818403082397052155855551013827631300138392617463507295598766432238244927532603702174625664029147734159484258425912211570061758932768879126012144572295044488581621803988056991279294826449920028558639440118797933935848941550647511209614891499488631967521834829107530485712631717298337067010483774272106369894655292574793880734361044761241865900834333412119496277743759055581633247342490859643484319045382768660378579351654998566716023479932910026407332178985364788489633615298168737502072009804442770861359363632045539709910565548419163417407463076976623168140769738248721270321986689511156749395378508607805152130947562806499285625004881905618210375358873777998489457014054559131103866627011466123075978538102983345673837849077207757036687457957637592199268053746844473829894440057871981383438544978392978484006395385628004779643068584935183968482815310055781917523880954346039849863598190302931902722282299036532059693635494638264133477073735137783350133064665201536985756023798551477467333813662345157623532795419097384137504217268644189055102235283694553181205616630067425206298260675904187254132486212155855858301987602899157236953296937390669368865204408477062695914837023567762525272347783705448315595074072179046435738103516864550848337675524140794138567626057282218357753954545243309714844068042699733880337112547053446837778406280211211336111503967973097707968084463498124859563539456727591580113091724097889051453268324627518667318451816177997552604242300485381903166168469449470618416783727791438237001179488872377894891984758944181964515452876760738636239675134835244285251152232278658963476375247215300067321600999453982973767873832464794888770511169237675853101079941439205020143282999989643626409469245030865125736244590917892200015483215773973579053916320004069038089777727001515750983267506299101410288699335702326547821714183964773248507139287741792157182493943945354684140644088496712120894386900415529350661809132689630657057064802147812048966595752047761439983717641033584110545921164142903570069530221986316977025163839706136772299939669576744099208511437968720874508157401410236904676853510114643576951468724956550188003126548356794033985081728928758413417856866205932936993569700024343848763900895370259730446613907280673800897748667168848129350055265851134538847766879675517923397979607864637621929071413844014498533185290321468429369586596352622169322970283058604268823252493321413972917038656250257585294055655498015145938330326710699000297428305123939774150616757370415631887435890469235495295580280856239352777316350046187332365980503114269688548872902244960178393751921687904553634554787820948879541070839447323261440251994533716942671126966405739040522452538698181669546559278652295899791966721729927482679441970927055080658249844214719024886020266707855351985199253736230878034061925508065834660089242993686181
 
 ```
-
-If you experience problems, found a bug, or have suggestions, Feel free to create a new issue or make a pull request.
 
 
 ## Contents
@@ -38,12 +40,6 @@ If you experience problems, found a bug, or have suggestions, Feel free to creat
 * [License](#license)
 <!-- TOC -->
 
-## Summary
-BigInt is a header only library for working with large integer values bigger than the hardware limit.  
-BigInt has no additional dependencies and is designed to be easy to use without unnecessary performance compromises.  
-The numbers a represented in base 18,446,744,073,709,551,616 (= 2<sup>64</sup>) to maximize memory efficiency and speed.  
-It is fully `constexpr'd` and therefore partial result and constants can be calculated at compile time.  
-
 
 ## Requirements
 BigInt requires **C++20** or higher and a compatible GCC (or MinGW), Clang, or MSVC compiler.
@@ -61,14 +57,15 @@ or
 ```
 depending on where you put the folder.  
 
+If you experience problems, found a bug, or have suggestions, Feel free to create a new issue or make a pull request.
+
 
 ## Overview
 For simplicity reasons, this overview will use `using bigint;`. If you prefer not to do so, you can access the BigInt class as `bigint::BigInt`.  
 
 ### Features
 
-* numbers a represented in base 18446744073709551616 = 2<sup>64</sup> to maximize memory efficiency (64 bit per digit).
-* BigInt provides support for literals using `_big`:  
+- BigInt literals in decimal, hexadecimal, octal, and binary using `_big`:
   ```c++
   auto a = 12300000000000000000000000000000000000000_big;
   auto b = 1'000'000'000'000'000_big;  // with digit separators
@@ -76,50 +73,54 @@ For simplicity reasons, this overview will use `using bigint;`. If you prefer no
   auto d = 0b10101010'11000011_big;  // binary literal
   auto e = 0777777777777777777_big;  // octal literal
   ```
-* BigInt is fully `constexpr'd` and therefore partial results and constants can be calculated at compile time:  
+* Everything can be calculated at compile time, because BigInt is fully `constexpr'd`:
   ```c++
-  constexpr auto a = -1 + pow(3_big, 300) * 5;
+  constexpr auto a = -1 + pow(3_big, 3000) * 5;
   constexpr auto b = gdc(12368464545159878212501232471351513542431_big, 0x1385a5347761f71414247342dda76655535_big);
-  constexpr auto c = 12368464545159878212501232471351513542431_big / 0; // compile time error division by zero
+  constinit auto c = 12368464545159878212501232471351513542431_big / 0; // does not compile, because division by zero
   ```
-* Conversion from / to different bases:  
+* Supports all arithmetic and bitwise binary operators (`+`, `-`, `*`, `/`, `%`,  `&`, `|`, `^`, `<<`, `>>`) as well as many useful math functions:
   ```c++
+  auto a = 132456789_big - 987654321_big * 1235467890_big;
+  auto b = (a % 999999_big) << 513
+  auto c = b & a;
+  c *= a;
+  
+  pow_mod(123456789_big, 987654321_big, 5555555555_big); // efficient modular exponentiation
+  log(pow(3_big, 100), factorial(1000));
+  log2(factorial(1000));              // log2() is computed in O(1)!
+  lcm(factorial(100), pow(3, 100));   // least common multiple
+  divmod(factorial(100), pow(3, 50)); // combined division and modulo
+  digit_sum<13>(factorial(100));      // digit sum in base 13
+  // etc ...
+  ```
+* All arithmetic and bitwise binary operators are also available as GMP-style methods, which can save on unnecessary allocations: 
+  ```c++
+  BigInt a = 1234567890 * 0x1234'5678'9abc'def0_big - factorial(100);
+  
+  BigInt b;
+  mult(b, 0x1234'5678'9abc'def0_big, 1234567890);
+  sub(b, b factorial(100));
+  
+  assert(a == b)
+  ```
+* Easy string conversion even for decimal, hexadecimal, octal, binary, and other bases:
+  ```c++
+  constexpr auto a = from_string("-999888777666555444333222111000");
+  constexpr auto a = from_string<2>("-1011001101");
   constexpr auto a = from_string<16>("-abc057");
-  constexpr auto c = from_string<7>("123456777") // compile time error because '7' is not a valid digit in base 7
+  constexpr auto c = from_string<7>("123456777") // does not compile, because '7' is not a valid digit in base 7
   constexpr std::string base_10 = to_string<10>(-0xabc057_big)
   constexpr std::string base_17 = to_string<17>(-0xabc057_big)
   ```
-* Use operator syntax for better readability or function syntax for better performance and more control over allocations:
+* EasyConversion from / to integral types:
   ```c++
-  // 6 allocations, 5 deallocations total:
-  auto mult3(const BigInt& a, const BigInt& b, const BigInt& c, const BigInt& d) -> BigInt {
-      return a * b * c * d;
-  }
-  // 2 allocations, 2 deallocations total:
-  void mult3(BigInt& res, const BigInt& a, const BigInt& b, const BigInt& c, const BigInt& d) {
-      BigInt temp; DigitsVec temp2;
-      mult(res,  a,    b, temp2);
-      mult(temp, res,  c, temp2);
-      mult(res,  temp, d, temp2);
-  }
-  ```
-* EasyConversion from / to integral types:  
-  ```c++
-  fits_u32(-1234_big); // false
+  fits<uint16_t>(-1234_big); // false
   fits<int16_t>(-1234_big); // true
   
   int64_t a = as_i64(-1234_big);
   uint16_t b = as_integral<uint16_t>(-1234_big);
-  BigInt c = BigInt{-99LL);
-  ```
-* many useful math functions:  
-  ```c++
-  pow_mod(123456789_big, 987654321_big, 5555555555_big); // efficient modular exponentiation
-  log(factorial(100), pow(3, 100));
-  lcm(factorial(100), pow(3, 100)); // least common multiple
-  divmod(factorial(100), pow(3, 50)); // combined division and modulo
-  digit_sum<13>(factorial(100)); // digit sum in base 13
-  ...
+  BigInt c = BigInt{-99LL};
   ```
 
 ### Initialization
@@ -379,11 +380,11 @@ But luckily there are many ways to reduce such allocations:
 ```c++
 [[nodiscard]] constexpr auto
 factorial(uint32_t n) -> BigInt {
-	BigInt result{1};
-	for (uint64_t i = 1; i <= n; ++i) {
-		result *= i;
-	}
-	return result;
+    BigInt result{1};
+    for (uint64_t i = 1; i <= n; ++i) {
+        result *= i;
+    }
+    return result;
 }
 
 std::cout << "100! = " << factorial(100) << std::endl;
@@ -396,18 +397,18 @@ std::cout << "100! = " << factorial(100) << std::endl;
 ```c++
 [[nodiscard]] constexpr auto
 digit_sum(const is_BigInt_like auto& v) -> uint64_t {
-	constexpr auto base = 19; // 19 is the larges value for n such that 10^n fits into 64 bits
-	DivModResult<BigInt, uint64_t> tempDig{ abs(v), 0ull };
-	
-	uint64_t sum = 0ull;
-	while (tempDig.d > 0) {
-		tempDig = divmod(tempDig.d, base);
-		while (tempDig.r > 0) {
-			sum += tempDig.r % 10;
-			tempDig.r /= 10;
-		}
-	}
-	return sum;
+    constexpr auto base = 19; // 19 is the larges value for n such that 10^n fits into 64 bits
+    DivModResult<BigInt, uint64_t> tempDig{ abs(v), 0ull };
+    
+    uint64_t sum = 0ull;
+    while (tempDig.d > 0) {
+        tempDig = divmod(tempDig.d, base);
+        while (tempDig.r > 0) {
+            sum += tempDig.r % 10;
+            tempDig.r /= 10;
+        }
+    }
+    return sum;
 }
 
 std::cout << "digit_sum(100!) = " << digit_sum(factorial(100)) << std::endl;
