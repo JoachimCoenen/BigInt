@@ -42,16 +42,24 @@ sqrt(const is_BigInt_like auto& y) -> BigInt {
 
 namespace _private {
 BIGINT_TRACY_CONSTEXPR_AUTO
-calculate_squares(const is_BigInt_like auto& base, const is_BigInt_like auto& y) -> std::vector<BigInt> {
+calculate_squares(const utils::Span<const uint64_t>& base, const utils::Span<const uint64_t>& y) -> std::vector<DigitsVec> {
 	constexpr uint8_t exp_bits_max = 64;
-	std::vector<BigInt> squares;
-	squares.push_back(base);
+	std::vector<DigitsVec> squares;
+
+	DigitsVec temp;
+	utils::UniquePtr<KaratsubaStepTemps> karatsuba_temps;
+
 	for (uint8_t i = 1; i < exp_bits_max; ++i) {
-		auto square = squares.back() * squares.back();
-		if (square > y) {
+		utils::Span last_square = i == 1 ? base : utils::Span{squares.back()};
+
+		squares.emplace_back(last_square.size() * 2);
+		utils::Span square{squares.back()};
+		mult_ignore_sign(square, last_square, last_square, temp, karatsuba_temps);
+		cleanup(squares.back());
+		if (square <=> y > 0) { // if (square > y)
+			squares.pop_back();
 			break;
 		}
-		squares.emplace_back(std::move(square));
 	}
 	return squares;
 }
@@ -78,18 +86,28 @@ log(const is_BigInt_like auto& base, const is_BigInt_like auto& y) -> uint64_t {
 		return 0;
 	}
 
-	const auto squares = _private::calculate_squares(base, y);
+	const auto squares = _private::calculate_squares(base._span(), y._span());
 
 	uint64_t result = 0;
 	BigInt temp{y};
+	BigInt temp2;
+	BigInt reminder; // not used
+	DigitsVec temp_d, temp_af, temp_bf;
 
 	for (auto i = static_cast<uint8_t>(squares.size()); i --> 0;) {
-		const auto& square = squares[i];
-		if (square <= temp) {
-			temp /= square;
-			uint64_t mask = 1ull << i;
+		const auto square = utils::Span<const uint64_t>{squares[i]};
+		if (square <=> temp._span() <= 0) {  // (square <= temp)
+			// temp2 = temp / square:
+			_private::divmod_ignore_sign<false, true>(temp2, reminder, temp._span(), square, temp_d, temp_af, temp_bf);
+			std::swap(temp, temp2);
+
+			uint64_t mask = 1ull << (i + 1);
 			result |= mask;
 		}
+	}
+	if (base <= temp) {
+		uint64_t mask = 1ull << 0;
+		result |= mask;
 	}
 	return result;
 }
