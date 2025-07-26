@@ -646,9 +646,8 @@ operator-(BigInt&& a) -> BigInt {
 
 
 // bitwise shift operations:
-namespace bigint {
+namespace bigint::_private {
 
-namespace _private {
 CONSTEXPR_AUTO
 lshift_safe(uint64_t a, uint64_t b) {
 	return (b >= 64) ? 0 : a << b; // shifting by 64 bits for 64 bit int is undefined.
@@ -659,115 +658,121 @@ rshift_safe(uint64_t a, uint64_t b) {
 	return (b >= 64) ? 0 : a >> b; // shifting by 64 bits for 64 bit int is undefined.
 }
 
-}
-
-BIGINT_TRACY_CONSTEXPR_AUTO
-operator<<(const  is_BigInt_like auto &a, uint64_t digits) -> BigInt {
+BIGINT_TRACY_CONSTEXPR_VOID
+lshift(const utils::Span<uint64_t>& result, const utils::Span<const uint64_t>& a, std::make_unsigned_t<BigInt::size_type> digits) {
 	BIGINT_TRACY_ZONE_SCOPED;
-	if (is_zero(a)) {
-		return BigInt{0, a.sign()};
-	}
+	assert(!is_zero(a));
+	assert(result.size() >= a.size() + digits / 64);
 
-	const uint64_t start = digits / 64;
-	BigInt result{0, a.sign()};
-	result.resize(a.size() + start, 0);
+	const BigInt::size_type start = digits / 64;
 	digits %= 64;
-	result.set(start, a[0] << digits);
-	for (uint64_t i = 1; i < a.size(); ++i) {
-		const uint64_t lo = _private::rshift_safe(a[i-1], 64-digits);
-		const uint64_t hi = a[i] << digits;
-		result.set(i + start, lo | hi);
-	}
-	const auto last = _private::rshift_safe(a[a.size()-1], 64-digits);
+
+	const auto last = rshift_safe(a[a.size()-1], 64-digits);
 	if (digits > 0 && last != 0) {
-		result.append(last);
+		result[a.size() + start] = last;
 	}
-	return result;
+
+	for (BigInt::size_type i = a.size(); i --> 1;) {
+		const uint64_t lo = rshift_safe(a[i-1], 64-digits);
+		const uint64_t hi = a[i] << digits;
+		result[i + start] = lo | hi;
+	}
+	result[start] = a[0] << digits;
+
+	std::fill_n(result.begin(), start, 0);
 }
 
-BIGINT_TRACY_CONSTEXPR_AUTO
-operator>>(const  is_BigInt_like auto &a, uint64_t digits) -> BigInt {
+BIGINT_TRACY_CONSTEXPR_VOID
+rshift(const utils::Span<uint64_t>& result, const utils::Span<const uint64_t>& a, std::make_unsigned_t<BigInt::size_type> digits) {
 	BIGINT_TRACY_ZONE_SCOPED;
-	const uint64_t start = digits / 64;
-	if (is_zero(a) || a.size() <= start) {
-		return BigInt{0, a.sign()};
-	}
-	BigInt result{0, a.sign()};
-	result.resize(a.size() - start);
+	assert(!is_zero(a));
+	assert(a.size() > digits / 64);
+	assert(result.size() >= a.size() - digits / 64);
 
+	const BigInt::size_type start = digits / 64;
 	digits %= 64;
-	for (uint64_t i = start; i < a.size()-1; ++i) {
+
+	for (BigInt::size_type i = start; i < a.size()-1; ++i) {
 		const uint64_t lo = a[i] >> digits;
-		const uint64_t hi = _private::lshift_safe(a[i+1], 64-digits);
-		result.set(i - start, lo | hi);
+		const uint64_t hi = lshift_safe(a[i+1], 64-digits);
+		result[i - start] = lo | hi;
 	}
+
 	const auto last = a[a.size()-1] >> digits;
-	if (last != 0) {
-		result.set(result.size()-1, last);
-	} else {
-		result.remove_last();
+	result[a.size() - start - 1] = last;
+}
+
+}
+
+// bitwise shift operations:
+namespace bigint {
+
+/**
+ * @brief shifts the bits of `a` to the left by `n` bits. Supports assignment operations `lshift(a, a, n)`.
+ * @param result the result will be put in here.
+ * @param a the first operand.
+ * @param n how far to move the bits.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+lshift(BigInt& result, const is_BigInt_like auto &a, std::make_unsigned_t<BigInt::size_type> n) {
+	if (is_zero(a)) {
+		result.resize(0);
+		return;
 	}
+	result.sign() = a.sign();
+	auto asize = a.size();
+	result.resize(asize + n / 64 + 1, 0);
+	_private::lshift(result._span(), a._span().first(asize), n);
+	result.cleanup();
+}
+
+/**
+ * @brief shifts the bits of `a` to the right by `n` bits. Supports assignment operations `rshift(a, a, n)`.
+ * @param result the result will be put in here.
+ * @param a the first operand.
+ * @param n how far to move the bits.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+rshift(BigInt& result, const is_BigInt_like auto &a, std::make_unsigned_t<BigInt::size_type> n) {
+	const BigInt::size_type start = n / 64;
+	if (is_zero(a) || a.size() <= start) {
+		result.resize(0);
+		return;
+	}
+	result.sign() = a.sign();
+	result.resize(std::max(result.size(), a.size() - start));
+	_private::rshift(result._span(), a._span(), n);
+	result.resize(a.size() - start);
+	result.cleanup();
+}
+
+BIGINT_TRACY_CONSTEXPR_AUTO
+operator<<(const is_BigInt_like auto &a, std::make_unsigned_t<BigInt::size_type> digits) -> BigInt {
+	BigInt result;
+	lshift(result, a, digits);
+	return result;
+}
+
+BIGINT_TRACY_CONSTEXPR_AUTO
+operator>>(const is_BigInt_like auto &a, std::make_unsigned_t<BigInt::size_type> digits) -> BigInt {
+	BigInt result;
+	rshift(result, a, digits);
 	return result;
 }
 
 
 BIGINT_TRACY_CONSTEXPR_AUTO
-operator<<=(BigInt &a, uint64_t digits) -> BigInt& {
-	if (is_zero(a) || digits == 0) {
-		return a;
-	}
-
-	const uint64_t start = digits / 64;
-	digits %= 64;
-
-	const uint64_t asize = a.size();
-
-	a.resize(a.size() + start);
-
-	const auto last = _private::rshift_safe(a[asize-1], 64-digits);
-	if (digits > 0 && last != 0) {
-		a.append(last);
-	}
-
-	for (uint64_t i = asize; i --> 1;) {
-		const uint64_t lo = _private::rshift_safe(a[i-1], 64-digits);
-		const uint64_t hi = a[i] << digits;
-		a.set(i + start, lo | hi);
-	}
-	a.set(start, a[0] << digits);
-
-	for (uint64_t i = start; i --> 0;) {
-		a.set(i, 0);
-	}
-
+operator<<=(BigInt &a, std::make_unsigned_t<BigInt::size_type> digits) -> BigInt& {
+	lshift(a, a, digits);
 	return a;
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
-operator>>=(BigInt &a, uint64_t digits) -> BigInt& {
-	const uint64_t start = digits / 64;
-	if (a.size() <= start) {
-		a.resize(1);
-		a.set(0, 0);
+operator>>=(BigInt &a, std::make_unsigned_t<BigInt::size_type> digits) -> BigInt& {
+	if (digits == 0) {
 		return a;
 	}
-	if (is_zero(a) || digits == 0) {
-		return a;
-	}
-
-	digits %= 64;
-	for (uint64_t i = start; i < a.size()-1; ++i) {
-		const uint64_t lo = a[i] >> digits;
-		const uint64_t hi = _private::lshift_safe(a[i+1], 64-digits);
-		a.set(i - start, lo | hi);
-	}
-	const auto last = a[a.size()-1] >> digits;
-	a.resize(a.size() - start);
-	if (last != 0) {
-		a.set(a.size()-1, last);
-	} else {
-		a.remove_last();
-	}
+	rshift(a, a, digits);
 	return a;
 }
 

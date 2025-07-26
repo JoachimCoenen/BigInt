@@ -103,11 +103,19 @@ TEST(HelloTest, TestCreateFromString) {
 // Bitwise Shift
 namespace {
 
+TEST_BINARY_OPERATOR_BIGINT_F(LShift, BigInt, uint64_t, lshift(res, a, b), get_all_lshift_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(LShift, uint64_t, lshift(a, a, b), get_all_lshift_test_values())
+
 TEST_BINARY_OPERATOR_BIGINT(LShift, BigInt, uint64_t, a << b, get_all_lshift_test_values())
 
-TEST_BINARY_OPERATOR_BIGINT(RShift, BigInt, uint64_t, a >> b, get_all_rshift_test_values())
-
 TEST_ASSIGN_OPERATOR_BIGINT(LShift, uint64_t, a <<= b, get_all_lshift_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT_F(RShift, BigInt, uint64_t, rshift(res, a, b), get_all_rshift_test_values())
+
+TEST_ASSIGN_OPERATOR_BIGINT_F(RShift, uint64_t, rshift(a, a, b), get_all_rshift_test_values())
+
+TEST_BINARY_OPERATOR_BIGINT(RShift, BigInt, uint64_t, a >> b, get_all_rshift_test_values())
 
 TEST_ASSIGN_OPERATOR_BIGINT(RShift, uint64_t, a >>= b, get_all_rshift_test_values())
 
