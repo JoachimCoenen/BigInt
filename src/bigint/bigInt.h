@@ -1931,7 +1931,7 @@ _divide_loop(const DivModResult<utils::Span<uint64_t>>& result, const utils::Spa
 
 
 /**
- * @brief division & modulo ignoring any sign.
+ * @brief division & modulo ignoring any sign. Supports assignment operations `divmod(a, a, b)`.
  * @param quotient the quotient will be put in here. Size requirement: `result.size() == a.size()`.
  * @param a the dividend. Can be the same span as the quotient of the result (`result.q.data() == a.data()`).
  * @param b the divisor. Either `uint32_t` or `uint64_t`.
@@ -2163,7 +2163,7 @@ _fix_divmod_signs(BigInt& quotient, TRHS& remainder, const Sign a_sign, const TR
 }
 
 /**
- * @brief division with remainder.
+ * @brief division with remainder. Supports assignment operations `divmod(a, a, b)`.
  *
  * @param quotient the quotient result, will be untouched if `ignore_quotient==true`. Max size requirement: `quotient.size() == a.size() - b.size() + 1` (only if `ignore_quotient==true`).
  * @param a the dividend
@@ -2184,7 +2184,7 @@ divmod(BigInt& quotient, const is_BigInt_like auto &a, one_of<int32_t, uint32_t,
 
 
 /**
- * @brief integer division with remainder.
+ * @brief integer division with remainder. Does NOT support assignment operations.
  *
  * @param quotient the quotient result, will be untouched if `ignore_quotient==true`. Max size requirement: `quotient.size() == a.size() - b.size() + 1` (only if `ignore_quotient==true`).
  * @param remainder the dividend result, will be touched even if `ignore_remainder==true`! Max size requirement: `result.r.size() == a.size() + 2`.
@@ -2217,7 +2217,7 @@ divmod(BigInt& quotient, BigInt& remainder, const is_BigInt_like auto &a, const 
 namespace bigint {
 
 /**
- * @brief integer division with remainder.
+ * @brief integer division with remainder. Supports assignment operations `divmod(a, a, b)`.
  *
  * @param quotient the quotient result. Max size requirement: `quotient.size() == a.size() - b.size() + 1`.
  * @param a the dividend
@@ -2245,7 +2245,7 @@ divmod(const is_BigInt_like auto &a, one_of<int32_t, uint32_t, int64_t, uint64_t
 
 
 /**
- * @brief integer division with remainder.
+ * @brief integer division with remainder. Does NOT support assignment operations.
  *
  * @param quotient the quotient result. Max size requirement: `quotient.size() == a.size() - b.size() + 1`.
  * @param remainder the dividend result. Max size requirement: `result.r.size() == a.size() + 2`.
@@ -2283,7 +2283,7 @@ divmod(const is_BigInt_like auto &a, const is_BigInt_like auto &b) -> DivModResu
 namespace bigint {
 
 /**
- * @brief integer division.
+ * @brief integer division. Supports assignment operations `div(a, a, b)`.
  *
  * @param result the quotient result.
  * @param a the dividend
@@ -2295,7 +2295,7 @@ div(BigInt &result, const is_BigInt_like auto &a, one_of<int32_t, uint32_t, int6
 }
 
 /**
- * @brief integer division.
+ * @brief integer division. Does NOT support assignment operations.
  *
  * @param result the quotient result. Max size requirement: `quotient.size() == a.size() - b.size() + 1`.
  * @param a the dividend
@@ -2312,7 +2312,7 @@ div(BigInt& result, const is_BigInt_like auto &a, const is_BigInt_like auto &b, 
 }
 
 /**
- * @brief integer division.
+ * @brief integer division. Does NOT support assignment operations.
  *
  * @param result the quotient result. Max size requirement: `quotient.size() == a.size() - b.size() + 1`.
  * @param a the dividend
