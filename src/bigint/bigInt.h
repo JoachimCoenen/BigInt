@@ -2318,7 +2318,7 @@ div(BigInt &result, const is_BigInt_like auto &a, one_of<int32_t, uint32_t, int6
 BIGINT_TRACY_CONSTEXPR_VOID
 div(BigInt& result, const is_BigInt_like auto &a, const is_BigInt_like auto &b, DigitsVec& temp, DigitsVec& temp_af, DigitsVec& temp_bf) {
 	BigInt remainder;
-	_private::divmod<false, true>(result, remainder, a._span(), b._span(), temp, temp_af, temp_bf);
+	_private::divmod<false, true>(result, remainder, a, b, temp, temp_af, temp_bf);
 }
 
 /**
