@@ -289,6 +289,11 @@ public:
 	}
 
 	CONSTEXPR_AUTO
+	operator[](size_type index) const noexcept -> uint64_t {
+		return index >= 1 ? 0 : _value;
+	}
+
+	CONSTEXPR_AUTO
 	_span() const noexcept -> utils::Span<const uint64_t> {
 		return utils::Span{&_value, 1};
 	}

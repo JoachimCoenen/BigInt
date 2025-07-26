@@ -108,7 +108,7 @@ log10(const is_BigInt_like auto& y) -> uint64_t {
 		throw std::domain_error{utils::error_msg("integer log of a non-positive number is undefined.")};
 	}
 
-	return log(BigInt{10}, y);
+	return log(_private::IntegralAdapter{10}, y);
 }
 
 
@@ -125,7 +125,7 @@ log2(const is_BigInt_like auto& y) -> BigInt::size_type {
 		throw std::domain_error{utils::error_msg("integer log of a non-positive number is undefined.")};
 	}
 
-	return 64 * y.size() - utils::clzll(y[y.size() - 1]) - 1 ;
+	return 64 * y.size() - utils::clzll(y[y.size() - 1]) - 1;
 }
 
 
