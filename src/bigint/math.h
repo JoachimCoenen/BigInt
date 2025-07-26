@@ -432,32 +432,32 @@ lcm(const BigInt& u, const BigInt& v) -> BigInt {
 	return abs(u) / gcd(u, v) * abs(v);
 }
 
+
+namespace _private {
 /**
  * @brief Sums all digits in the given base ignoring any sign. E.g.: `digit_sum<10>(-12955) == 1 + 2 + 9 + 5 + 5 == 22`.
  * Supported bases are 2 - 64 (inclusive). The bases 2, 4, 8, 16, and 32 are considerable faster than any other base.
- * @tparam base
- * @param v
- * @return
  */
-template <int base = 10>
 BIGINT_TRACY_CONSTEXPR_AUTO
-digit_sum(const BigInt& v) -> uint64_t {
+digit_sum(const utils::Span<const uint64_t> v, uint_fast8_t base = 10) -> uint64_t {
 	BIGINT_TRACY_ZONE_SCOPED;
-	const uint32_t division_base = _private::base_conversion_32{base}.division_base; // 9 is the larges value for n such that 10^n fits into 32 bits
+	if (base > 64 || base < 2) {
+		std::string msg = "digit_sum only supports bases in the range 2 - 64 (inclusive).";
+		throw std::invalid_argument(utils::error_msg(std::move(msg)));
+	}
+	const auto conv = _private::base_conversion_64(base);
 
-	if (division_base != 0) {
-		DivModResult temp {v, (uint32_t)0};
-		temp.q.sign() = Sign::POS;
+	if (conv.division_base != 0) {
+		BigInt q{v, Sign::POS};
 
 		uint64_t sum = 0ull;
-		while (!is_zero(temp.q)) {
-			temp = divmod(temp.q, division_base);
-			uint32_t& digs = temp.r;
-			while (digs > 0) {
-				sum += digs % base;
-				digs /= base;
+		while (!is_zero(q)) {
+			auto digits = divmod(q, q, conv.division_base);
+			while (digits > 0) {
+				sum += digits % base;
+				digits /= base;
 			}
-			temp.q.cleanup();
+			q.cleanup();
 		}
 		return sum;
 
@@ -473,6 +473,16 @@ digit_sum(const BigInt& v) -> uint64_t {
 		}
 		return sum;
 	}
+}
+}
+
+/**
+ * @brief Sums all digits in the given base ignoring any sign. E.g.: `digit_sum<10>(-12955) == 1 + 2 + 9 + 5 + 5 == 22`.
+ * Supported bases are 2 - 64 (inclusive). The bases 2, 4, 8, 16, and 32 are considerable faster than any other base.
+ */
+BIGINT_TRACY_CONSTEXPR_AUTO
+digit_sum(const is_BigInt_like auto& v, uint_fast8_t base = 10) -> uint64_t {
+	return _private::digit_sum(v._span(), base);
 }
 
 }

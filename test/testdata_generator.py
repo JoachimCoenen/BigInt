@@ -1,4 +1,5 @@
 # This Python file uses the following encoding: utf-8
+import random
 import sys
 from dataclasses import dataclass, field
 import itertools as it
@@ -130,6 +131,7 @@ class Operation:
 	type_name: ClassVar[str] = 'abstract'
 	param_count: ClassVar[int] = 0
 	name: str
+	arg_for_param: Callable[[int], int | str] | None = field(default=None, kw_only=True)
 	op: Callable[[int, ...], int | str]
 	valid_for_args: Callable[[int, ...], bool] | None = None
 	modify_args: Callable[[int, ...], tuple[int, ...]] | None = field(default=None, kw_only=True)
@@ -166,7 +168,9 @@ class TriOperation(Operation):
 	testdata: list[int] | tuple[list[int], list[int], list[int]] = field(default_factory=lambda: TestdataSet.NORMAL, kw_only=True)
 
 
-def get_val_type(value: int) -> str:
+def get_val_type(value: int | str) -> str:
+	if isinstance(value, str):
+		return 'STR'
 	if value > UINT64_MAX_00:
 		return 'BIG'
 	elif value > INT64_MAX_00:
@@ -185,7 +189,7 @@ def get_val_type(value: int) -> str:
 		return 'BIG'
 
 
-def make_param(arg: int) -> str:
+def make_param(arg: int | str) -> str:
 	type_ = get_val_type(arg)
 	return f'{type_},{arg}'
 
@@ -197,7 +201,10 @@ def make_expected_result(operation: Operation, args: FilteredArgs) -> str:
 def make_operation_test(operation: Operation, args: FilteredArgs) -> str:
 	assert len(args) == operation.param_count, f'param count does not match: expected {operation.param_count}, but got {len(args)}'
 	expected = make_expected_result(operation, args)
-	cpp_args = ';'.join(make_param(arg) for arg in args)
+	if (arg_for_param := operation.arg_for_param) is not None:
+		cpp_args = ';'.join(make_param(arg_for_param(arg)) for arg in args)
+	else:
+		cpp_args = ';'.join(make_param(arg) for arg in args)
 	return f'{cpp_args};{expected}'
 
 
@@ -207,32 +214,6 @@ def make_all_operation_tests(filtered_args: Iterator[FilteredArgs], operation: O
 
 def sign(a: int) -> int:
 	return -1 if a < 0 else (1 if a > 0 else 0)
-
-
-def digit_sum_10(a: int) -> int:
-	return sum(bytes(str(abs(a)), encoding='utf-8')) - len(str(abs(a)))*ord('0')
-
-
-def digit_sum_16(a: int) -> int:
-	mapp = {
-		ord('0'): 0,
-		ord('1'): 1,
-		ord('2'): 2,
-		ord('3'): 3,
-		ord('4'): 4,
-		ord('5'): 5,
-		ord('6'): 6,
-		ord('7'): 7,
-		ord('8'): 8,
-		ord('9'): 9,
-		ord('a'): 10,
-		ord('b'): 11,
-		ord('c'): 12,
-		ord('d'): 13,
-		ord('e'): 14,
-		ord('f'): 15,
-	}
-	return sum(map(mapp.__getitem__, bytes(f'{abs(a):x}', encoding='utf-8')))
 
 
 def log2(y: int) -> int:
@@ -265,6 +246,32 @@ def digits_of_pow_result_approx(a: int, b: int) -> int:
 	return a.bit_length() * b * 10000000000 // 33219280949
 	# a.bit_length() * b / math.log2(10)
 	# math.log10(abs(a)) * b
+
+
+random.seed(b'bigint')  # ensure reproducible testdata
+
+
+def int_to_str(number: int, *, base: int, random_capitalization: bool = False) -> str:
+	if number == 0:
+		return "0"
+	has_sign = number < 0
+	number = abs(number)
+
+	digits = []
+	while number:
+		d = number % base
+		a = 'A' if random_capitalization and random.randint(0, 1) == 1 else 'a'  # use lower and upper-case letters.
+		digits.append(chr((ord(a) - 10 if d > 9 else ord('0')) + d))
+		number //= base
+	number_str = ''.join(digits[::-1])
+	return ('-' if has_sign else '') + number_str
+
+
+def digit_sum(number: int, *, base: int) -> int:
+	number = abs(number)
+	assert ord('a') == 97
+	assert ord('0') == 48
+	return sum(map(lambda x: x - (97 - 10 if x >= 97 else 48), bytes(int_to_str(number, base=base), encoding='utf-8')))
 
 
 BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
@@ -300,11 +307,37 @@ BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
 	BinOperation('bitwise_or',  lambda a, b: (abs(a) | abs(b)) * (-1 if (a < 0) or (b < 0) else +1)),
 	BinOperation('bitwise_xor', lambda a, b: (abs(a) ^ abs(b)) * (-1 if (a < 0) != (b < 0) else +1)),
 
+	UnaOperation('digit_sum_2',  lambda a: digit_sum(a, base=2)),
+	UnaOperation('digit_sum_3',  lambda a: digit_sum(a, base=3)),
+	UnaOperation('digit_sum_5',  lambda a: digit_sum(a, base=5)),
+	UnaOperation('digit_sum_10', lambda a: digit_sum(a, base=10)),
+	UnaOperation('digit_sum_13', lambda a: digit_sum(a, base=13)),
+	UnaOperation('digit_sum_16', lambda a: digit_sum(a, base=16)),
+	UnaOperation('digit_sum_32', lambda a: digit_sum(a, base=32)),
+	UnaOperation('digit_sum_35', lambda a: digit_sum(a, base=35)),
+	UnaOperation('digit_sum_36', lambda a: digit_sum(a, base=36)),
 
-	UnaOperation('digit_sum_10', lambda a: digit_sum_10(a)),
-	UnaOperation('digit_sum_16', lambda a: digit_sum_16(a)),
+	UnaOperation('to_string_2',  lambda a: int_to_str(a, base=2)),
+	UnaOperation('to_string_3',  lambda a: int_to_str(a, base=3)),
+	UnaOperation('to_string_5',  lambda a: int_to_str(a, base=5)),
+	UnaOperation('to_string_8',  lambda a: int_to_str(a, base=8)),
 	UnaOperation('to_string_10', lambda a: a),
-	UnaOperation('to_string_16', lambda a: ('-' if a < 0 else '') + f'{abs(a):x}'),
+	UnaOperation('to_string_13', lambda a: int_to_str(a, base=13)),
+	UnaOperation('to_string_16', lambda a: int_to_str(a, base=16)),
+	UnaOperation('to_string_32', lambda a: int_to_str(a, base=32)),
+	UnaOperation('to_string_35', lambda a: int_to_str(a, base=35)),
+	UnaOperation('to_string_36', lambda a: int_to_str(a, base=36)),
+
+	UnaOperation('from_string_2',  lambda a: a, arg_for_param=lambda a: int_to_str(a, base=2)),
+	UnaOperation('from_string_3',  lambda a: a, arg_for_param=lambda a: int_to_str(a, base=3)),
+	UnaOperation('from_string_5',  lambda a: a, arg_for_param=lambda a: int_to_str(a, base=5)),
+	UnaOperation('from_string_8',  lambda a: a, arg_for_param=lambda a: int_to_str(a, base=8)),
+	UnaOperation('from_string_10', lambda a: a, arg_for_param=lambda a: a),
+	UnaOperation('from_string_13', lambda a: a, arg_for_param=lambda a: int_to_str(a, base=13, random_capitalization=True)),
+	UnaOperation('from_string_16', lambda a: a, arg_for_param=lambda a: int_to_str(a, base=16, random_capitalization=True)),
+	UnaOperation('from_string_32', lambda a: a, arg_for_param=lambda a: int_to_str(a, base=32, random_capitalization=True)),
+	UnaOperation('from_string_35', lambda a: a, arg_for_param=lambda a: int_to_str(a, base=35, random_capitalization=True)),
+	UnaOperation('from_string_36', lambda a: a, arg_for_param=lambda a: int_to_str(a, base=36, random_capitalization=True)),
 
 	BinOperation('huge',   lambda a, b: 0, testdata=TestdataSet.HUGE),  # can be used for crude performance test
 	BinOperation('mix',    lambda a, b: 0, testdata=TestdataSet.MIX),   # can be used for crude performance test

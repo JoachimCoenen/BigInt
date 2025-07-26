@@ -91,7 +91,7 @@ For simplicity reasons, this overview will use `using bigint;`. If you prefer no
   log2(factorial(1000));              // log2() is computed in O(1)!
   lcm(factorial(100), pow(3, 100));   // least common multiple
   divmod(factorial(100), pow(3, 50)); // combined division and modulo
-  digit_sum<13>(factorial(100));      // digit sum in base 13
+  digit_sum(factorial(100), 13);      // digit sum in base 13
   // etc ...
   ```
 * All arithmetic and bitwise binary operators are also available as GMP-style methods, which can save on unnecessary allocations: 
@@ -107,11 +107,11 @@ For simplicity reasons, this overview will use `using bigint;`. If you prefer no
 * Easy string conversion even for decimal, hexadecimal, octal, binary, and other bases:
   ```c++
   constexpr auto a = from_string("-999888777666555444333222111000");
-  constexpr auto a = from_string<2>("-1011001101");
-  constexpr auto a = from_string<16>("-abc057");
-  constexpr auto c = from_string<7>("123456777") // does not compile, because '7' is not a valid digit in base 7
-  constexpr std::string base_10 = to_string<10>(-0xabc057_big)
-  constexpr std::string base_17 = to_string<17>(-0xabc057_big)
+  constexpr auto a = from_string("-1011001101", 2);
+  constexpr auto a = from_string("-abc057", 16);
+  constexpr auto c = from_string("123456777", 7); // does not compile, because '7' is not a valid digit in base 7
+  constexpr std::string base_10 = to_string(-0xabc057_big, 10)
+  constexpr std::string base_17 = to_string(-0xabc057_big, 17)
   ```
 * EasyConversion from / to integral types:
   ```c++
@@ -247,12 +247,11 @@ pow_mod(const BigInt& base, const BigInt& exp, const BigInt& mod) -> BigInt
 ```
 
 #### digit_sum(x)
-Sums all digits in the given base ignoring any sign. E.g.: `digit_sum<10>(-12955_big) == 1 + 2 + 9 + 5 + 5 == 22`.  
+Sums all digits in the given base ignoring any sign. E.g.: `digit_sum(-12955_big) == 1 + 2 + 9 + 5 + 5 == 22`.  
 Supported bases are 2 - 64 (inclusive). The bases 2, 4, 8, 16, and 32 are considerable faster than any other base.
 ```c++
-template <int base = 10>
 constexpr auto
-digit_sum(const BigInt& x) -> uint64_t
+digit_sum(const BigInt& x, uint_fast8_t base = 10) -> uint64_t
 ```
 
 #### factorial(x), aka. x!

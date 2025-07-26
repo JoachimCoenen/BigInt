@@ -144,6 +144,8 @@ enum class ValType {
 	N64 = 5,
 
 	BIG = 6,
+
+	STR = 76,
 };
 
 
@@ -158,6 +160,8 @@ enum class ParamType {
 	S64 = 4,
 
 	BIG = 6,
+
+	STR = 7,
 };
 
 using VT = ValType;
@@ -175,6 +179,8 @@ is_assignable(const ParamType param, const ValType value) {
 	case PT::S64:
 		return value == VT::U32 || value == VT::S32 || value == VT::N32 || value == VT::S64 || value == VT::N64;
 	case PT::BIG:
+		return value == VT::U32 || value == VT::S32 || value == VT::N32 || value == VT::S64 || value == VT::N64 || value == VT::BIG;
+	case PT::STR:
 		return true;
 	default:
 		// can never happen
@@ -195,6 +201,8 @@ param_type() {
 		return PT::S32;
 	} else if constexpr (std::is_same_v<bigint::BigInt, T>) {
 		return PT::BIG;
+	} else if constexpr (std::is_same_v<std::string, T>) {
+		return PT::STR;
 	} else {
 		static_assert(false, "unhandeled type provided");
 	}
@@ -202,7 +210,7 @@ param_type() {
 
 template <typename T>
 CONSTEXPR_AUTO
-str_to_int(const std::string_view str_value) {
+str_to_int(const std::string_view str_value) -> T {
 	if constexpr (std::is_same_v<T, uint64_t>) {
 		return bigint::utils::stoull(str_value);
 	} else if constexpr (std::is_same_v<T, int64_t>) {

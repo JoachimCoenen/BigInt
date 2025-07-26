@@ -29,9 +29,16 @@ TEST_BINARY_OPERATOR_BIGINT(Pow, BigInt, uint64_t, pow(a, b), get_all_pow_test_v
 
 TEST_TRINARY_OPERATOR_BIGINT(PowMod, BigInt, BigInt, BigInt, pow_mod(a, b, c), get_all_powmod_test_values())
 
-TEST_UNARY_OPERATOR(DigitSum_10, BigInt, uint64_t, digit_sum<10>(a), get_all_digit_sum_10_test_values(), uint64_t, res)
-
-TEST_UNARY_OPERATOR(DigitSum_16, BigInt, uint64_t, digit_sum<16>(a), get_all_digit_sum_16_test_values(), uint64_t, res)
+TEST_UNARY_OPERATOR(DigitSum,   BigInt, uint64_t, digit_sum(a), get_all_digit_sum_10_test_values(), uint64_t, res)
+TEST_UNARY_OPERATOR(DigitSum_2, BigInt, uint64_t, digit_sum(a, 2), get_all_digit_sum_2_test_values(), uint64_t, res)
+TEST_UNARY_OPERATOR(DigitSum_3, BigInt, uint64_t, digit_sum(a, 3), get_all_digit_sum_3_test_values(), uint64_t, res)
+TEST_UNARY_OPERATOR(DigitSum_5, BigInt, uint64_t, digit_sum(a, 5), get_all_digit_sum_5_test_values(), uint64_t, res)
+TEST_UNARY_OPERATOR(DigitSum_10, BigInt, uint64_t, digit_sum(a, 10), get_all_digit_sum_10_test_values(), uint64_t, res)
+TEST_UNARY_OPERATOR(DigitSum_13, BigInt, uint64_t, digit_sum(a, 13), get_all_digit_sum_13_test_values(), uint64_t, res)
+TEST_UNARY_OPERATOR(DigitSum_16, BigInt, uint64_t, digit_sum(a, 16), get_all_digit_sum_16_test_values(), uint64_t, res)
+TEST_UNARY_OPERATOR(DigitSum_32, BigInt, uint64_t, digit_sum(a, 32), get_all_digit_sum_32_test_values(), uint64_t, res)
+TEST_UNARY_OPERATOR(DigitSum_35, BigInt, uint64_t, digit_sum(a, 35), get_all_digit_sum_35_test_values(), uint64_t, res)
+TEST_UNARY_OPERATOR(DigitSum_36, BigInt, uint64_t, digit_sum(a, 36), get_all_digit_sum_36_test_values(), uint64_t, res)
 
 }
 

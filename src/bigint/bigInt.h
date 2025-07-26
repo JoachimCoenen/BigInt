@@ -4,6 +4,7 @@
 
 // standard library
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <sstream>
@@ -47,7 +48,7 @@ namespace bigint {
 
 class BigInt;
 BIGINT_TRACY_CONSTEXPR_AUTO
-from_string(std::string_view input) -> BigInt;
+from_string(std::string_view input, uint_fast8_t base = 10) -> BigInt;
 
 CONSTEXPR_AUTO
 is_neg(const is_BigInt_like auto &value) -> bool;
@@ -2446,8 +2447,8 @@ operator%=(BigInt &a, const is_BigInt_like auto &b) -> BigInt& {
 
 namespace bigint::_private {
 
-consteval uint8_t calculate_base_power_64(uint32_t base) {
-	// formula: result =floor(64 / log2(base))
+constexpr uint8_t calculate_base_power_64(uint32_t base) {
+	// formula: result = floor(64 / log2(base))
 	switch (base) {
 	case 2:
 		return 64;
@@ -2491,15 +2492,15 @@ consteval uint8_t calculate_base_power_64(uint32_t base) {
 }
 
 struct base_conversion_64 {
-	explicit consteval base_conversion_64(uint32_t base) noexcept
+	explicit constexpr base_conversion_64(uint32_t base) noexcept
 		: base_power(calculate_base_power_64(base)), //  = 19 for base 10;
 		division_base(utils::ipow(base, base_power)) {}
 	uint8_t base_power;
 	uint64_t division_base;
 };
 
-consteval uint8_t calculate_base_power_32(uint32_t base) {
-	// formula: result =floor(64 / log2(base))
+constexpr uint8_t calculate_base_power_32(uint32_t base) {
+	// formula: result = floor(32 / log2(base))
 	switch (base) {
 	case 2:
 		return 32;
@@ -2531,7 +2532,7 @@ consteval uint8_t calculate_base_power_32(uint32_t base) {
 }
 
 struct base_conversion_32 {
-	explicit consteval base_conversion_32(uint32_t base) noexcept
+	explicit constexpr base_conversion_32(uint32_t base) noexcept
 		: base_power(calculate_base_power_32(base)), //  = 9 for base 10;
 		division_base(static_cast<uint32_t>(utils::ipow(base, base_power))) {}
 	uint8_t base_power;
@@ -2543,16 +2544,14 @@ to_char(uint8_t d) -> char {
 	return (d > 9 ? 'a' - 10 : '0') + d;
 }
 
-template <int base, uint64_t len>
-BIGINT_TRACY_CONSTEXPR_AUTO
-to_string_padded_generic(uint64_t val) -> std::string {
-	std::string result(len, '0');
+BIGINT_TRACY_CONSTEXPR_VOID
+to_string_padded_generic(std::string& result, uint64_t val, uint_fast8_t base, uint_fast8_t len) {
 	for (auto i = len; i --> 0;) {
-		auto d = static_cast<uint8_t>(val % base);
+		auto d = static_cast<uint_fast8_t>(val % base);
 		val /= base;
-		result[i] = to_char(d);
+		result.push_back(to_char(d));
 	}
-	return result;
+	assert(val == 0);
 }
 
 }
@@ -2561,77 +2560,91 @@ to_string_padded_generic(uint64_t val) -> std::string {
 // to_string, from_string, & digit_sum:
 namespace bigint {
 namespace _private {
-	template <int base>
 	BIGINT_TRACY_CONSTEXPR_AUTO
-	to_string_ignore_sign(const utils::Span<const uint64_t> &v) -> std::string {
-		constexpr auto conv = base_conversion_32(base);
+	to_string(const utils::Span<const uint64_t> &v, uint_fast8_t base, bool isNegative) -> std::string {
+		if (base > 36 || base < 2) {
+			std::string msg = "to_string only supports bases in the range 2 - 36 (inclusive).";
+			throw std::invalid_argument(utils::error_msg(std::move(msg)));
+		}
+		auto conv = base_conversion_32(base);
 
 		std::string result;
-		if constexpr (conv.division_base != 0) {
-			DivModResult temp{BigInt{v, Sign::POS}, (uint32_t)0};
-
-			while (temp.q > 0) {
-				temp = divmod(temp.q, conv.division_base);
-				auto& digs = temp.r;
-				result.insert(0, to_string_padded_generic<base, conv.base_power>(digs));
-				temp.q.cleanup();
+		if (conv.division_base != 0) {
+			// DivModResult temp{BigInt{v, Sign::POS}, (uint32_t)0};
+			BigInt q{v, Sign::POS};
+			uint64_t r;
+			while (q > 0) {
+				auto digits = divmod(q, q, conv.division_base);
+				to_string_padded_generic(result, digits, base, conv.base_power);
 			}
+			while (!result.empty() && result.back() == '0') {
+				result.pop_back();
+			}
+			if (isNegative) {
+				result.push_back('-');
+			}
+			std::ranges::reverse(result);
+
 		} else { // special case for when base is a divider of 32.
-			constexpr auto base_power = base_conversion_64{base}.base_power;
-			result.append(base_power * v.size(), '0');
-			for (BigInt::size_type i = v.size(); i --> 0;) {
+			auto base_power = base_conversion_64{base}.base_power;
+
+			result.reserve(base_power * (v.size()) + (isNegative ? 1 : 0));
+
+			uint64_t last_digs = v.back();
+			while (last_digs > 0) {
+				auto d = static_cast<uint_fast8_t>(last_digs % base);
+				last_digs /= base;
+				result.push_back(to_char(d));
+			}
+
+			if (isNegative) {
+				result.push_back('-');
+			}
+			std::ranges::reverse(result);
+
+			const auto r0 = result.size();
+			for (BigInt::size_type i = 1; i < v.size(); ++i) {
+				result.append(base_power, '0');
 				uint64_t digs = v[v.size() - i - 1];
-				for (uint8_t j = base_power; j --> 0;) {
-					auto d = static_cast<uint8_t>(digs % base);
+				for (uint_fast8_t j = base_power; j --> 0;) {
+					auto d = static_cast<uint_fast8_t>(digs % base);
 					digs /= base;
-					result.at((i) * base_power + j) = to_char(d);
+					result.at(r0 + (i - 1) * base_power + j) = to_char(d);
 				}
 			}
 		}
-
-		const auto index = result.find_first_of("123456789abcdefghijklmnopqrstuvwxyz");
-		result.erase(0, index);
 		if (result.empty()) {
-			result = "0";
+			result.push_back('0');
 		}
 		return result;
 	}
 }
 
 
-template <int base>
 BIGINT_TRACY_CONSTEXPR_AUTO
-to_string(const is_BigInt_like auto& v) -> std::string {
-	auto result = _private::to_string_ignore_sign<base>(v._span());
-	if (is_neg(v)) {
-		result.insert(0, "-");
-	}
+to_string(const is_BigInt_like auto& v, uint8_t base = 10) -> std::string {
+	auto result = _private::to_string(v._span(), base, is_neg(v));
 	return result;
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
 to_string_base2(const is_BigInt_like auto& v) -> std::string {
-	return to_string<2>(v);
+	return to_string(v, 2);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
 to_string_base8(const is_BigInt_like auto& v) -> std::string {
-	return to_string<8>(v);
+	return to_string(v, 8);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
 to_string_base10(const is_BigInt_like auto& v) -> std::string {
-	return to_string<10>(v);
+	return to_string(v);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
 to_string_base16(const is_BigInt_like auto& v) -> std::string {
-	return to_string<16>(v);
-}
-
-BIGINT_TRACY_CONSTEXPR_AUTO
-to_string(const is_BigInt_like auto& v) -> std::string {
-	return to_string_base10(v);
+	return to_string(v, 16);
 }
 
 
@@ -2663,10 +2676,14 @@ to_debug_string(const is_BigInt_like auto& value) -> std::string {
 	return std::string{"IBigIntLike {_data: "} + _to_debug_string_data(value) + ", _sign: " + sign + "}";
 }
 
-template <int base = 10>
 BIGINT_TRACY_CONSTEXPR_AUTO
-from_string(const std::string_view input) -> BigInt {
-	constexpr auto conv = _private::base_conversion_64(base);
+// from_string(const std::string_view input, uint_fast8_t base = 10)  default value for base is already defined in forward declaration.
+from_string(const std::string_view input, uint_fast8_t base) -> BigInt {
+	if (base > 36 || base < 2) {
+		std::string msg = "from_string only supports bases in the range 2 - 36 (inclusive).";
+		throw std::invalid_argument(utils::error_msg(std::move(msg)));
+	}
+	const auto conv = _private::base_conversion_64(base);
 
 	BigInt result{0};
 
@@ -2676,7 +2693,11 @@ from_string(const std::string_view input) -> BigInt {
 
 	const BigInt::size_type i0 = input[0] == '-' or input[0] == '+' ? 1 : 0;
 
-	if constexpr (conv.division_base != 0) {
+	if (conv.division_base != 0) {
+		auto expected_size = static_cast<BigInt::size_type>(std::ceil(static_cast<double>(input.size() - i0) * std::log2(base) / 64.)) + 1;
+		if (expected_size > 2) {
+			result.reserve(expected_size);
+		}
 		for (BigInt::size_type i = i0; i < input.size(); i += conv.base_power) {
 			auto substr = std::string_view(input).substr(i, conv.base_power);
 			auto mul = substr.size() == conv.base_power ? conv.division_base : utils::ipow(base, static_cast<uint8_t>(substr.size()));
@@ -2684,12 +2705,11 @@ from_string(const std::string_view input) -> BigInt {
 			result *= mul;
 			result += add;
 		}
-		result.sign() = input[0] == '-' ? Sign::NEG : Sign::POS;
-	} else { // special case for when base is a divider of 32.
 
+	} else { // special case for when base is a divider of 32.
 		const auto digit_count = input.size() - i0;
-		const auto big_int_digit_count = std::max<BigInt::size_type>(0, digit_count / conv.base_power + (digit_count % conv.base_power > 0 ? 1 : 0));
-		result.resize(big_int_digit_count);
+		const auto expected_size = std::max<BigInt::size_type>(0, digit_count / conv.base_power + (digit_count % conv.base_power > 0 ? 1 : 0));
+		result.resize(expected_size);
 
 		BigInt::size_type i = input.size();
 		for (BigInt::size_type k = 0; k < result.size(); k += 1, i -= conv.base_power) {
@@ -2699,32 +2719,28 @@ from_string(const std::string_view input) -> BigInt {
 			result.set(k, add);
 		}
 	}
+	result.sign() = input[0] == '-' ? Sign::NEG : Sign::POS;
 	return result;
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
 from_string_base2(const std::string_view input) -> BigInt {
-	return from_string<2>(input);
+	return from_string(input, 2);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
 from_string_base8(const std::string_view input) -> BigInt {
-	return from_string<8>(input);
+	return from_string(input, 8);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
 from_string_base10(const std::string_view input) -> BigInt {
-	return from_string<10>(input);
+	return from_string(input, 10);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
 from_string_base16(const std::string_view input) -> BigInt {
-	return from_string<16>(input);
-}
-
-BIGINT_TRACY_CONSTEXPR_AUTO
-from_string(const std::string_view input) -> BigInt {
-	return from_string_base10(input);
+	return from_string(input, 16);
 }
 
 

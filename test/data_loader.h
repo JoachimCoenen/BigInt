@@ -94,6 +94,9 @@ to_val_type(const std::string& line) -> ValType {
 	if (line == "BIG") {
 		return ValType::BIG;
 	}
+	if (line == "STR") {
+		return ValType::STR;
+	}
 	throw std::runtime_error(std::string("Unknown ValType '") + line + "'.");
 }
 

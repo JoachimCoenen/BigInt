@@ -484,9 +484,44 @@ TEST_DIVMOD(Divmod, BigInt, int32_t, divmod(a, b), int32_t, res.r)
 // to_string
 namespace {
 
-TEST_UNARY_OPERATOR(to_string_10, BigInt, std::string, bigint::to_string_base10(a), get_all_to_string_10_test_values(), std::string, res)
+TEST_UNARY_OPERATOR(to_string, BigInt, std::string, to_string(a), get_all_to_string_10_test_values(), std::string, res)
+TEST_UNARY_OPERATOR(to_string_base2, BigInt, std::string, to_string_base2(a), get_all_to_string_2_test_values(), std::string, res)
+TEST_UNARY_OPERATOR(to_string_base8, BigInt, std::string, to_string_base8(a), get_all_to_string_8_test_values(), std::string, res)
+TEST_UNARY_OPERATOR(to_string_base10, BigInt, std::string, to_string_base10(a), get_all_to_string_10_test_values(), std::string, res)
+TEST_UNARY_OPERATOR(to_string_base16, BigInt, std::string, to_string_base16(a), get_all_to_string_16_test_values(), std::string, res)
 
-TEST_UNARY_OPERATOR(to_string_16, BigInt, std::string, bigint::to_string_base16(a), get_all_to_string_16_test_values(), std::string, res)
+TEST_UNARY_OPERATOR(to_string_2, BigInt, std::string, to_string(a, 2), get_all_to_string_2_test_values(), std::string, res)
+TEST_UNARY_OPERATOR(to_string_3, BigInt, std::string, to_string(a, 3), get_all_to_string_3_test_values(), std::string, res)
+TEST_UNARY_OPERATOR(to_string_5, BigInt, std::string, to_string(a, 5), get_all_to_string_5_test_values(), std::string, res)
+TEST_UNARY_OPERATOR(to_string_10, BigInt, std::string, to_string(a, 10), get_all_to_string_10_test_values(), std::string, res)
+TEST_UNARY_OPERATOR(to_string_13, BigInt, std::string, to_string(a, 13), get_all_to_string_13_test_values(), std::string, res)
+TEST_UNARY_OPERATOR(to_string_16, BigInt, std::string, to_string(a, 16), get_all_to_string_16_test_values(), std::string, res)
+TEST_UNARY_OPERATOR(to_string_32, BigInt, std::string, to_string(a, 32), get_all_to_string_32_test_values(), std::string, res)
+TEST_UNARY_OPERATOR(to_string_35, BigInt, std::string, to_string(a, 35), get_all_to_string_35_test_values(), std::string, res)
+TEST_UNARY_OPERATOR(to_string_36, BigInt, std::string, to_string(a, 36), get_all_to_string_36_test_values(), std::string, res)
+
+}
+
+
+// from_string
+namespace {
+using string = std::string;
+
+TEST_UNARY_OPERATOR_BIGINT(from_string, string, from_string(a), get_all_from_string_10_test_values())
+TEST_UNARY_OPERATOR_BIGINT(from_string_base2, string, from_string_base2(a), get_all_from_string_2_test_values())
+TEST_UNARY_OPERATOR_BIGINT(from_string_base8, string, from_string_base8(a), get_all_from_string_8_test_values())
+TEST_UNARY_OPERATOR_BIGINT(from_string_base10, string, from_string_base10(a), get_all_from_string_10_test_values())
+TEST_UNARY_OPERATOR_BIGINT(from_string_base16, string, from_string_base16(a), get_all_from_string_16_test_values())
+
+TEST_UNARY_OPERATOR_BIGINT(from_string_2, string, from_string(a, 2), get_all_from_string_2_test_values())
+TEST_UNARY_OPERATOR_BIGINT(from_string_3, string, from_string(a, 3), get_all_from_string_3_test_values())
+TEST_UNARY_OPERATOR_BIGINT(from_string_5, string, from_string(a, 5), get_all_from_string_5_test_values())
+TEST_UNARY_OPERATOR_BIGINT(from_string_10, string, from_string(a, 10), get_all_from_string_10_test_values())
+TEST_UNARY_OPERATOR_BIGINT(from_string_13, string, from_string(a, 13), get_all_from_string_13_test_values())
+TEST_UNARY_OPERATOR_BIGINT(from_string_16, string, from_string(a, 16), get_all_from_string_16_test_values())
+TEST_UNARY_OPERATOR_BIGINT(from_string_32, string, from_string(a, 32), get_all_from_string_32_test_values())
+TEST_UNARY_OPERATOR_BIGINT(from_string_35, string, from_string(a, 35), get_all_from_string_35_test_values())
+TEST_UNARY_OPERATOR_BIGINT(from_string_36, string, from_string(a, 36), get_all_from_string_36_test_values())
 
 }
 
