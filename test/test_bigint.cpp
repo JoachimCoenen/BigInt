@@ -280,15 +280,15 @@ TEST_BINARY_OPERATOR_BIGINT_F(Mul, BigInt, uint32_t, mult(res, a, b), get_all_mu
 
 TEST_BINARY_OPERATOR_BIGINT_F(Mul, BigInt, int32_t, mult(res, a, b), get_all_mul_test_values())
 
-TEST_BINARY_OPERATOR_BIGINT_F(MulNaive, BigInt, BigInt, DigitsVec tmp; mult_naive(res, a, b, tmp), get_all_mul_test_values())
+TEST_BINARY_OPERATOR_BIGINT_F(MulNaive, BigInt, BigInt, mult_naive(res, a, b), get_all_mul_test_values())
 
 TEST_BINARY_OPERATOR_BIGINT_F(MulKaratsuba_f1, BigInt, BigInt, KaratsubaStepTemps tmp; mult_karatsuba(res, a, b, tmp), get_all_mul_test_values())
 TEST_BINARY_OPERATOR_BIGINT_F(MulKaratsuba_f2, BigInt, BigInt, KaratsubaStepTemps tmp; mult_karatsuba(res, a, b, tmp), get_all_mul_karatsuba_test_values())
 
 TEST_BINARY_OPERATOR_BIGINT_F(Mul_f1, BigInt, BigInt, mult(res, a, b), get_all_mul_test_values())
 
-TEST_BINARY_OPERATOR_BIGINT_F(Mul_f2, BigInt, BigInt, DigitsVec tmp; utils::UniquePtr<KaratsubaStepTemps> tmp2; mult(res, a, b, tmp, tmp2), get_all_mul_test_values())
-TEST_BINARY_OPERATOR_BIGINT_F(Mul_f3, BigInt, BigInt, DigitsVec tmp; utils::UniquePtr<KaratsubaStepTemps> tmp2; mult(res, a, b, tmp, tmp2), get_all_mul_karatsuba_test_values())
+TEST_BINARY_OPERATOR_BIGINT_F(Mul_f2, BigInt, BigInt, utils::UniquePtr<KaratsubaStepTemps> tmp2; mult(res, a, b, tmp2), get_all_mul_test_values())
+TEST_BINARY_OPERATOR_BIGINT_F(Mul_f3, BigInt, BigInt, utils::UniquePtr<KaratsubaStepTemps> tmp2; mult(res, a, b, tmp2), get_all_mul_karatsuba_test_values())
 
 TEST_ASSIGN_OPERATOR_BIGINT_F(Mul, uint64_t, mult(a, a, b), get_all_mul_test_values())
 

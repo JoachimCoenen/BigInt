@@ -365,10 +365,9 @@ But luckily there are many ways to reduce such allocations:
       const is_BigInt_like auto& d
   ) -> BigInt {
       BigInt temp1, temp2;
-      DigitsVec temp;
-      mult(temp1, a, b,     temp);
-      mult(temp2, temp1, c, temp);
-      mult(temp1, temp2, d, temp);
+      mult(temp1, a, b);
+      mult(temp2, temp1, c);
+      mult(temp1, temp2, d);
       return temp1;
   }
   ```

@@ -1536,40 +1536,53 @@ _mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<c
 }
 
 /**
+ * @brief multiples `a` and `b` ignoring their signs and adds that to `result`:  `result += a * b;`
+ * @param result the result will be put in here. Size requirement: `result.size() == a.size() + 1`.
+ * @param a the first operand
+ * @param b the second operand.
+ */
+BIGINT_TRACY_CONSTEXPR_VOID
+_addmul_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, uint64_t b) {
+	assert(result.size() == a.size() + 1);
+
+	uint64_t c = 0; // carry
+	BigInt::size_type i = 0;
+	for (; i < a.size(); i++) {
+		const auto rc = mult(a[i], b);
+		auto mult_i = rc.lo + c;
+		c = rc.hi + (mult_i < c ? 1 : 0); // account for addition overflow
+		auto result_i = result[i] + mult_i;
+		c += (result_i < mult_i ? 1 : 0); // account for addition overflow
+		result[i] = result_i;
+	}
+
+	// handle last multiplication carry
+	result[i] = c;
+}
+
+/**
  * @brief multiples `a` and `b` ignoring their signs.
  * @param result the result will be put in here. Size requirement: `result.size() == a.size() + b.size()`.
  * @param a the operand with the most digits.
  * @param b the operand with the least digits.
- * @param temp_vec a temporary. Max size requirement: `temp.size() == a.size() + 1`.
  */
 BIGINT_TRACY_CONSTEXPR_VOID
-_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b, DigitsVec &temp_vec) {
+_mult_naive_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a, const utils::Span<const uint64_t> &b) {
 	BIGINT_TRACY_ZONE_SCOPED;
-	BigInt::size_type temp_size = a.size() + 1;
+	assert(result.size() == a.size() + b.size());
 
 	// first iteration step (performed inline):
-	_mult_naive_ignore_sign(rmasked(result, 0, temp_size + 1), a, b[0]);
+	_mult_naive_ignore_sign(rmasked(result, 0, a.size() + 1), a, b[0]);
 
 	// all other iteration steps:
-	BigInt::size_type i = 1;
-	if (b.size() > 1) {
-		temp_vec.resize(temp_size, 0);
-		utils::Span<uint64_t> temp{temp_vec};
-		for (; i < b.size(); i++) {
-			_mult_naive_ignore_sign(temp, a, b[i]);
-			_add_ignore_sign(rmasked(result, i, temp_size + 1), rmasked(result, i, temp_size), temp);
-		}
-	}
-
-	i += temp_size + 1;
-	for (; i < result.size(); ++i) {
-		result[i] = 0;
+	for (BigInt::size_type i = 1; i < b.size(); i++) {
+		_addmul_naive_ignore_sign(rmasked(result, i, a.size() + 1), a, b[i]);
 	}
 }
 
 // forward declaration:
 BIGINT_TRACY_CONSTEXPR_VOID
-mult_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a_, const utils::Span<const uint64_t> &b_, DigitsVec& temp, utils::UniquePtr<KaratsubaStepTemps>& karatsuba_temps);
+mult_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a_, const utils::Span<const uint64_t> &b_, utils::UniquePtr<KaratsubaStepTemps>& karatsuba_temps);
 
 /**
  * @brief multiplies two integers ignoring their sign using the Karatsuba algorithm. `a.size()` *must* be equal or greater than `b.size()`.
@@ -1599,11 +1612,11 @@ _mult_karatsuba_ignore_sign(const utils::Span<uint64_t> &result, const utils::Sp
 	auto &local_temps = temps.local_temps;
 
 	temps.ac.resize(a.size() + c.size());
-	mult_ignore_sign(temps.ac_span(), a, c, local_temps->ab_cd, local_temps);
+	mult_ignore_sign(temps.ac_span(), a, c, local_temps);
 	cleanup(temps.ac);
 
 	temps.bd.resize(b.size() + d.size());
-	mult_ignore_sign(temps.bd_span(), b, d, local_temps->ab_cd, local_temps);
+	mult_ignore_sign(temps.bd_span(), b, d, local_temps);
 	cleanup(temps.bd);
 
 
@@ -1616,7 +1629,7 @@ _mult_karatsuba_ignore_sign(const utils::Span<uint64_t> &result, const utils::Sp
 	cleanup(temps.c_d);
 
 	temps.ab_cd.resize(temps.a_b.size() + temps.c_d.size());
-	mult_ignore_sign(temps.ab_cd_span(), temps.a_b_span(), temps.c_d_span(), local_temps->ab_cd, local_temps);
+	mult_ignore_sign(temps.ab_cd_span(), temps.a_b_span(), temps.c_d_span(), local_temps);
 	cleanup(temps.ab_cd);
 
 	[[maybe_unused]] auto sign = sub_ignore_sign(temps.ab_cd_span(), temps.ab_cd_span(), temps.ac_span());
@@ -1677,13 +1690,10 @@ _mult_ignore_sign_shortcuts(BigInt &result, const utils::Span<const uint64_t>& a
  * @param result the result will be put in here. Size requirement: `result.size() == a.size() + b.size()`.
  * @param a_ the first operand.
  * @param b_ the second operand.
- * @param temp a temporary. Max size requirement: `temp.size() == max(a.size(), b.size()) + 1` if
- *             `MultiplicationAlgorithm::NAIVE == determine_multiplication_algorithm(a.size(), b.size())`, otherwise
- *             there's no size requirement.
  * @param karatsuba_temps temporaries for karatsuba multiplication. Can be a nullptr. Will be filled only if needed.
  */
 BIGINT_TRACY_CONSTEXPR_VOID
-mult_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a_, const utils::Span<const uint64_t> &b_, DigitsVec& temp, utils::UniquePtr<KaratsubaStepTemps>& karatsuba_temps) {
+mult_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const uint64_t> &a_, const utils::Span<const uint64_t> &b_, utils::UniquePtr<KaratsubaStepTemps>& karatsuba_temps) {
 	if (_mult_ignore_sign_shortcuts(result, a_, b_)) {
 		return;
 	}
@@ -1693,7 +1703,7 @@ mult_ignore_sign(const utils::Span<uint64_t> &result, const utils::Span<const ui
 
 	switch (determine_multiplication_algorithm(a.size(), b.size())) {
 	case MultiplicationAlgorithm::NAIVE:
-		_mult_naive_ignore_sign(result, a, b, temp);
+		_mult_naive_ignore_sign(result, a, b);
 		return;
 	case MultiplicationAlgorithm::KARATSUBA:
 		if (!karatsuba_temps) {
@@ -1749,10 +1759,9 @@ mult(BigInt &result, is_BigInt_like auto &a, std::signed_integral auto b) {
  * @param result the result will be put in here.
  * @param lhs the first operand.
  * @param rhs the second operand.
- * @param temp a temporary. Max size requirement: `temp.size() == max(a.size(), b.size()) + 1`.
  */
 BIGINT_TRACY_CONSTEXPR_VOID
-mult_naive(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_like auto &rhs, DigitsVec& temp) {
+mult_naive(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_like auto &rhs) {
 	assert_release_msg(&result != &lhs._bigint(), "result and first argument must be separate instances");
 	assert_release_msg(&result != &rhs._bigint(), "result and second argument must be separate instances");
 	if (_private::_mult_ignore_sign_shortcuts(result, lhs._span(), rhs._span())) {
@@ -1761,9 +1770,9 @@ mult_naive(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_like 
 	result.resize(lhs.size() + rhs.size());
 	result.sign() = _private::mult_sign(lhs.sign(), rhs.sign());
 	if (rhs.size() > lhs.size()) { // put the number with more digits first.
-		_private::_mult_naive_ignore_sign(result._span(), rhs._span(), lhs._span(), temp);
+		_private::_mult_naive_ignore_sign(result._span(), rhs._span(), lhs._span());
 	} else {
-		_private::_mult_naive_ignore_sign(result._span(), lhs._span(), rhs._span(), temp);
+		_private::_mult_naive_ignore_sign(result._span(), lhs._span(), rhs._span());
 	}
 	result.cleanup();
 }
@@ -1797,17 +1806,14 @@ mult_karatsuba(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_l
  * @param result the result will be put in here.
  * @param a the first operand.
  * @param b the second operand.
- * @param temp a temporary. Max size requirement: `temp.size() == max(a.size(), b.size()) + 1` if
- *             `MultiplicationAlgorithm::NAIVE == determine_multiplication_algorithm(a.size(), b.size())`, otherwise
- *             there's no size requirement.
  * @param karatsuba_temps temporaries for karatsuba multiplication. Can be a nullptr. Will be filled only if needed.
  */
 BIGINT_TRACY_CONSTEXPR_VOID
-mult(BigInt &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b, DigitsVec& temp, utils::UniquePtr<KaratsubaStepTemps>& karatsuba_temps) {
+mult(BigInt &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b, utils::UniquePtr<KaratsubaStepTemps>& karatsuba_temps) {
 	assert_release_msg(&result != &a._bigint(), "result and first argument must be separate instances");
 	assert_release_msg(&result != &b._bigint(), "result and second argument must be separate instances");
 	result.resize(a.size() + b.size());
-	_private::mult_ignore_sign(result._span(), a._span(), b._span(), temp, karatsuba_temps);
+	_private::mult_ignore_sign(result._span(), a._span(), b._span(), karatsuba_temps);
 	result.sign() = _private::mult_sign(a.sign(), b.sign());
 	result.cleanup();
 }
@@ -1821,9 +1827,8 @@ mult(BigInt &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b,
  */
 BIGINT_TRACY_CONSTEXPR_VOID
 mult(is_BigInt_like auto &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b) {
-	DigitsVec temp;
 	utils::UniquePtr<KaratsubaStepTemps> temps;
-	mult(result, a, b, temp, temps);
+	mult(result, a, b, temps);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
