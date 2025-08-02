@@ -94,7 +94,7 @@ log(const is_BigInt_like auto& base, const is_BigInt_like auto& y) -> uint64_t {
 	DigitsVec temp_d, temp_af, temp_bf;
 
 	for (auto i = static_cast<uint8_t>(squares.size()); i --> 0;) {
-		const auto square = utils::Span<const uint64_t>{squares[i]};
+		const utils::Span<const uint64_t> square (squares[i]);
 		if (square <=> temp._span() <= 0) {  // (square <= temp)
 			// temp2 = temp / square:
 			_private::divmod_ignore_sign<false, true>(temp2, reminder, temp._span(), square, temp_d, temp_af, temp_bf);

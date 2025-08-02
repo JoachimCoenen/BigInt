@@ -371,6 +371,13 @@ public:
 		: Span(arr.data(), N)
 	{ }
 
+	template <class T2>
+	requires (std::is_const_v<T> && !std::is_const_v<T2> && std::is_same_v<std::remove_const_t<T>, T2>)
+	explicit constexpr
+	Span(const std::vector<T2>& vec) noexcept
+		: Span(vec.data(), vec.size())
+	{ }
+
 	explicit constexpr
 	Span(std::vector<T>& vec) noexcept
 		: Span(vec.data(), vec.size())
