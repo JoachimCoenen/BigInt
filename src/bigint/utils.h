@@ -275,6 +275,12 @@ uint64_t __inline div_u128_saturate(uint64_t high_dividend, uint64_t low_dividen
 	}
 }
 
+void __inline mul_u128(uint64_t lhs, uint64_t rhs, uint64_t *hi, uint64_t *lo) {
+	auto result = static_cast<_private::uint128_t_>(lhs) * rhs;
+	*lo = result;
+	*hi = result >> 64;
+}
+
 }
 
 // check_bounds

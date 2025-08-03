@@ -1427,26 +1427,9 @@ struct MultResult {
  */
 BIGINT_TRACY_CONSTEXPR_AUTO
 mult(uint64_t a, uint64_t b) -> MultResult {
-	const auto a_0 = a & 0xFFFFFFFFull;
-	const auto a_1 = a >> 32;
-	const auto b_0 = b & 0xFFFFFFFFull;
-	const auto b_1 = b >> 32;
-	const uint64_t r_00 = a_0 * b_0;
-	const uint64_t r_01 = a_0 * b_1;
-	const uint64_t r_10 = a_1 * b_0;
-	const uint64_t r_11 = a_1 * b_1;
-
-	auto c = r_11 >> 0;
-	c += r_01 >> 32;
-	c += r_10 >> 32;
-
-	auto r = r_00 << 0;
-	r += r_01 << 32;
-	c += (r < (r_01 << 32)) ? 1 : 0;
-	r += r_10 << 32;
-	c += (r < (r_10 << 32)) ? 1 : 0;
-
-	return MultResult{r, c};
+	MultResult result;
+	utils::mul_u128(a, b, &result.hi, &result.lo);
+	return result;
 }
 
 }
