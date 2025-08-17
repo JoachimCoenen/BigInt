@@ -46,14 +46,12 @@ calculate_squares(const std::span<const uint64_t>& base, const std::span<const u
 	constexpr uint8_t exp_bits_max = 64;
 	std::vector<DigitsVec> squares;
 
-	std::unique_ptr<KaratsubaStepTemps> karatsuba_temps;
-
 	for (uint8_t i = 1; i < exp_bits_max; ++i) {
 		std::span last_square = i == 1 ? base : std::span<uint64_t>{squares.back()};
 
 		squares.emplace_back(last_square.size() * 2);
 		std::span<uint64_t> square{squares.back()};
-		mult_ignore_sign(square, last_square, last_square, karatsuba_temps);
+		mult_ignore_sign(square, last_square, last_square, nullptr);
 		cleanup(squares.back());
 		if (square <=> y > 0) { // if (square > y)
 			squares.pop_back();
@@ -170,18 +168,16 @@ pow(const is_BigInt_like auto& base, uint64_t exp) -> BigInt {
 	BigInt temp = base.copy();
 	BigInt temp2;
 
-	std::unique_ptr<KaratsubaStepTemps> karatsuba_temps;
-
 	const auto exp_bits = static_cast<uint8_t>(64 - utils::clzll(exp));
 	for (uint8_t i = 0; i < exp_bits; ++i) {
 		const auto mask = 1ull << i;
 		if (exp & mask) {
 			//result *= temp;
-			mult(temp2, result, temp, karatsuba_temps);
+			mult(temp2, result, temp);
 			std::swap(result, temp2);
 		}
 		if (i+1 < exp_bits) {
-			mult(temp2, temp, temp, karatsuba_temps);
+			mult(temp2, temp, temp);
 			std::swap(temp, temp2);
 		}
 	}
@@ -222,7 +218,6 @@ pow_mod(const is_BigInt_like auto& base, const is_BigInt_like auto& exp, const i
 	BigInt temp; // = base % mod;
 	BigInt temp2;
 	BigInt temp3;
-	std::unique_ptr<KaratsubaStepTemps> karatsuba_temps;
 
 	result.reserve(mod.size() * 2 + 2);
 	temp.reserve(mod.size() * 2 + 2);
@@ -236,12 +231,12 @@ pow_mod(const is_BigInt_like auto& base, const is_BigInt_like auto& exp, const i
 		const auto mask = 1ull << (i % 64);
 		if (exp[i / 64] & mask) {
 			// result = (result * temp) % mod;
-			mult(temp2, result, temp, karatsuba_temps);
+			mult(temp2, result, temp);
 			_private::divmod<true, false>(temp3, result, temp2, mod, *temp_mod, *temp_af, *temp_bf); // temp3 is just a placeholder here and is never read from or written to.
 		}
 		if (i + 1 < exp_bits) { // don´t square at the end of the last loop, it just wasts CPU cycles.
 			// temp = (temp * temp) % mod;
-			mult(temp3, temp, temp, karatsuba_temps);
+			mult(temp3, temp, temp);
 			_private::divmod<true, false>(temp2, temp, temp3, mod, *temp_mod, *temp_af, *temp_bf); // temp2 is just a placeholder here and is never read from or written to.
 		}
 	}
