@@ -15,12 +15,12 @@ using namespace test_data;
 // Constructors
 namespace {
 
-inline void expectSimpleInt(const DigitsVec& actual, const DigitsVec& expectedData) {
+inline void expectSimpleInt(const std::string& actual, const std::string& expectedData) {
 	EXPECT_EQ(actual, expectedData);
 }
 
 TEST(HelloTest, TestCreateEmpty) {
-	expectSimpleInt(BigInt{}.__data_for_testing_only(), {0, 0});
+	expectSimpleInt(to_debug_string(BigInt{}), "IBigIntLike {_data: {0}, _sign: POS}");
 }
 
 TEST(HelloTest, TestCreateFromUInt64) {
@@ -33,7 +33,7 @@ TEST(HelloTest, TestCreateFromUInt64) {
 		std::numeric_limits<uint64_t>::max(),
 	}};
 	for (auto i : numbers) {
-		expectSimpleInt(BigInt{i}.__data_for_testing_only(), {i, 0});
+		expectSimpleInt(to_debug_string(BigInt{i}), "IBigIntLike {_data: {" + std::to_string(i) + "}, _sign: POS}");
 	}
 }
 
@@ -45,7 +45,7 @@ TEST(HelloTest, TestCreateFromUInt32) {
 		std::numeric_limits<uint32_t>::max(),
 	}};
 	for (auto i : numbers) {
-		expectSimpleInt(BigInt{i}.__data_for_testing_only(), {i, 0});
+		expectSimpleInt(to_debug_string(BigInt{i}), "IBigIntLike {_data: {" + std::to_string(i) + "}, _sign: POS}");
 	}
 }
 
@@ -62,7 +62,7 @@ TEST(HelloTest, TestCreateFromString) {
 //		UINT64_MAX_P1,
 	}};
 	for (const auto &i : numbers) {
-		expectSimpleInt(BigInt{i}.__data_for_testing_only(), {utils::stoull(i), 0});
+		expectSimpleInt(to_debug_string(BigInt{i}), "IBigIntLike {_data: {" + i + "}, _sign: POS}");
 	}
 
 	const std::vector<std::string> numbers2 = {{
@@ -90,11 +90,17 @@ TEST(HelloTest, TestCreateFromString) {
 		EXPECT_EQ(to_string(BigInt{"-" + i}), "-" + i);
 	}
 
-	expectSimpleInt(BigInt{"61835470006151583405"}.__data_for_testing_only(), {6495237785022928557, 3, 0});
-	EXPECT_EQ(to_string(BigInt{"61835470006151583405"}), "61835470006151583405");
-
-	expectSimpleInt(BigInt{"340282366920938463500268095579187314689"}.__data_for_testing_only(), {1, 2, 1, 0});
-	EXPECT_EQ(to_string(BigInt{"340282366920938463500268095579187314689"}), "340282366920938463500268095579187314689");
+	const std::vector<std::pair<std::string, std::string>> numbers3 = {
+		{"61835470006151583405", "IBigIntLike {_data: {6495237785022928557, 3}, _sign: POS}"},
+		{"+61835470006151583405", "IBigIntLike {_data: {6495237785022928557, 3}, _sign: POS}"},
+		{"-61835470006151583405", "IBigIntLike {_data: {6495237785022928557, 3}, _sign: NEG}"},
+		{"340282366920938463500268095579187314689", "IBigIntLike {_data: {1, 2, 1}, _sign: POS}"},
+		{"+340282366920938463500268095579187314689", "IBigIntLike {_data: {1, 2, 1}, _sign: POS}"},
+		{"-340282366920938463500268095579187314689", "IBigIntLike {_data: {1, 2, 1}, _sign: NEG}"},
+	};
+	for (const auto& [i, r] : numbers3) {
+		expectSimpleInt(to_debug_string(BigInt{i}), r);
+	}
 }
 
 }
@@ -150,7 +156,6 @@ TEST_BINARY_OPERATOR_BIGINT(BitwiseXor, BigInt, BigInt, a ^ b, get_all_bitwise_x
 TEST_ASSIGN_OPERATOR_BIGINT(BitwiseXor, BigInt, a ^= b, get_all_bitwise_xor_test_values())
 
 }
-
 
 
 // Addition
@@ -453,18 +458,18 @@ TEST_DIV_ASSIGN_OPERATOR_BIGINT(Mod, int32_t, a %= b, get_all_mod_test_values())
 namespace {
 
 template<typename RT>
-using Divmod_RT = std::tuple<DigitsVec, RT>;
+using Divmod_RT = std::tuple<std::string, RT>;
 
 template<typename R>
 using Divmod_R = DivModResult<BigInt, R>;
 
 #define TEST_DIVMOD(NAME, O1, O2, OP, RT, GET_RT) \
-TEST_DIV_OPERATOR(NAME, O1, O2, Divmod_R<O2>, OP, get_all_divmod_test_values(), Divmod_RT<RT>, std::tuple(res.q.__data_for_testing_only(), GET_RT))
+TEST_DIV_OPERATOR(NAME, O1, O2, Divmod_R<O2>, OP, get_all_divmod_test_values(), Divmod_RT<RT>, std::tuple(to_debug_string(res.q), GET_RT))
 
 #define TEST_DIVMOD_F(NAME, O1, O2, OP, RT, GET_RT) \
-TEST_DIV_OPERATOR_F(NAME, O1, O2, Divmod_R<O2>, OP, get_all_divmod_test_values(), Divmod_RT<RT>, std::tuple(res.q.__data_for_testing_only(), GET_RT))
+TEST_DIV_OPERATOR_F(NAME, O1, O2, Divmod_R<O2>, OP, get_all_divmod_test_values(), Divmod_RT<RT>, std::tuple(to_debug_string(res.q), GET_RT))
 
-TEST_DIVMOD_F(Divmod, BigInt, BigInt, DigitsVecPtr temp; DigitsVecPtr temp_af; DigitsVecPtr temp_bf; divmod(res.q, res.r, a, b, *temp, *temp_af, *temp_bf), DigitsVec, res.r.__data_for_testing_only())
+TEST_DIVMOD_F(Divmod, BigInt, BigInt, DigitsVec temp; DigitsVec temp_af; DigitsVec temp_bf; divmod(res.q, res.r, a, b, temp, temp_af, temp_bf), std::string, to_debug_string(res.r))
 
 TEST_DIVMOD_F(Divmod, BigInt, uint64_t, res.r = divmod(res.q, a, b), uint64_t, res.r)
 
@@ -474,7 +479,7 @@ TEST_DIVMOD_F(Divmod, BigInt, uint32_t, res.r = divmod(res.q, a, b), uint32_t, r
 
 TEST_DIVMOD_F(Divmod, BigInt, int32_t, res.r = divmod(res.q, a, b), int32_t, res.r)
 
-TEST_DIVMOD(Divmod, BigInt, BigInt, divmod(a, b), DigitsVec, res.r.__data_for_testing_only())
+TEST_DIVMOD(Divmod, BigInt, BigInt, divmod(a, b), std::string, to_debug_string(res.r))
 
 TEST_DIVMOD(Divmod, BigInt, uint64_t, divmod(a, b), uint64_t, res.r)
 

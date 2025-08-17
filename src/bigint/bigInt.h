@@ -264,16 +264,6 @@ class BigInt : public IBigIntLike
 		return *this;
 	}
 
-public:
-	[[nodiscard]] auto
-	__data_for_testing_only() const -> DigitsVec {
-		DigitsVec result = _data(); // copy!
-		result.resize(size() + 1);
-		std::copy(_data().begin(), _data().end(), result.begin());
-		result.back() = is_neg(*this) ? 1 : 0;
-		return result;
-	}
-
 private:
 	CONSTEXPR_AUTO
 	_data() const noexcept -> const DigitsVec& { return *_data_ptr; }
@@ -2618,7 +2608,6 @@ namespace _private {
 		if (conv.division_base != 0) {
 			// DivModResult temp{BigInt{v, Sign::POS}, (uint32_t)0};
 			BigInt q{v, Sign::POS};
-			uint64_t r;
 			while (q > 0) {
 				auto digits = divmod(q, q, conv.division_base);
 				to_string_padded_generic(result, digits, base, conv.base_power);
@@ -2699,20 +2688,13 @@ _to_debug_string_data(const is_BigInt_like auto& value) -> std::string {
 	if (value.size() == 0) {
 		return "{}";
 	} else {
-		std::ostringstream oss;
-		oss << "{";
-
-		BigInt::size_type i = 0;
-		// add the first element with no delimiter
-		oss << value[i];
-		++i;
-		for (; i < value.size(); ++i) {
-			oss << ", ";
-			oss << value[i];
-		}
-
-		oss << "}";
-		return oss.str();
+		const auto data_for_testing_only = value._span();
+		const auto contents = utils::join_transformed_strings(
+			data_for_testing_only,
+			[](uint64_t d) { return std::to_string(d); },
+			", "
+		);
+		return "{" + contents + "}";
 	}
 }
 

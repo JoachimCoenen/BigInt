@@ -4,6 +4,7 @@
 #include <array>
 #include <cassert>
 #include <charconv>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -97,6 +98,23 @@ remove_chars_from_string(std::string& str, std::string_view chars_to_remove) {
 	for (const auto char_to_remove : chars_to_remove) {
 		str.erase(std::ranges::remove(str, char_to_remove).begin(), str.end());
 	}
+}
+
+/**
+ * @brief A range pipe that results in a string.
+ */
+template<std::ranges::range R, class F>
+CONSTEXPR_AUTO
+join_transformed_strings(const R& r, F to_string, std::string_view separator) -> std::string {
+	std::stringstream ss;
+	auto iter = r.begin();
+	if (iter != r.end()) {
+		ss << to_string(*iter);
+		while (++iter != r.end()) {
+			ss << separator << to_string(*iter);
+		}
+	}
+	return ss.str();
 }
 
 }
