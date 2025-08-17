@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utils/utils.h"
+#include "utils/pool.h"
 
 // standard library
 #include <cassert>
@@ -41,6 +42,15 @@ concept is_BigInt_like = std::is_base_of_v<IBigIntLike, T>;
 using utils::one_of;
 
 using DigitsVec = std::vector<uint64_t>;
+
+template <>
+struct pool::pooled_reset<DigitsVec> {
+	static CONSTEXPR_VOID
+	reset(DigitsVec& v) { v.clear(); }
+};
+
+using DigitsVecPtr = pool::pooled_ptr<DigitsVec>;
+
 }
 
 
@@ -115,8 +125,10 @@ class BigInt : public IBigIntLike
 
 	explicit constexpr
 	BigInt(uint64_t v, Sign sign=Sign::POS)
-		: _data({v}), _sign(sign)
-	{ }
+		: _sign(sign)
+	{
+		_data().push_back(v);
+	}
 
 	explicit constexpr
 		BigInt(std::signed_integral auto v)
@@ -128,39 +140,41 @@ class BigInt : public IBigIntLike
 		: BigInt(from_string(v))
 	{ }
 
-	explicit constexpr
+	explicit constexpr // todo: maybe remove
 	BigInt(const std::span<const uint64_t> &v, Sign sign=Sign::POS)
-		: _data(v.size()), _sign(sign) {
-		std::copy(v.begin(), v.end(), _data.begin());
-		if (_data.empty()) {
-			_data.push_back(0);
+	: _sign(sign) {
+		_data().resize(v.size());
+		std::copy(v.begin(), v.end(), _data().begin());
+		if (_data().empty()) {
+			_data().push_back(0);
 		}
 	}
 
 	explicit constexpr
-	BigInt(DigitsVec &&v, Sign sign=Sign::POS)
-		: _data(std::move(v)), _sign(sign) {
-		if (_data.empty()) {
-			_data.push_back(0);
+	BigInt(DigitsVecPtr &&v, Sign sign=Sign::POS)
+		: _data_ptr(std::move(v)), _sign(sign) {
+		if (_data().empty()) {
+			_data().push_back(0);
 		}
 	}
 
-	explicit constexpr
-	BigInt(const is_BigInt_like auto &v)
-		: _data(v.size()), _sign(v.sign()) {
-		for (size_type i = 0; i < v.size(); ++i) {
-			_data[i] = v[i];
-		}
-		if (_data.empty()) {
-			_data.push_back(0);
-		}
-	}
+	/** use the `.copy()` method instead. */
+	BigInt(const BigInt &v) = delete;
+	BigInt(BigInt &&v) = default;
+	/** use the `.copy()` method instead. */
+	BigInt& operator=(const BigInt &v) = delete;
+	BigInt& operator=(BigInt &&v) = default;
 
-	CONSTEXPR_AUTO_DISCARD
-	operator=(const is_BigInt_like auto &other) -> BigInt& {
-		BigInt tmp(other);
-		std::swap(*this, tmp);
-		return *this;
+	/**
+	 *
+	 * @return a new copy of this BigInt.
+	 */
+	CONSTEXPR_AUTO
+	copy() const noexcept -> BigInt {
+		BigInt result;
+		result._data() = _data();
+		result._sign = _sign;
+		return result;
 	}
 
 	CONSTEXPR_AUTO
@@ -175,12 +189,12 @@ class BigInt : public IBigIntLike
 
 	CONSTEXPR_AUTO
 	size() const noexcept -> size_type {
-		return _data.size();
+		return _data().size();
 	}
 
 	CONSTEXPR_AUTO
 	operator[](size_type index) const noexcept -> uint64_t {
-		return index >= size() ? 0 : _data[index];
+		return index >= size() ? 0 : _data()[index];
 	}
 
 	CONSTEXPR_VOID
@@ -188,58 +202,58 @@ class BigInt : public IBigIntLike
 #if BIGINT_ENABLE_BOUNDS_CHECKS
 		utils::check_bounds(index, size());
 #endif
-		_data[index] = digit;
+		_data()[index] = digit;
 	}
 
 	CONSTEXPR_VOID
-	append(uint64_t v) { _data.push_back(v); }
+	append(uint64_t v) { _data().push_back(v); }
 
 	CONSTEXPR_VOID
 	remove_last() {
-		if (_data.size() > 1) {
-			_data.pop_back();
+		if (_data().size() > 1) {
+			_data().pop_back();
 		} else {
-			_data[0] = 0;
+			_data()[0] = 0;
 		}
 	}
 
 	BIGINT_TRACY_CONSTEXPR_VOID
 	cleanup() {
 		BIGINT_TRACY_ZONE_SCOPED;
-		_private::cleanup(_data);
+		_private::cleanup(_data());
 	}
 
 	CONSTEXPR_VOID
 	resize(size_type size) {
 		// size 0 clears the BigInt and sets its value to 0.
-		_data.resize(std::max<size_type>(1, size));
+		_data().resize(std::max<size_type>(1, size));
 		if (size == 0) {
-			_data[0] = 0;
+			_data()[0] = 0;
 		}
 	}
 
 	CONSTEXPR_VOID
 	resize(size_type size, const uint64_t default_digit) {
 		// size 0 clears the BigInt and sets its value to 0.
-		_data.resize(std::max<size_type>(1, size), default_digit);
+		_data().resize(std::max<size_type>(1, size), default_digit);
 		if (size == 0) {
-			_data[0] = 0;
+			_data()[0] = 0;
 		}
 	}
 
 	CONSTEXPR_VOID
 	reserve(size_type size) {
-		_data.reserve(std::max<size_type>(1, size));
+		_data().reserve(std::max<size_type>(1, size));
 	}
 
 	CONSTEXPR_AUTO
 	_span() noexcept -> std::span<uint64_t> {
-		return std::span{_data};
+		return std::span{_data()};
 	}
 
 	CONSTEXPR_AUTO
 	_span() const noexcept -> std::span<const uint64_t> {
-		return std::span{_data.data(), _data.size()};
+		return std::span{_data().data(), _data().size()};
 	}
 
 	/**
@@ -253,15 +267,20 @@ class BigInt : public IBigIntLike
 public:
 	[[nodiscard]] auto
 	__data_for_testing_only() const -> DigitsVec {
-		DigitsVec result = _data;
+		DigitsVec result = _data(); // copy!
 		result.resize(size() + 1);
-		std::copy(_data.begin(), _data.end(), result.begin());
+		std::copy(_data().begin(), _data().end(), result.begin());
 		result.back() = is_neg(*this) ? 1 : 0;
 		return result;
 	}
 
 private:
-	[[no_unique_address]] DigitsVec _data;
+	CONSTEXPR_AUTO
+	_data() const noexcept -> const DigitsVec& { return *_data_ptr; }
+	CONSTEXPR_AUTO
+	_data() noexcept -> DigitsVec& { return *_data_ptr; }
+
+	[[no_unique_address]] DigitsVecPtr _data_ptr;
 	Sign _sign; // adds another 8 bytes :(
 };
 
@@ -278,6 +297,14 @@ public:
 	IntegralAdapter(const std::integral auto value)
 		: _value(utils::constexpr_abs(value)), _sign(get_sign(value))
 	{}
+
+	/**
+	 * @return a new copy of this IntegralAdapter.
+	 */
+	CONSTEXPR_AUTO
+	copy() const noexcept -> IntegralAdapter {
+		return *this;
+	}
 
 	CONSTEXPR_AUTO
 	sign() const noexcept -> Sign {
@@ -467,7 +494,7 @@ namespace bigint::_private {
 class BigIntNeg;
 class BigIntAbsNeg;
 
-class BigIntAbs: IBigIntLike {
+class BigIntAbs: public IBigIntLike {
 public:
 	using size_type = BigInt::size_type;
 
@@ -475,6 +502,14 @@ public:
 	explicit constexpr
 	BigIntAbs(const BigInt& lhs) :
 		_lhs(lhs) {}
+
+	/**
+	 * @return a new copy of this BigIntAbs.
+	 */
+	CONSTEXPR_AUTO
+	copy() const noexcept -> BigIntAbs {
+		return *this;
+	}
 
 	CONSTEXPR_AUTO
 	sign() const noexcept -> Sign {
@@ -514,7 +549,15 @@ public:
 
 	explicit constexpr
 	BigIntNeg(const BigInt& lhs) :
-		_lhs(lhs) {}
+	_lhs(lhs) {}
+
+	/**
+	 * @return a new copy of this BigIntNeg.
+	 */
+	CONSTEXPR_AUTO
+	copy() const noexcept -> BigIntNeg {
+		return *this;
+	}
 
 	CONSTEXPR_AUTO
 	sign() const noexcept -> Sign {
@@ -552,7 +595,15 @@ public:
 public:
 	explicit constexpr
 	BigIntAbsNeg(const BigInt& lhs) :
-		_lhs(lhs) {}
+	_lhs(lhs) {}
+
+	/**
+	 * @return a new copy of this BigIntAbsNeg.
+	 */
+	CONSTEXPR_AUTO
+	copy() const noexcept -> BigIntAbsNeg {
+		return *this;
+	}
 
 	CONSTEXPR_AUTO
 	sign() const noexcept -> Sign {
@@ -617,7 +668,7 @@ abs(BigInt&& a) -> BigInt {
 }
 
 CONSTEXPR_AUTO
-operator-(const _private::BigIntNeg& a) -> BigInt {
+operator-(const _private::BigIntNeg& a) -> const BigInt& {
 	return a._bigint();
 }
 
@@ -1408,7 +1459,10 @@ struct MultResult {
 
 	[[nodiscard]] explicit constexpr
 	operator BigInt() const {
-		BigInt result{{lo, hi}};
+		BigInt result{};
+		assert(result.size() == 1);
+		result.set(0, lo);
+		result.append(hi);
 		result.cleanup();
 		return result;
 	}
@@ -1454,24 +1508,24 @@ determine_multiplication_algorithm(BigInt::size_type a_size, BigInt::size_type b
  * Holds temporaries used during Karatsuba multiplication.
  */
 struct KaratsubaStepTemps {
-	DigitsVec ac;
-	DigitsVec bd;
-	DigitsVec ab_cd;
-	DigitsVec a_b;
-	DigitsVec c_d;
+	DigitsVecPtr ac;
+	DigitsVecPtr bd;
+	DigitsVecPtr ab_cd;
+	DigitsVecPtr a_b;
+	DigitsVecPtr c_d;
 
 	std::unique_ptr<KaratsubaStepTemps> local_temps;
 
 	CONSTEXPR_AUTO
-	ac_span() -> std::span<uint64_t> { return std::span<uint64_t>{ac}; };
+	ac_span() -> std::span<uint64_t> { return std::span<uint64_t>{*ac}; };
 	CONSTEXPR_AUTO
-	bd_span() -> std::span<uint64_t> { return std::span<uint64_t>{bd}; };
+	bd_span() -> std::span<uint64_t> { return std::span<uint64_t>{*bd}; };
 	CONSTEXPR_AUTO
-	ab_cd_span() -> std::span<uint64_t> { return std::span<uint64_t>{ab_cd}; };
+	ab_cd_span() -> std::span<uint64_t> { return std::span<uint64_t>{*ab_cd}; };
 	CONSTEXPR_AUTO
-	a_b_span() -> std::span<uint64_t> { return std::span<uint64_t>{a_b}; };
+	a_b_span() -> std::span<uint64_t> { return std::span<uint64_t>{*a_b}; };
 	CONSTEXPR_AUTO
-	c_d_span() -> std::span<uint64_t> { return std::span<uint64_t>{c_d}; };
+	c_d_span() -> std::span<uint64_t> { return std::span<uint64_t>{*c_d}; };
 };
 
 }
@@ -1589,34 +1643,34 @@ _mult_karatsuba_ignore_sign(const std::span<uint64_t> &result, const std::span<c
 
 	auto &local_temps = temps.local_temps;
 
-	temps.ac.resize(a.size() + c.size());
+	temps.ac->resize(a.size() + c.size());
 	mult_ignore_sign(temps.ac_span(), a, c, local_temps);
-	cleanup(temps.ac);
+	cleanup(*temps.ac);
 
-	temps.bd.resize(b.size() + d.size());
+	temps.bd->resize(b.size() + d.size());
 	mult_ignore_sign(temps.bd_span(), b, d, local_temps);
-	cleanup(temps.bd);
+	cleanup(*temps.bd);
 
 
-	temps.a_b.resize(std::max(a.size(), b.size()) + 1);
+	temps.a_b->resize(std::max(a.size(), b.size()) + 1);
 	add_ignore_sign(temps.a_b_span(), a, b);
-	cleanup(temps.a_b);
+	cleanup(*temps.a_b);
 
-	temps.c_d.resize(std::max(c.size(), d.size()) + 1);
+	temps.c_d->resize(std::max(c.size(), d.size()) + 1);
 	add_ignore_sign(temps.c_d_span(), c, d);
-	cleanup(temps.c_d);
+	cleanup(*temps.c_d);
 
-	temps.ab_cd.resize(temps.a_b.size() + temps.c_d.size());
+	temps.ab_cd->resize(temps.a_b->size() + temps.c_d->size());
 	mult_ignore_sign(temps.ab_cd_span(), temps.a_b_span(), temps.c_d_span(), local_temps);
-	cleanup(temps.ab_cd);
+	cleanup(*temps.ab_cd);
 
 	[[maybe_unused]] auto sign = sub_ignore_sign(temps.ab_cd_span(), temps.ab_cd_span(), temps.ac_span());
-	cleanup(temps.ab_cd);
+	cleanup(*temps.ab_cd);
 	[[maybe_unused]] auto sign2 = sub_ignore_sign(temps.ab_cd_span(), temps.ab_cd_span(), temps.bd_span());
-	cleanup(temps.ab_cd);
+	cleanup(*temps.ab_cd);
 
-	std::ranges::copy(temps.bd, result.begin());
-	std::fill(result.begin() + temps.bd.size(), result.end(), 0);
+	std::ranges::copy(*temps.bd, result.begin());
+	std::fill(result.begin() + temps.bd->size(), result.end(), 0);
 
 	const auto result_shifted1 = rshifted(result, mid);
 	_add_ignore_sign(result_shifted1, result_shifted1, rmasked(temps.ab_cd_span(), 0, result_shifted1.size()));
@@ -2264,8 +2318,8 @@ divmod(BigInt& quotient, BigInt& remainder, const is_BigInt_like auto &a, const 
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod(const is_BigInt_like auto &a, const is_BigInt_like auto &b) -> DivModResult<BigInt> {
 	DivModResult<BigInt> result;
-	DigitsVec temp, temp_af, temp_bf;
-	_private::divmod<false, false>(result.q, result.r, a, b, temp, temp_af, temp_bf);
+	DigitsVecPtr temp, temp_af, temp_bf;
+	_private::divmod<false, false>(result.q, result.r, a, b, *temp, *temp_af, *temp_bf);
 	return result;
 }
 
@@ -2314,8 +2368,8 @@ div(BigInt& result, const is_BigInt_like auto &a, const is_BigInt_like auto &b, 
 BIGINT_TRACY_CONSTEXPR_VOID
 div(BigInt& result, const is_BigInt_like auto &a, const is_BigInt_like auto &b) {
 	BigInt remainder;
-	DigitsVec temp, temp_af, temp_bf;
-	_private::divmod<false, true>(result, remainder, a, b, temp, temp_af, temp_bf);
+	DigitsVecPtr temp, temp_af, temp_bf;
+	_private::divmod<false, true>(result, remainder, a, b, *temp, *temp_af, *temp_bf);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
@@ -2402,8 +2456,8 @@ mod(BigInt& result, const is_BigInt_like auto &a, const is_BigInt_like auto &b, 
  */
 BIGINT_TRACY_CONSTEXPR_VOID
 mod(BigInt& result, const is_BigInt_like auto &a, const is_BigInt_like auto &b) {
-	DigitsVec temp, temp_af, temp_bf;
-	mod(result, a, b, temp, temp_af, temp_bf);
+	DigitsVecPtr temp, temp_af, temp_bf;
+	mod(result, a, b, *temp, *temp_af, *temp_bf);
 }
 
 BIGINT_TRACY_CONSTEXPR_AUTO
@@ -2420,7 +2474,7 @@ operator%(const is_BigInt_like auto &a, const is_BigInt_like auto &b) -> BigInt 
 	return result;
 }
 
-BIGINT_TRACY_CONSTEXPR_AUTO
+BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
 operator%=(BigInt &a, const one_of<uint32_t, int32_t, uint64_t, int64_t> auto &b) -> BigInt& {
 	auto result = a % b;
 	a.resize(1);
@@ -2429,7 +2483,7 @@ operator%=(BigInt &a, const one_of<uint32_t, int32_t, uint64_t, int64_t> auto &b
 	return a;
 }
 
-BIGINT_TRACY_CONSTEXPR_AUTO
+BIGINT_TRACY_CONSTEXPR_AUTO_DISCARD
 operator%=(BigInt &a, const is_BigInt_like auto &b) -> BigInt& {
 	a = a % b;
 	return a;

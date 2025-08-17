@@ -24,7 +24,7 @@ sqrt(const is_BigInt_like auto& y) -> BigInt {
 
 	// sqrt(0) == 0; sqrt(1) == 1
 	if (y <= 1) {
-		return y;
+		return y.copy();
 	}
 
 	// Initial estimate (must be too high)
@@ -88,16 +88,16 @@ log(const is_BigInt_like auto& base, const is_BigInt_like auto& y) -> uint64_t {
 	const auto squares = _private::calculate_squares(base._span(), y._span());
 
 	uint64_t result = 0;
-	BigInt temp{y};
+	BigInt temp = y.copy();
 	BigInt temp2;
 	BigInt reminder; // not used
-	DigitsVec temp_d, temp_af, temp_bf;
+	DigitsVecPtr temp_d, temp_af, temp_bf;
 
 	for (auto i = static_cast<uint8_t>(squares.size()); i --> 0;) {
 		const std::span<const uint64_t> square (squares[i]);
 		if (square <=> temp._span() <= 0) {  // (square <= temp)
 			// temp2 = temp / square:
-			_private::divmod_ignore_sign<false, true>(temp2, reminder, temp._span(), square, temp_d, temp_af, temp_bf);
+			_private::divmod_ignore_sign<false, true>(temp2, reminder, temp._span(), square, *temp_d, *temp_af, *temp_bf);
 			std::swap(temp, temp2);
 
 			uint64_t mask = 1ull << (i + 1);
@@ -167,7 +167,7 @@ pow(const is_BigInt_like auto& base, uint64_t exp) -> BigInt {
 	}
 
 	BigInt result{1};
-	BigInt temp{base};
+	BigInt temp = base.copy();
 	BigInt temp2;
 
 	std::unique_ptr<KaratsubaStepTemps> karatsuba_temps;
@@ -214,12 +214,10 @@ pow_mod(const is_BigInt_like auto& base, const is_BigInt_like auto& exp, const i
 
 	const uint64_t exp_bits = (exp.size() - 1) * 64 + (64 - utils::clzll(exp[exp.size()-1]));
 
-	DigitsVec temp_mod;
-	DigitsVec temp_af;
-	DigitsVec temp_bf;
-	temp_mod.resize(mod.size() + 2);
-	temp_af.resize(mod.size() * 2 + 1);
-	temp_bf.resize(mod.size() + 1);
+	DigitsVecPtr temp_mod, temp_af, temp_bf;
+	temp_mod->resize(mod.size() + 2);
+	temp_af->resize(mod.size() * 2 + 1);
+	temp_bf->resize(mod.size() + 1);
 	BigInt result{1};
 	BigInt temp; // = base % mod;
 	BigInt temp2;
@@ -232,19 +230,19 @@ pow_mod(const is_BigInt_like auto& base, const is_BigInt_like auto& exp, const i
 	temp3.reserve(mod.size() * 2);
 
 	// temp = base % mod;
-	_private::divmod<true, false>(result, temp, base, mod, temp_mod, temp_af, temp_bf); // result is just a placeholder here and is never read from or written to.
+	_private::divmod<true, false>(result, temp, base, mod, *temp_mod, *temp_af, *temp_bf); // result is just a placeholder here and is never read from or written to.
 
 	for (uint64_t i = 0; i < exp_bits; ++i) {
 		const auto mask = 1ull << (i % 64);
 		if (exp[i / 64] & mask) {
 			// result = (result * temp) % mod;
 			mult(temp2, result, temp, karatsuba_temps);
-			_private::divmod<true, false>(temp3, result, temp2, mod, temp_mod, temp_af, temp_bf); // temp3 is just a placeholder here and is never read from or written to.
+			_private::divmod<true, false>(temp3, result, temp2, mod, *temp_mod, *temp_af, *temp_bf); // temp3 is just a placeholder here and is never read from or written to.
 		}
 		if (i + 1 < exp_bits) { // don´t square at the end of the last loop, it just wasts CPU cycles.
 			// temp = (temp * temp) % mod;
 			mult(temp3, temp, temp, karatsuba_temps);
-			_private::divmod<true, false>(temp2, temp, temp3, mod, temp_mod, temp_af, temp_bf); // temp2 is just a placeholder here and is never read from or written to.
+			_private::divmod<true, false>(temp2, temp, temp3, mod, *temp_mod, *temp_af, *temp_bf); // temp2 is just a placeholder here and is never read from or written to.
 		}
 	}
 	return result;
@@ -403,8 +401,8 @@ gcd_internal(const BigInt& Uu, const BigInt& Vv) -> BigInt {
 
 	constexpr auto k = 63;
 
-	BigInt U = Uu; U.sign() = Sign::POS;
-	BigInt V = Vv; V.sign() = Sign::POS;
+	BigInt U = Uu.copy(); U.sign() = Sign::POS;
+	BigInt V = Vv.copy(); V.sign() = Sign::POS;
 	BigInt R, temp; // temporaries
 
 	while (!is_zero(V)) {
