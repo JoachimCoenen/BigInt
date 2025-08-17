@@ -42,7 +42,7 @@ std::cout << pow_mod(factorial(1'234), exponent, modulo) << std::endl;
 
 
 ## Requirements
-BigInt requires **C++20** or higher and a compatible GCC (or MinGW), Clang, or MSVC compiler.
+BigInt requires **C++23** or higher and a compatible GCC (or MinGW), Clang, or MSVC compiler.
 
 
 ## Installing
