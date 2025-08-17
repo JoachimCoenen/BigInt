@@ -1,6 +1,6 @@
 #pragma once
 
-#include "utils.h"
+#include "utils/utils.h"
 
 // standard library
 #include <cassert>
@@ -17,7 +17,7 @@
 #	define BIGINT_ENABLE_BOUNDS_CHECKS 1
 #endif
 
-#include "_bigint_tracy_defines.h"
+#include "utils/_bigint_tracy_defines.h"
 
 
 namespace bigint::_private {
@@ -2762,4 +2762,4 @@ operator ""_big(const char* literal) -> BigInt {
 
 }
 
-#include "_bigint_tracy_undefines.h"
+#include "utils/_bigint_tracy_undefines.h"

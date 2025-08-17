@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../src/bigint/bigInt.h"
-#include "../src/bigint/utils.h"
+#include "../src/bigint/utils/utils.h"
 
 #include <functional>
 #include <ranges>

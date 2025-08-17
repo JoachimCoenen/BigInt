@@ -2,7 +2,7 @@
 
 #include "bigInt.h"
 
-#include "_bigint_tracy_defines.h"
+#include "utils/_bigint_tracy_defines.h"
 
 
 // misc math:
@@ -504,4 +504,4 @@ digit_sum(const is_BigInt_like auto& v, uint_fast8_t base = 10) -> uint64_t {
 }
 
 
-#include "_bigint_tracy_undefines.h"
+#include "utils/_bigint_tracy_undefines.h"
