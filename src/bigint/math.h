@@ -42,17 +42,17 @@ sqrt(const is_BigInt_like auto& y) -> BigInt {
 
 namespace _private {
 BIGINT_TRACY_CONSTEXPR_AUTO
-calculate_squares(const utils::Span<const uint64_t>& base, const utils::Span<const uint64_t>& y) -> std::vector<DigitsVec> {
+calculate_squares(const std::span<const uint64_t>& base, const std::span<const uint64_t>& y) -> std::vector<DigitsVec> {
 	constexpr uint8_t exp_bits_max = 64;
 	std::vector<DigitsVec> squares;
 
 	utils::UniquePtr<KaratsubaStepTemps> karatsuba_temps;
 
 	for (uint8_t i = 1; i < exp_bits_max; ++i) {
-		utils::Span last_square = i == 1 ? base : utils::Span<uint64_t>{squares.back()};
+		std::span last_square = i == 1 ? base : std::span<uint64_t>{squares.back()};
 
 		squares.emplace_back(last_square.size() * 2);
-		utils::Span<uint64_t> square{squares.back()};
+		std::span<uint64_t> square{squares.back()};
 		mult_ignore_sign(square, last_square, last_square, karatsuba_temps);
 		cleanup(squares.back());
 		if (square <=> y > 0) { // if (square > y)
@@ -94,7 +94,7 @@ log(const is_BigInt_like auto& base, const is_BigInt_like auto& y) -> uint64_t {
 	DigitsVec temp_d, temp_af, temp_bf;
 
 	for (auto i = static_cast<uint8_t>(squares.size()); i --> 0;) {
-		const utils::Span<const uint64_t> square (squares[i]);
+		const std::span<const uint64_t> square (squares[i]);
 		if (square <=> temp._span() <= 0) {  // (square <= temp)
 			// temp2 = temp / square:
 			_private::divmod_ignore_sign<false, true>(temp2, reminder, temp._span(), square, temp_d, temp_af, temp_bf);
@@ -455,7 +455,7 @@ namespace _private {
  * Supported bases are 2 - 64 (inclusive). The bases 2, 4, 8, 16, and 32 are considerable faster than any other base.
  */
 BIGINT_TRACY_CONSTEXPR_AUTO
-digit_sum(const utils::Span<const uint64_t> v, uint_fast8_t base = 10) -> uint64_t {
+digit_sum(const std::span<const uint64_t> v, uint_fast8_t base = 10) -> uint64_t {
 	BIGINT_TRACY_ZONE_SCOPED;
 	if (base > 64 || base < 2) {
 		std::string msg = "digit_sum only supports bases in the range 2 - 64 (inclusive).";
