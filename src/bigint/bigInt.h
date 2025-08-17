@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -1459,7 +1460,7 @@ struct KaratsubaStepTemps {
 	DigitsVec a_b;
 	DigitsVec c_d;
 
-	utils::UniquePtr<KaratsubaStepTemps> local_temps;
+	std::unique_ptr<KaratsubaStepTemps> local_temps;
 
 	CONSTEXPR_AUTO
 	ac_span() -> std::span<uint64_t> { return std::span<uint64_t>{ac}; };
@@ -1559,7 +1560,7 @@ _mult_naive_ignore_sign(const std::span<uint64_t> &result, const std::span<const
 
 // forward declaration:
 BIGINT_TRACY_CONSTEXPR_VOID
-mult_ignore_sign(const std::span<uint64_t> &result, const std::span<const uint64_t> &a_, const std::span<const uint64_t> &b_, utils::UniquePtr<KaratsubaStepTemps>& karatsuba_temps);
+mult_ignore_sign(const std::span<uint64_t> &result, const std::span<const uint64_t> &a_, const std::span<const uint64_t> &b_, std::unique_ptr<KaratsubaStepTemps>& karatsuba_temps);
 
 /**
  * @brief multiplies two integers ignoring their sign using the Karatsuba algorithm. `a.size()` *must* be equal or greater than `b.size()`.
@@ -1575,7 +1576,7 @@ _mult_karatsuba_ignore_sign(const std::span<uint64_t> &result, const std::span<c
 	assert(lhs.size() >= rhs.size());
 
 	if (!temps.local_temps) {
-		temps.local_temps = utils::UniquePtr(new KaratsubaStepTemps());
+		temps.local_temps = std::make_unique<KaratsubaStepTemps>();
 	}
 
 	auto n = std::max(lhs.size(), rhs.size());
@@ -1670,7 +1671,7 @@ _mult_ignore_sign_shortcuts(BigInt &result, const std::span<const uint64_t>& a, 
  * @param karatsuba_temps temporaries for karatsuba multiplication. Can be a nullptr. Will be filled only if needed.
  */
 BIGINT_TRACY_CONSTEXPR_VOID
-mult_ignore_sign(const std::span<uint64_t> &result, const std::span<const uint64_t> &a_, const std::span<const uint64_t> &b_, utils::UniquePtr<KaratsubaStepTemps>& karatsuba_temps) {
+mult_ignore_sign(const std::span<uint64_t> &result, const std::span<const uint64_t> &a_, const std::span<const uint64_t> &b_, std::unique_ptr<KaratsubaStepTemps>& karatsuba_temps) {
 	if (_mult_ignore_sign_shortcuts(result, a_, b_)) {
 		return;
 	}
@@ -1684,7 +1685,7 @@ mult_ignore_sign(const std::span<uint64_t> &result, const std::span<const uint64
 		return;
 	case MultiplicationAlgorithm::KARATSUBA:
 		if (!karatsuba_temps) {
-			karatsuba_temps = utils::UniquePtr(new KaratsubaStepTemps());
+			karatsuba_temps = std::make_unique<KaratsubaStepTemps>();
 		}
 		_mult_karatsuba_ignore_sign(result, a, b, *karatsuba_temps);
 		return;
@@ -1786,7 +1787,7 @@ mult_karatsuba(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_l
  * @param karatsuba_temps temporaries for karatsuba multiplication. Can be a nullptr. Will be filled only if needed.
  */
 BIGINT_TRACY_CONSTEXPR_VOID
-mult(BigInt &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b, utils::UniquePtr<KaratsubaStepTemps>& karatsuba_temps) {
+mult(BigInt &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b, std::unique_ptr<KaratsubaStepTemps>& karatsuba_temps) {
 	assert_release_msg(&result != &a._bigint(), "result and first argument must be separate instances");
 	assert_release_msg(&result != &b._bigint(), "result and second argument must be separate instances");
 	result.resize(a.size() + b.size());
@@ -1804,7 +1805,7 @@ mult(BigInt &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b,
  */
 BIGINT_TRACY_CONSTEXPR_VOID
 mult(is_BigInt_like auto &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b) {
-	utils::UniquePtr<KaratsubaStepTemps> temps;
+	std::unique_ptr<KaratsubaStepTemps> temps;
 	mult(result, a, b, temps);
 }
 
