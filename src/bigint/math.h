@@ -240,6 +240,9 @@ pow_mod(const is_BigInt_like auto& base, const is_BigInt_like auto& exp, const i
 			_private::divmod<true, false>(temp2, temp, temp3, mod, *temp_mod, *temp_af, *temp_bf); // temp2 is just a placeholder here and is never read from or written to.
 		}
 	}
+	if (is_zero(result)) {
+		result.sign() = Sign::POS;
+	}
 	return result;
 }
 

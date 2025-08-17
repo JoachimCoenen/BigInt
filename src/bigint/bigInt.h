@@ -221,6 +221,9 @@ class BigInt : public IBigIntLike
 	cleanup() {
 		BIGINT_TRACY_ZONE_SCOPED;
 		_private::cleanup(_data());
+		if (size() == 1 && _data()[0] == 0) {
+			_sign = Sign::POS;
+		}
 	}
 
 	CONSTEXPR_VOID
@@ -229,6 +232,7 @@ class BigInt : public IBigIntLike
 		_data().resize(std::max<size_type>(1, size));
 		if (size == 0) {
 			_data()[0] = 0;
+			_sign = Sign::POS;
 		}
 	}
 
@@ -238,6 +242,7 @@ class BigInt : public IBigIntLike
 		_data().resize(std::max<size_type>(1, size), default_digit);
 		if (size == 0) {
 			_data()[0] = 0;
+			_sign = Sign::POS;
 		}
 	}
 
@@ -1783,7 +1788,7 @@ mult(BigInt &result, is_BigInt_like auto &a, std::unsigned_integral auto b) {
 BIGINT_TRACY_CONSTEXPR_VOID
 mult(BigInt &result, is_BigInt_like auto &a, std::signed_integral auto b) {
 	mult(result, a, static_cast<uint64_t>(llabs(b)));
-	if (b < 0) {
+	if (b < 0 && !is_zero(result)) {
 		result.sign() = _private::neg(result.sign());
 	}
 }
@@ -2390,6 +2395,9 @@ operator/=(BigInt &a, const is_BigInt_like auto &b) -> BigInt& {
 		// correct wrong corrections, caused by wrong sign of `b` supplied above:
 		if (remainder != 0 && b.sign() == Sign::NEG) {
 			a -= 1;
+		}
+		if (is_zero(a)) {
+			a.sign() = Sign::POS;
 		}
 	} else { // we cannot do it inplace:
 		BigInt result;
