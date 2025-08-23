@@ -493,10 +493,9 @@ class BigIntAbs: public IBigIntLike {
 public:
 	using size_type = BigInt::size_type;
 
-public:
 	explicit constexpr
-	BigIntAbs(const BigInt& lhs) :
-		_lhs(lhs) {}
+	BigIntAbs(const BigInt& raw) :
+		_raw(raw) {}
 
 	/**
 	 * @return a new copy of this BigIntAbs.
@@ -513,27 +512,27 @@ public:
 
 	CONSTEXPR_AUTO
 	size() const noexcept -> size_type {
-		return _lhs.size();
+		return _raw.size();
 	}
 
 	CONSTEXPR_AUTO
 	operator[](size_type index) const -> uint64_t {
-		return _lhs[index];
+		return _raw[index];
 	}
 
 	CONSTEXPR_AUTO
 	_span() const noexcept -> std::span<const uint64_t> {
-		return _lhs._span();
+		return _raw._span();
 	}
 
 	/**
 	 * @return the underlying BigInt instance.
 	 */
 	CONSTEXPR_AUTO
-	_bigint() const noexcept -> const BigInt& { return _lhs; }
+	_bigint() const noexcept -> const BigInt& { return _raw; }
 
 private:
-	const BigInt& _lhs;
+	const BigInt& _raw;
 };
 
 class BigIntNeg: IBigIntLike {
@@ -544,7 +543,7 @@ public:
 
 	explicit constexpr
 	BigIntNeg(const BigInt& lhs) :
-	_lhs(lhs) {}
+	_raw(lhs) {}
 
 	/**
 	 * @return a new copy of this BigIntNeg.
@@ -556,31 +555,31 @@ public:
 
 	CONSTEXPR_AUTO
 	sign() const noexcept -> Sign {
-		return _private::neg(_lhs.sign());
+		return _private::neg(_raw.sign());
 	}
 
 	CONSTEXPR_AUTO
 	size() const noexcept -> size_type {
-		return _lhs.size();
+		return _raw.size();
 	}
 
 	CONSTEXPR_AUTO
 	operator[](size_type index) const -> uint64_t {
-		return _lhs[index];
+		return _raw[index];
 	}
 	CONSTEXPR_AUTO
 	_span() const noexcept -> std::span<const uint64_t> {
-		return _lhs._span();
+		return _raw._span();
 	}
 
 	/**
 	 * @return the underlying BigInt instance.
 	 */
 	CONSTEXPR_AUTO
-	_bigint() const noexcept -> const BigInt& { return _lhs; }
+	_bigint() const noexcept -> const BigInt& { return _raw; }
 
 private:
-	const BigInt& _lhs;
+	const BigInt& _raw;
 };
 
 class BigIntAbsNeg: IBigIntLike {
@@ -590,7 +589,7 @@ public:
 public:
 	explicit constexpr
 	BigIntAbsNeg(const BigInt& lhs) :
-	_lhs(lhs) {}
+	_raw(lhs) {}
 
 	/**
 	 * @return a new copy of this BigIntAbsNeg.
@@ -607,27 +606,27 @@ public:
 
 	CONSTEXPR_AUTO
 	size() const noexcept -> size_type {
-		return _lhs.size();
+		return _raw.size();
 	}
 
 	CONSTEXPR_AUTO
 	operator[](size_type index) const -> uint64_t {
-		return _lhs[index];
+		return _raw[index];
 	}
 
 	CONSTEXPR_AUTO
 	_span() const noexcept -> std::span<const uint64_t> {
-		return _lhs._span();
+		return _raw._span();
 	}
 
 	/**
 	 * @return the underlying BigInt instance.
 	 */
 	CONSTEXPR_AUTO
-	_bigint() const noexcept -> const BigInt& { return _lhs; }
+	_bigint() const noexcept -> const BigInt& { return _raw; }
 
 private:
-	const BigInt& _lhs;
+	const BigInt& _raw;
 };
 
 }
