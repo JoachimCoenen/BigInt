@@ -1531,24 +1531,18 @@ namespace bigint::_private {
  */
 BIGINT_TRACY_CONSTEXPR_VOID
 _mult_naive_ignore_sign(const std::span<uint64_t> &result, const std::span<const uint64_t> &a, uint64_t b) {
-	assert(result.size() >= a.size() + 1);
+	assert(result.size() == a.size() + 1);
 	uint64_t c = 0; // carry
 	BigInt::size_type i = 0;
 	for (; i < a.size(); i++) {
 		const auto rc = mult(a[i], b);
 		auto result_i = rc.lo + c;
 		result[i] = result_i;
-		c = rc.hi + (result_i < c ? 1 : 0); // account for addition overflow
+		c = rc.hi + (result_i < c); // account for addition overflow
 	}
 
-	if (c) {
-		result[i] = c;
-		++i;
-	}
-
-	for (; i < result.size(); ++i) {
-		result[i] = 0;
-	}
+	// handle last multiplication carry
+	result[i] = c;
 }
 
 /**
@@ -1566,9 +1560,9 @@ _addmul_naive_ignore_sign(const std::span<uint64_t> &result, const std::span<con
 	for (; i < a.size(); i++) {
 		const auto rc = mult(a[i], b);
 		auto mult_i = rc.lo + c;
-		c = rc.hi + (mult_i < c ? 1 : 0); // account for addition overflow
+		c = rc.hi + (mult_i < c); // account for addition overflow
 		auto result_i = result[i] + mult_i;
-		c += (result_i < mult_i ? 1 : 0); // account for addition overflow
+		c += (result_i < mult_i); // account for addition overflow
 		result[i] = result_i;
 	}
 
@@ -1636,9 +1630,11 @@ private:
 	std::unique_ptr<KaratsubaStepTemps> _local_temps;
 };
 
+
 // forward declaration:
 BIGINT_TRACY_CONSTEXPR_VOID
-mult_ignore_sign(const std::span<uint64_t> &result, const std::span<const uint64_t> &a_, const std::span<const uint64_t> &b_, KaratsubaStepTemps* karatsuba_temps);
+mult_ignore_sign(std::span<uint64_t> result, std::span<const uint64_t> a, std::span<const uint64_t> b, KaratsubaStepTemps* karatsuba_temps);
+
 
 /**
  * @brief multiplies two integers ignoring their sign using the Karatsuba algorithm. `a.size()` *must* be equal or greater than `b.size()`.
@@ -1648,7 +1644,7 @@ mult_ignore_sign(const std::span<uint64_t> &result, const std::span<const uint64
  * @param temps temporaries for karatsuba multiplication.
  */
 BIGINT_TRACY_CONSTEXPR_VOID
-_mult_karatsuba_ignore_sign(const std::span<uint64_t> &result, const std::span<const uint64_t> &lhs, const std::span<const uint64_t> &rhs, KaratsubaStepTemps& temps) {
+_mult_karatsuba_ignore_sign(std::span<uint64_t> result, std::span<const uint64_t> lhs, std::span<const uint64_t> rhs, KaratsubaStepTemps& temps) {
 	BIGINT_TRACY_ZONE_SCOPED;
 	// xx = mm(ac) + m((a+b) * (c+d) - ac - bd) + (bd)
 	assert(lhs.size() >= rhs.size());
@@ -1661,7 +1657,7 @@ _mult_karatsuba_ignore_sign(const std::span<uint64_t> &result, const std::span<c
 	const auto c = rmasked(rhs, mid, rhs.size());
 	const auto d = rmasked(rhs, 0, mid);
 
-	auto &local_temps = temps.local_temps();
+	auto& local_temps = temps.local_temps();
 
 	temps.ac.resize(a.size() + c.size());
 	mult_ignore_sign(temps.ac_span(), a, c, &local_temps);
@@ -1725,7 +1721,7 @@ _mult_ignore_sign_shortcuts(const std::span<uint64_t> &result, const std::span<c
 /**
  * @brief shortcuts for multiplication.
  *
-* @param result the result will be put in here.
+ * @param result the result will be put in here.
  * @param a the first operand.
  * @param b the second operand.
  *
@@ -1740,21 +1736,22 @@ _mult_ignore_sign_shortcuts(BigInt &result, const std::span<const uint64_t>& a, 
 	return false;
 }
 
-
 /**
  * @brief multiples `a` and `b`.
  * @param result the result will be put in here. Size requirement: `result.size() == a.size() + b.size()`.
- * @param a_ the first operand.
- * @param b_ the second operand.
+ * @param a the first operand.
+ * @param b the second operand.
  * @param karatsuba_temps temporaries for karatsuba multiplication. Can be a nullptr. Will be filled only if needed.
  */
 BIGINT_TRACY_CONSTEXPR_VOID
-mult_ignore_sign(const std::span<uint64_t> &result, const std::span<const uint64_t> &a_, const std::span<const uint64_t> &b_, KaratsubaStepTemps* karatsuba_temps) {
-	if (_mult_ignore_sign_shortcuts(result, a_, b_)) {
+mult_ignore_sign(std::span<uint64_t> result, std::span<const uint64_t> a, std::span<const uint64_t> b, KaratsubaStepTemps* karatsuba_temps) {
+	if (_mult_ignore_sign_shortcuts(result, a, b)) {
 		return;
 	}
 
-	auto [a, b] = a_.size() >= b_.size() ? std::tie(a_, b_) : std::tie(b_, a_);
+	if (b.size() > a.size()) {
+		std::swap(a, b);
+	}
 	assert(a.size() >= b.size());
 
 	switch (determine_multiplication_algorithm(a.size(), b.size())) {
@@ -1825,11 +1822,13 @@ mult_naive(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_like 
 	}
 	result.resize(lhs.size() + rhs.size());
 	result.sign() = _private::mult_sign(lhs.sign(), rhs.sign());
+
+	auto rhs_span = rhs._span();
+	auto lhs_span = lhs._span();
 	if (rhs.size() > lhs.size()) { // put the number with more digits first.
-		_private::_mult_naive_ignore_sign(result._span(), rhs._span(), lhs._span());
-	} else {
-		_private::_mult_naive_ignore_sign(result._span(), lhs._span(), rhs._span());
+		std::swap(lhs_span, rhs_span);
 	}
+	_private::_mult_naive_ignore_sign(result._span(), lhs_span, rhs_span);
 	result.cleanup();
 }
 
@@ -1838,7 +1837,6 @@ mult_naive(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_like 
  * @param result the result will be put in here.
  * @param lhs the first operand.
  * @param rhs the second operand.
- * @param temps temporaries used by the algorithm.
  */
 BIGINT_TRACY_CONSTEXPR_VOID
 mult_karatsuba(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_like auto &rhs) {
@@ -1849,12 +1847,14 @@ mult_karatsuba(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_l
 	}
 	result.resize(lhs.size() + rhs.size());
 	result.sign() = _private::mult_sign(lhs.sign(), rhs.sign());
-	auto& temps = _private::KaratsubaStepTemps::get_static();
+
+	auto rhs_span = rhs._span();
+	auto lhs_span = lhs._span();
 	if (rhs.size() > lhs.size()) { // put the number with more digits first.
-		_private::_mult_karatsuba_ignore_sign(result._span(), rhs._span(), lhs._span(), temps);
-	} else {
-		_private::_mult_karatsuba_ignore_sign(result._span(), lhs._span(), rhs._span(), temps);
+		std::swap(lhs_span, rhs_span);
 	}
+	auto& karatsuba_temps = _private::KaratsubaStepTemps::get_static();
+	_private::_mult_karatsuba_ignore_sign(result._span(), lhs_span, rhs_span, karatsuba_temps);
 	result.cleanup();
 }
 
@@ -1866,8 +1866,8 @@ mult_karatsuba(BigInt &result, const is_BigInt_like auto &lhs, const is_BigInt_l
  */
 BIGINT_TRACY_CONSTEXPR_VOID
 mult(BigInt &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b) {
-	assert_release_msg(&result != &a._bigint(), "result and first argument must be separate instances");
-	assert_release_msg(&result != &b._bigint(), "result and second argument must be separate instances");
+	assert(&result != &a._bigint());//, "result and first argument must be separate instances");
+	assert(&result != &b._bigint());//, "result and second argument must be separate instances");
 	result.resize(a.size() + b.size());
 	_private::mult_ignore_sign(result._span(), a._span(), b._span(), nullptr);
 	result.sign() = _private::mult_sign(a.sign(), b.sign());
@@ -2078,25 +2078,25 @@ _divmod_ignore_sign_big(BigInt& quotient, BigInt& remainder, const std::span<con
 
 		auto& af = temp_af;
 		af.resize(a.size() + 1);
-		_mult_naive_ignore_sign(std::span<uint64_t>{af}, a, f);
+		_mult_naive_ignore_sign(std::span{af}, a, f);
 		cleanup(af);
 
 		auto& bf = temp_bf;
 		bf.resize(b.size() + 1);
-		_mult_naive_ignore_sign(std::span<uint64_t>{bf}, b, f);
+		_mult_naive_ignore_sign(std::span{bf}, b, f);
 		cleanup(bf);
 
 		e = bf.back();
 
 		_resize_result_for_divide_loop<ignore_quotient>(quotient, remainder, temp, af.size(), bf.size());
-		_divide_loop<ignore_quotient>(DivModResult{quotient._span(), remainder._span()}, std::span<uint64_t>{af}, std::span<uint64_t>{bf}, e, std::span<uint64_t>{temp});
+		_divide_loop<ignore_quotient>(DivModResult{quotient._span(), remainder._span()}, std::span{af}, std::span{bf}, e, std::span{temp});
 
 		if constexpr (!ignore_remainder) { // fix remainder:
 			[[maybe_unused]] auto rm = divmod_ignore_sign_small<false>(remainder._span(), remainder._span(), f);
 		}
 	} else {
 		_resize_result_for_divide_loop<ignore_quotient>(quotient, remainder, temp, a.size(), b.size());
-		_divide_loop<ignore_quotient>(DivModResult{quotient._span(), remainder._span()}, a, b, e, std::span<uint64_t>{temp});
+		_divide_loop<ignore_quotient>(DivModResult{quotient._span(), remainder._span()}, a, b, e, std::span{temp});
 	}
 
 	if constexpr (!ignore_quotient) {
