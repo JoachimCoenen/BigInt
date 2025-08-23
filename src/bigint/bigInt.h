@@ -82,6 +82,11 @@ enum class Sign: bool {
 namespace bigint::_private {
 
 CONSTEXPR_AUTO
+mult_sign(Sign a, Sign b) -> Sign {
+	return a != b ? Sign::NEG : Sign::POS;
+}
+
+CONSTEXPR_AUTO
 neg(Sign sign) noexcept  -> Sign {
 	return (sign == Sign::POS) ? Sign::NEG : Sign::POS;
 }
@@ -1143,40 +1148,36 @@ namespace bigint::_private {
 
 /**
  * @brief adds two integers ignoring their sign. `a.size()` *must* be equal or greater than `b.size()`. Supports assignment operations `_add_ignore_sign(a, a, b)` or even `_add_ignore_sign(a, a, a)`.
- * @param result the result will be put in here. Size requirement: `result.size() >= max(a.size(), b.size())`, if we know that there is no overflow, otherwise `result.size() > max(a.size(), b.size())`.
+ * @param result the result will be put in here. Size requirement: `result.size() >= a.size()`. At most `a.size()` digits are written and the overflow is returned.
  * @param a the operand with the most digits.
  * @param b the operand with the least digits.
+ * @return overflow
  */
-BIGINT_TRACY_CONSTEXPR_VOID
-_add_ignore_sign(const std::span<uint64_t> &result, const std::span<const uint64_t> &a, const std::span<const uint64_t> &b) {
-	BIGINT_TRACY_ZONE_SCOPED;
+CONSTEXPR_AUTO
+_add_ignore_sign(const std::span<uint64_t> result, const std::span<const uint64_t> a, const std::span<const uint64_t> b) -> uint_fast32_t {
 	assert(a.size() >= b.size());
 	assert(result.size() >= a.size());
 
-	bool c = false; // carry
+	uint_fast32_t c = 0; // carry
 	BigInt::size_type i = 0;
-	for (; i < b.size(); ++i) {
+	const auto b_size = b.size();
+	for (; i < b_size; ++i) {
 		const auto ai = a[i];
-		auto result_i = ai + b[i];
-		if (c) { ++result_i; }
-		c = result_i < ai || (c && result_i == ai);
+		auto result_i = b[i] + c;
+		c = (result_i < c);
+		result_i += ai;
+		c += (result_i < ai);
 		result[i] = result_i;
 	}
 
-	for (; i < a.size(); ++i) {
-		const auto ai = a[i];
-		result[i] = ai + (c ? 1 : 0);
-		c = ai == std::numeric_limits<decltype(ai)>::max() && c;
+	const auto a_size = a.size();
+	for (; i < a_size; ++i) {
+		const auto result_i = a[i] + c;
+		c = result_i < c;
+		result[i] = result_i;
 	}
 
-	if (c) {
-		result[i] = 1;
-		++i;
-	}
-
-	for (; i < result.size(); ++i) {
-		result[i] = 0;
-	}
+	return c;
 }
 
 /**
@@ -1188,7 +1189,7 @@ _add_ignore_sign(const std::span<uint64_t> &result, const std::span<const uint64
  * @param b_lo the second operand.
  * @param b_hi the second operand.
  */
-BIGINT_TRACY_CONSTEXPR_VOID
+CONSTEXPR_AUTO
 _sub_ignore_sign_no_negative_result(
 	uint64_t& result_hi,
 	uint64_t& result_lo,
@@ -1204,7 +1205,7 @@ _sub_ignore_sign_no_negative_result(
 	if (c) { --result_hi; }
 	c = result_hi > a_hi || (c && result_hi == a_hi);
 
-	if (c) { // should NEVER happen.
+	if (c) [[unlikely]] { // should NEVER happen.
 		auto msg = utils::concat(
 			"leftover carry! abs(b) was greater than abs(a). This is not supported.",
 			" c: ", c, ".");
@@ -1214,51 +1215,41 @@ _sub_ignore_sign_no_negative_result(
 
 
 /**
- * @brief subtracts `b` from `a` ignoring their sign. `abs(a)` *must* be equal or greater than `abs(b)`. Supports assignment operations `_sub_ignore_sign_no_negative_result(a, a, b)`.
- * @param result the result will be put in here. Size requirement: `result.size() >= max(a.size(), b.size())`.
+ * @brief subtracts `b` from `a` ignoring their sign using twos complement subtraction. `a.size()` *must* be equal or greater than `b.size()`.
+ *        Supports assignment operations `_sub_ignore_sign_no_negative_result(a, a, b)`.
+ * @param result the result will be put in here. Size requirement: `result.size() >= a.size()`.
  * @param a the first operand.
  * @param b the second operand.
+ * @return true if there was underflow and the result is negative and inverted.
  */
-BIGINT_TRACY_CONSTEXPR_VOID
-_sub_ignore_sign_no_negative_result(const std::span<uint64_t> &result, const std::span<const uint64_t> &a, const std::span<const uint64_t> &b) {
-	BIGINT_TRACY_ZONE_SCOPED;
-	assert(result.size() >= std::max(a.size(), b.size()));
+CONSTEXPR_AUTO
+_sub_ignore_sign(const std::span<uint64_t> result, const std::span<const uint64_t> a, const std::span<const uint64_t> b) -> bool {
+	assert(a.size() >= b.size());
+	assert(result.size() >= a.size());
 
-	bool c = false; // carry
+	uint_fast32_t c = 0; // carry
 	BigInt::size_type i = 0;
-	const auto min_size = std::min(a.size(), b.size());
-	for (; i < min_size; ++i) {
+	const auto b_size = b.size();
+	for (; i < b_size; ++i) {
 		const auto ai = a[i];
-		auto result_i = ai - b[i];
-		if (c) { --result_i; }
-		c = result_i > ai || (c && result_i == ai);
+		const auto bic = b[i] + c;
+		c = (bic < c);
+		auto result_i = ai - bic;
+		c += (result_i > ai);
 		result[i] = result_i;
 	}
 
-	if (a.size() >= b.size()) {
-		for (; i < a.size(); ++i) {
-			const auto ai = a[i];
-			result[i] = ai - (c ? 1 : 0);
-			c = ai == 0 && c;
-		}
-	} else {
-		if (!is_zero(rshifted(b, a.size()))) {
-			std::string msg = "abs(b) was greater than abs(a). This is not supported.";
-			throw std::invalid_argument(utils::error_msg(std::move(msg)));
-		}
+	const auto a_size = a.size();
+	for (; i < a_size; ++i) {
+		const auto ai = a[i];
+		const auto result_i = ai - c;
+		c = result_i > ai;
+		result[i] = result_i;
 	}
 
-	if (c) { // should NEVER happen.
-		auto msg = utils::concat(
-			"leftover carry! abs(b) was greater than abs(a). This is not supported.",
-			" c: ", c, ".");
-		throw std::invalid_argument(utils::error_msg(std::move(msg)));
-	}
-
-	for (; i < result.size(); ++i) {
-		result[i] = 0;
-	}
+	return c;
 }
+
 
 /**
  * @brief adds two integers ignoring their sign. Supports assignment operations `add_ignore_sign(a, a, b)`.
@@ -1266,37 +1257,55 @@ _sub_ignore_sign_no_negative_result(const std::span<uint64_t> &result, const std
  * @param a the first operand.
  * @param b the second operand.
  */
-BIGINT_TRACY_CONSTEXPR_VOID
-add_ignore_sign(const std::span<uint64_t> &result, const std::span<const uint64_t> &a, const std::span<const uint64_t> &b) {
-	if (b.size() > a.size()) { // put the number with more digits first.
-		_add_ignore_sign(result, b, a);
-	} else {
-		_add_ignore_sign(result, a, b);
+CONSTEXPR_VOID
+add_ignore_sign(std::span<uint64_t> result, std::span<const uint64_t> a, std::span<const uint64_t> b) {
+	if (b.size() > a.size()) {
+		std::swap(a, b);
 	}
+	assert(result.size() == a.size() + 1);
+	const auto c = _add_ignore_sign(result, a, b);
+	result.back() = c;
+}
+
+CONSTEXPR_VOID
+_negate_twos_complement(std::span<uint64_t> a) {
+	bool c = false; // carry
+	BigInt::size_type i = 0;
+	for (; i < a.size(); ++i) {
+		auto ai = 0 - a[i] - c; // underflow
+		c = ai != 0 || c;
+		a[i] = ai;
+	}
+	assert(c);
 }
 
 /**
  * @brief subtracts `b` from `a` ignoring their sign. Supports assignment operations `sub_ignore_sign(a, a, b)`.
- * @param result the result will be put in here. Size requirement: `result.size() >= max(a.size(), b.size())`.
+ * @param result the result will be put in here. Size requirement: `result.size() == max(a.size(), b.size())`.
  * @param a the first operand.
  * @param b the second operand.
  */
-BIGINT_TRACY_CONSTEXPR_AUTO
-sub_ignore_sign(const std::span<uint64_t> &result, const std::span<const uint64_t> &a, const std::span<const uint64_t> &b) -> Sign {
-	BIGINT_TRACY_ZONE_SCOPED;
-	const bool isNegative = (a <=> b) == std::strong_ordering::less;
-	if (isNegative) {
-		_sub_ignore_sign_no_negative_result(result, b, a);
-		return Sign::NEG;
-	} else {
-		_sub_ignore_sign_no_negative_result(result, a, b);
-		return Sign::POS;
+CONSTEXPR_AUTO
+sub_ignore_sign(std::span<uint64_t> result, std::span<const uint64_t> a, std::span<const uint64_t> b) -> Sign {
+	bool swapped = b.size() > a.size();
+	if (swapped) {
+		std::swap(a, b);
 	}
+	assert(result.size() == a.size());
+
+	bool c = _sub_ignore_sign(result, a, b);
+
+	if (c) {
+		_negate_twos_complement(result);
+	}
+
+	return c != swapped ? Sign::NEG : Sign::POS;
 }
+
 
 /**
  * @brief adds two integers. Supports assignment operations `add(a, a, b)` or even `add(a, a, a)`.
- * @param result the result will be put in here. Size requirement: `result.size() >= max(a.size(), b.size())`, if we know that there is no overflow, otherwise `result.size() > max(a.size(), b.size())`.
+ * @param result the result will be put in here. Size requirement: `result.size() == max(a.size(), b.size()) + 1`, if we know that there is no overflow, otherwise `result.size() > max(a.size(), b.size())`.
  * @param a the first operand.
  * @param b the second operand.
  * @param a_sign sign of the first operand.
@@ -1304,14 +1313,15 @@ sub_ignore_sign(const std::span<uint64_t> &result, const std::span<const uint64_
  */
 BIGINT_TRACY_CONSTEXPR_AUTO
 add(const std::span<uint64_t> &result, const std::span<const uint64_t> &a, const std::span<const uint64_t> &b, const Sign a_sign, const Sign b_sign) -> Sign {
+	assert(result.size() == std::max(a.size(), b.size()) + 1);
 	if (a_sign == b_sign) {
 		add_ignore_sign(result, a, b);
 		return a_sign;
+	} else {
+		auto sub_sign = sub_ignore_sign(result.first(result.size() - 1), a, b);
+		result.back() = 0;
+		return mult_sign(a_sign, sub_sign);
 	}
-	if (a_sign == Sign::POS) {
-		return sub_ignore_sign(result, a, b);
-	}
-	return sub_ignore_sign(result, b, a);
 }
 
 }
@@ -1513,12 +1523,6 @@ determine_multiplication_algorithm(BigInt::size_type a_size, BigInt::size_type b
 // multiplication:
 namespace bigint::_private {
 
-CONSTEXPR_AUTO
-mult_sign(Sign a, Sign b) -> Sign {
-	return a != b ? Sign::NEG : Sign::POS;
-}
-
-
 /**
  * @brief multiples `a` and `b`. Supports assignment operations `_mult_naive_ignore_sign(a, a, b)`.
  * @param result the result will be put in here. Size requirement: `result.size() == a.size() + 1`.
@@ -1680,19 +1684,23 @@ _mult_karatsuba_ignore_sign(const std::span<uint64_t> &result, const std::span<c
 	mult_ignore_sign(temps.ab_cd_span(), temps.a_b_span(), temps.c_d_span(), &local_temps);
 	cleanup(temps.ab_cd);
 
-	[[maybe_unused]] auto sign = sub_ignore_sign(temps.ab_cd_span(), temps.ab_cd_span(), temps.ac_span());
+	[[maybe_unused]] // result is guaranteed to be positive.
+	auto sign = _sub_ignore_sign(temps.ab_cd_span(), temps.ab_cd_span(), temps.ac_span());
 	cleanup(temps.ab_cd);
-	[[maybe_unused]] auto sign2 = sub_ignore_sign(temps.ab_cd_span(), temps.ab_cd_span(), temps.bd_span());
+	[[maybe_unused]] // result is guaranteed to be positive.
+	auto sign2 = _sub_ignore_sign(temps.ab_cd_span(), temps.ab_cd_span(), temps.bd_span());
 	cleanup(temps.ab_cd);
 
 	std::ranges::copy(temps.bd, result.begin());
 	std::fill(result.begin() + temps.bd.size(), result.end(), 0);
 
 	const auto result_shifted1 = rshifted(result, mid);
-	_add_ignore_sign(result_shifted1, result_shifted1, rmasked(temps.ab_cd_span(), 0, result_shifted1.size()));
+	[[maybe_unused]] // result is guaranteed to not overflow.
+	auto c1 = _add_ignore_sign(result_shifted1, result_shifted1, rmasked(temps.ab_cd_span(), 0, result_shifted1.size()));
 
 	const auto result_shifted2 = rshifted(result, mid << 1);
-	_add_ignore_sign(result_shifted2, result_shifted2, rmasked(temps.ac_span(), 0, result_shifted2.size()));
+	[[maybe_unused]] // result is guaranteed to not overflow.
+	auto c2 = _add_ignore_sign(result_shifted2, result_shifted2, rmasked(temps.ac_span(), 0, result_shifted2.size()));
 }
 
 
