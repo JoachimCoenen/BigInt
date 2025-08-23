@@ -687,6 +687,16 @@ operator-(BigInt&& a) -> BigInt {
 	return std::move(a);
 }
 
+CONSTEXPR_AUTO
+operator+(is_BigInt_like auto&& a) -> decltype(a) {
+	return std::forward<decltype(a)>(a);
+}
+
+CONSTEXPR_AUTO
+operator+(const is_BigInt_like auto& a) -> const decltype(a)& {
+	return a;
+}
+
 }
 
 
