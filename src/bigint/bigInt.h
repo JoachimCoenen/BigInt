@@ -1337,7 +1337,7 @@ namespace bigint {
  * @param b the second operand.
  */
 BIGINT_TRACY_CONSTEXPR_VOID
-add(BigInt &result, is_BigInt_like auto &a, const is_BigInt_like auto &b) {
+add(BigInt &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b) {
 	const auto a_size = a.size();
 	result.resize(std::max(a.size(), b.size()) + 1);
 	const auto a_span = a._span().first(a_size);
@@ -1353,7 +1353,7 @@ add(BigInt &result, is_BigInt_like auto &a, const is_BigInt_like auto &b) {
  * @param b the second operand.
  */
 BIGINT_TRACY_CONSTEXPR_VOID
-add(BigInt &result, is_BigInt_like auto &a, const std::integral auto &b) {
+add(BigInt &result, const is_BigInt_like auto &a, const std::integral auto &b) {
 	add(result, a, _private::IntegralAdapter{b});
 }
 
@@ -1400,7 +1400,7 @@ namespace bigint {
  * @param b the second operand.
  */
 BIGINT_TRACY_CONSTEXPR_VOID
-sub(BigInt &result, is_BigInt_like auto &a, const is_BigInt_like auto &b) {
+sub(BigInt &result, const is_BigInt_like auto &a, const is_BigInt_like auto &b) {
 	const auto a_size = a.size();
 	result.resize(std::max(a.size(), b.size()) + 1);
 	const auto a_span = a._span().first(a_size);
@@ -1416,7 +1416,7 @@ sub(BigInt &result, is_BigInt_like auto &a, const is_BigInt_like auto &b) {
  * @param b the second operand.
  */
 BIGINT_TRACY_CONSTEXPR_VOID
-sub(BigInt &result, is_BigInt_like auto &a, const std::integral auto &b) {
+sub(BigInt &result, const is_BigInt_like auto &a, const std::integral auto &b) {
 	sub(result, a, _private::IntegralAdapter{b});
 }
 
