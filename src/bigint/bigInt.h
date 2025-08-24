@@ -1,7 +1,20 @@
 #pragma once
 
+#ifndef BIGINT_ENABLE_BOUNDS_CHECKS
+#	define BIGINT_ENABLE_BOUNDS_CHECKS 0
+#endif
+
+#ifndef BIGINT_USE_FAST_VECTOR
+#	define BIGINT_USE_FAST_VECTOR 1
+#endif
+
 #include "utils/utils.h"
 #include "utils/pool.h"
+#if BIGINT_USE_FAST_VECTOR
+#    include "utils/fast_vector.h"
+#else
+#    include <vector>
+#endif
 
 // standard library
 #include <cassert>
@@ -12,11 +25,6 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
-#include <vector>
-
-#ifndef BIGINT_ENABLE_BOUNDS_CHECKS
-#	define BIGINT_ENABLE_BOUNDS_CHECKS 1
-#endif
 
 #include "utils/_bigint_tracy_defines.h"
 
@@ -41,7 +49,11 @@ concept is_BigInt_like = std::is_base_of_v<IBigIntLike, T>;
 
 using utils::one_of;
 
-using DigitsVec = std::vector<uint64_t>;
+#if BIGINT_USE_FAST_VECTOR
+	using DigitsVec = fast::fast_vector<uint64_t>;
+#else
+	using DigitsVec = std::vector<uint64_t>;
+#endif
 
 template <>
 struct pool::pooled_reset<DigitsVec> {
@@ -177,7 +189,7 @@ class BigInt : public IBigIntLike
 	CONSTEXPR_AUTO
 	copy() const noexcept -> BigInt {
 		BigInt result;
-		result._data() = _data();
+		result._data_ptr = _data_ptr;
 		result._sign = _sign;
 		return result;
 	}
