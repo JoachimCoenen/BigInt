@@ -42,17 +42,18 @@ sqrt(const is_BigInt_like auto& y) -> BigInt {
 
 namespace _private {
 BIGINT_TRACY_CONSTEXPR_AUTO
-calculate_squares(const std::span<const uint64_t>& base, const std::span<const uint64_t>& y) -> std::vector<DigitsVec> {
+calculate_squares(const std::span<const uint64_t>& base, const std::span<const uint64_t>& y) -> std::vector<DigitsVecPtr> {
 	constexpr uint8_t exp_bits_max = 64;
-	std::vector<DigitsVec> squares;
+	std::vector<DigitsVecPtr> squares;
 
 	for (uint8_t i = 1; i < exp_bits_max; ++i) {
-		std::span last_square = i == 1 ? base : std::span<uint64_t>{squares.back()};
+		std::span last_square = i == 1 ? base : std::span{*squares.back()};
 
-		squares.emplace_back(last_square.size() * 2);
-		std::span<uint64_t> square{squares.back()};
+		squares.emplace_back();
+		squares.back()->resize(last_square.size() * 2);
+		std::span square{*squares.back()};
 		mult_ignore_sign(square, last_square, last_square, nullptr);
-		cleanup(squares.back());
+		cleanup(*squares.back());
 		if (square <=> y > 0) { // if (square > y)
 			squares.pop_back();
 			break;
@@ -92,7 +93,7 @@ log(const is_BigInt_like auto& base, const is_BigInt_like auto& y) -> uint64_t {
 	DigitsVecPtr temp_d, temp_af, temp_bf;
 
 	for (auto i = static_cast<uint8_t>(squares.size()); i --> 0;) {
-		const std::span<const uint64_t> square (squares[i]);
+		const std::span square (*squares[i]);
 		if (square <=> temp._span() <= 0) {  // (square <= temp)
 			// temp2 = temp / square:
 			_private::divmod_ignore_sign<false, true>(temp2, reminder, temp._span(), square, *temp_d, *temp_af, *temp_bf);
