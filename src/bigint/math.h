@@ -2,7 +2,7 @@
 
 #include "bigInt.h"
 
-#include "_bigint_tracy_defines.h"
+#include "utils/_bigint_tracy_defines.h"
 
 
 // misc math:
@@ -24,7 +24,7 @@ sqrt(const is_BigInt_like auto& y) -> BigInt {
 
 	// sqrt(0) == 0; sqrt(1) == 1
 	if (y <= 1) {
-		return y;
+		return y.copy();
 	}
 
 	// Initial estimate (must be too high)
@@ -42,19 +42,18 @@ sqrt(const is_BigInt_like auto& y) -> BigInt {
 
 namespace _private {
 BIGINT_TRACY_CONSTEXPR_AUTO
-calculate_squares(const utils::Span<const uint64_t>& base, const utils::Span<const uint64_t>& y) -> std::vector<DigitsVec> {
+calculate_squares(const std::span<const uint64_t>& base, const std::span<const uint64_t>& y) -> std::vector<DigitsVecPtr> {
 	constexpr uint8_t exp_bits_max = 64;
-	std::vector<DigitsVec> squares;
-
-	utils::UniquePtr<KaratsubaStepTemps> karatsuba_temps;
+	std::vector<DigitsVecPtr> squares;
 
 	for (uint8_t i = 1; i < exp_bits_max; ++i) {
-		utils::Span last_square = i == 1 ? base : utils::Span<uint64_t>{squares.back()};
+		std::span last_square = i == 1 ? base : std::span{*squares.back()};
 
-		squares.emplace_back(last_square.size() * 2);
-		utils::Span<uint64_t> square{squares.back()};
-		mult_ignore_sign(square, last_square, last_square, karatsuba_temps);
-		cleanup(squares.back());
+		squares.emplace_back();
+		squares.back()->resize(last_square.size() * 2);
+		std::span square{*squares.back()};
+		mult_ignore_sign(square, last_square, last_square, nullptr);
+		cleanup(*squares.back());
 		if (square <=> y > 0) { // if (square > y)
 			squares.pop_back();
 			break;
@@ -88,16 +87,16 @@ log(const is_BigInt_like auto& base, const is_BigInt_like auto& y) -> uint64_t {
 	const auto squares = _private::calculate_squares(base._span(), y._span());
 
 	uint64_t result = 0;
-	BigInt temp{y};
+	BigInt temp = y.copy();
 	BigInt temp2;
 	BigInt reminder; // not used
-	DigitsVec temp_d, temp_af, temp_bf;
+	DigitsVecPtr temp_d, temp_af, temp_bf;
 
 	for (auto i = static_cast<uint8_t>(squares.size()); i --> 0;) {
-		const utils::Span<const uint64_t> square (squares[i]);
+		const std::span square (*squares[i]);
 		if (square <=> temp._span() <= 0) {  // (square <= temp)
 			// temp2 = temp / square:
-			_private::divmod_ignore_sign<false, true>(temp2, reminder, temp._span(), square, temp_d, temp_af, temp_bf);
+			_private::divmod_ignore_sign<false, true>(temp2, reminder, temp._span(), square, *temp_d, *temp_af, *temp_bf);
 			std::swap(temp, temp2);
 
 			uint64_t mask = 1ull << (i + 1);
@@ -167,21 +166,19 @@ pow(const is_BigInt_like auto& base, uint64_t exp) -> BigInt {
 	}
 
 	BigInt result{1};
-	BigInt temp{base};
+	BigInt temp = base.copy();
 	BigInt temp2;
-
-	utils::UniquePtr<KaratsubaStepTemps> karatsuba_temps;
 
 	const auto exp_bits = static_cast<uint8_t>(64 - utils::clzll(exp));
 	for (uint8_t i = 0; i < exp_bits; ++i) {
 		const auto mask = 1ull << i;
 		if (exp & mask) {
 			//result *= temp;
-			mult(temp2, result, temp, karatsuba_temps);
+			mult(temp2, result, temp);
 			std::swap(result, temp2);
 		}
 		if (i+1 < exp_bits) {
-			mult(temp2, temp, temp, karatsuba_temps);
+			mult(temp2, temp, temp);
 			std::swap(temp, temp2);
 		}
 	}
@@ -214,17 +211,14 @@ pow_mod(const is_BigInt_like auto& base, const is_BigInt_like auto& exp, const i
 
 	const uint64_t exp_bits = (exp.size() - 1) * 64 + (64 - utils::clzll(exp[exp.size()-1]));
 
-	DigitsVec temp_mod;
-	DigitsVec temp_af;
-	DigitsVec temp_bf;
-	temp_mod.resize(mod.size() + 2);
-	temp_af.resize(mod.size() * 2 + 1);
-	temp_bf.resize(mod.size() + 1);
+	DigitsVecPtr temp_mod, temp_af, temp_bf;
+	temp_mod->resize(mod.size() + 2);
+	temp_af->resize(mod.size() * 2 + 1);
+	temp_bf->resize(mod.size() + 1);
 	BigInt result{1};
 	BigInt temp; // = base % mod;
 	BigInt temp2;
 	BigInt temp3;
-	utils::UniquePtr<KaratsubaStepTemps> karatsuba_temps;
 
 	result.reserve(mod.size() * 2 + 2);
 	temp.reserve(mod.size() * 2 + 2);
@@ -232,20 +226,23 @@ pow_mod(const is_BigInt_like auto& base, const is_BigInt_like auto& exp, const i
 	temp3.reserve(mod.size() * 2);
 
 	// temp = base % mod;
-	_private::divmod<true, false>(result, temp, base, mod, temp_mod, temp_af, temp_bf); // result is just a placeholder here and is never read from or written to.
+	_private::divmod<true, false>(result, temp, base, mod, *temp_mod, *temp_af, *temp_bf); // result is just a placeholder here and is never read from or written to.
 
 	for (uint64_t i = 0; i < exp_bits; ++i) {
 		const auto mask = 1ull << (i % 64);
 		if (exp[i / 64] & mask) {
 			// result = (result * temp) % mod;
-			mult(temp2, result, temp, karatsuba_temps);
-			_private::divmod<true, false>(temp3, result, temp2, mod, temp_mod, temp_af, temp_bf); // temp3 is just a placeholder here and is never read from or written to.
+			mult(temp2, result, temp);
+			_private::divmod<true, false>(temp3, result, temp2, mod, *temp_mod, *temp_af, *temp_bf); // temp3 is just a placeholder here and is never read from or written to.
 		}
 		if (i + 1 < exp_bits) { // don´t square at the end of the last loop, it just wasts CPU cycles.
 			// temp = (temp * temp) % mod;
-			mult(temp3, temp, temp, karatsuba_temps);
-			_private::divmod<true, false>(temp2, temp, temp3, mod, temp_mod, temp_af, temp_bf); // temp2 is just a placeholder here and is never read from or written to.
+			mult(temp3, temp, temp);
+			_private::divmod<true, false>(temp2, temp, temp3, mod, *temp_mod, *temp_af, *temp_bf); // temp2 is just a placeholder here and is never read from or written to.
 		}
+	}
+	if (is_zero(result)) {
+		result.sign() = Sign::POS;
 	}
 	return result;
 }
@@ -403,8 +400,8 @@ gcd_internal(const BigInt& Uu, const BigInt& Vv) -> BigInt {
 
 	constexpr auto k = 63;
 
-	BigInt U = Uu; U.sign() = Sign::POS;
-	BigInt V = Vv; V.sign() = Sign::POS;
+	BigInt U = Uu.copy(); U.sign() = Sign::POS;
+	BigInt V = Vv.copy(); V.sign() = Sign::POS;
 	BigInt R, temp; // temporaries
 
 	while (!is_zero(V)) {
@@ -455,7 +452,7 @@ namespace _private {
  * Supported bases are 2 - 64 (inclusive). The bases 2, 4, 8, 16, and 32 are considerable faster than any other base.
  */
 BIGINT_TRACY_CONSTEXPR_AUTO
-digit_sum(const utils::Span<const uint64_t> v, uint_fast8_t base = 10) -> uint64_t {
+digit_sum(const std::span<const uint64_t> v, uint_fast8_t base = 10) -> uint64_t {
 	BIGINT_TRACY_ZONE_SCOPED;
 	if (base > 64 || base < 2) {
 		std::string msg = "digit_sum only supports bases in the range 2 - 64 (inclusive).";
@@ -504,4 +501,4 @@ digit_sum(const is_BigInt_like auto& v, uint_fast8_t base = 10) -> uint64_t {
 }
 
 
-#include "_bigint_tracy_undefines.h"
+#include "utils/_bigint_tracy_undefines.h"

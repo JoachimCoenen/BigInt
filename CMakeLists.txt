@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 project ("BigInt")
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 cmake_policy(SET CMP0135 NEW)
 
@@ -15,29 +15,53 @@ set(BIGINT_TRACY_GIT_REPO "https://github.com/wolfpld/tracy.git" CACHE STRING
 set(BIGINT_TRACY_VERSION "v0.11.0" CACHE STRING
 	"The version of tracy to use (e.g. v0.11.0). must be a valifd git tag in the tracy git repository.")
 
+set(BIGINT_USE_SANITIZERS OFF CACHE BOOL
+	"if tuned on, enables all the sanitizers if available. (like address sanitizer, leak sanitizer, etc.)")
+
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	# using Clang
-	add_compile_options(-fsanitize=address -fsanitize=leak -fsanitize=undefined -pedantic)
-	add_link_options(-fsanitize=address -fsanitize=leak -fsanitize=undefined -pedantic)
+	if (BIGINT_USE_SANITIZERS)
+		add_compile_options(-fsanitize=address -fsanitize=leak -fsanitize=undefined -fsanitize-undefined-trap-on-error)
+		add_link_options(-fsanitize=address -fsanitize=leak -fsanitize=undefined -fsanitize-undefined-trap-on-error)
+	endif()
+
+	add_compile_options(-pedantic)
+	add_link_options(-pedantic)
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -march=native")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	# using GCC
-	if(MINGW)
-		# no address sanitazer for gcc on windows :(
-		# no libubsan rich logging capabilities for gcc on windows :(
-		# no sanitazer at all for gcc on windows :'(
-		add_compile_options(-fsanitize=undefined -fsanitize-undefined-trap-on-error -pedantic)
-		add_link_options(-fsanitize=undefined -fsanitize-undefined-trap-on-error -pedantic)
-	else()
-		add_compile_options(-fsanitize=address -fsanitize=leak -fsanitize=undefined -pedantic)
-		add_link_options(-fsanitize=address -fsanitize=leak -fsanitize=undefined -pedantic)
+	if (BIGINT_USE_SANITIZERS)
+		if (MINGW)
+			# no address sanitazer for gcc on windows :(
+			# no libubsan rich logging capabilities for gcc on windows :(
+			# no sanitazer at all for gcc on windows :'(
+			 add_compile_options(-fsanitize=undefined -fsanitize-undefined-trap-on-error)
+			 add_link_options(-fsanitize=undefined -fsanitize-undefined-trap-on-error)
+		else()
+			add_compile_options(-fsanitize=address -fsanitize=leak -fsanitize=undefined -fsanitize-undefined-trap-on-error)
+			add_link_options(-fsanitize=address -fsanitize=leak -fsanitize=undefined -fsanitize-undefined-trap-on-error)
+		endif()
 	endif()
+
+	add_compile_options(-pedantic)
+	add_link_options(-pedantic)
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -march=native")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+
 # elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
-#   # using Intel C++. Not yets supported
+#   # using Intel C++. Not yet supported
+
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	# using Visual Studio C++
-	add_compile_options(/fsanitize=address /W4)
-	add_link_options(/fsanitize=address /W4)
+	if (BIGINT_USE_SANITIZERS)
+		 add_compile_options(/fsanitize=address)
+		 add_link_options(/fsanitize=address)
+	endif()
+	add_compile_options(/W4) # /FA)
+	add_link_options(/W4)
 endif()
 
 

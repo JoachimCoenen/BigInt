@@ -59,7 +59,7 @@ TEST_VALUES\
 }
 
 #define TEST_UNARY_OPERATOR_BIGINT(NAME, O1, OP, TEST_VALUES) \
-TEST_UNARY_OPERATOR(NAME, O1, BigInt, OP, TEST_VALUES, DigitsVec, res.__data_for_testing_only())
+TEST_UNARY_OPERATOR(NAME, O1, BigInt, OP, TEST_VALUES, std::string, to_debug_string(res))
 
 
 
@@ -80,10 +80,10 @@ _TEST_BINARY_OPERATOR(NAME, O1, O2, R, return OP, TEST_VALUES, RT, GET_RT)
 _TEST_BINARY_OPERATOR(F##NAME, O1, O2, R, R res; OP; return res, TEST_VALUES, RT, GET_RT)
 
 #define TEST_BINARY_OPERATOR_BIGINT(NAME, O1, O2, OP, TEST_VALUES) \
-TEST_BINARY_OPERATOR(NAME, O1, O2, BigInt, OP, TEST_VALUES, DigitsVec, res.__data_for_testing_only())
+TEST_BINARY_OPERATOR(NAME, O1, O2, BigInt, OP, TEST_VALUES, std::string, to_debug_string(res))
 
 #define TEST_BINARY_OPERATOR_BIGINT_F(NAME, O1, O2, OP, TEST_VALUES) \
-TEST_BINARY_OPERATOR_F(NAME, O1, O2, BigInt, OP, TEST_VALUES, DigitsVec, res.__data_for_testing_only())
+TEST_BINARY_OPERATOR_F(NAME, O1, O2, BigInt, OP, TEST_VALUES, std::string, to_debug_string(res))
 
 #define _TEST_ASSIGN_OPERATOR(NAME, O1, O2, OP, TEST_VALUES, RT, GET_RT) \
 TEST(HelloTest, TestI##NAME##_##O1##_##O2) {\
@@ -95,10 +95,10 @@ TEST_VALUES\
 }
 
 #define TEST_ASSIGN_OPERATOR_BIGINT(NAME, O2, OP, TEST_VALUES) \
-_TEST_ASSIGN_OPERATOR(NAME, BigInt, O2, return OP, TEST_VALUES, DigitsVec, res.__data_for_testing_only())
+_TEST_ASSIGN_OPERATOR(NAME, BigInt, O2, return OP, TEST_VALUES, std::string, to_debug_string(res))
 
 #define TEST_ASSIGN_OPERATOR_BIGINT_F(NAME, O2, OP, TEST_VALUES) \
-_TEST_ASSIGN_OPERATOR(F##NAME, BigInt, O2, OP; return a, TEST_VALUES, DigitsVec, res.__data_for_testing_only())
+_TEST_ASSIGN_OPERATOR(F##NAME, BigInt, O2, OP; return a, TEST_VALUES, std::string, to_debug_string(res))
 
 
 
@@ -112,4 +112,4 @@ TEST_VALUES\
 }
 
 #define TEST_TRINARY_OPERATOR_BIGINT(NAME, O1, O2, O3, OP, TEST_VALUES) \
-_TEST_TRINARY_OPERATOR(NAME, O1, O2, O3, BigInt, return OP,TEST_VALUES, DigitsVec, res.__data_for_testing_only())
+_TEST_TRINARY_OPERATOR(NAME, O1, O2, O3, BigInt, return OP,TEST_VALUES, std::string, to_debug_string(res))

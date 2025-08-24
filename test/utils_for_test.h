@@ -1,10 +1,9 @@
 #pragma once
 
 #include "../src/bigint/bigInt.h"
-#include "../src/bigint/utils.h"
+#include "../src/bigint/utils/utils.h"
 
 #include <functional>
-#include <ranges>
 #include <string_view>
 #include <vector>
 
@@ -46,42 +45,6 @@ operator|(R&& r, [[maybe_unused]] const to_vector_adapter a) {
 	v.insert(v.begin(), r.begin(), r.end());
 
 	return v;
-}
-
-struct join_str_adapter {
-	std::string separator;
-};
-
-/**
- * @brief creates a range adaptor that converts the range to a vector.
- * @return A range adaptor that converts the range to a vector.
- */
-CONSTEXPR_AUTO
-join_str(const std::string& separator) {
-	return join_str_adapter{separator};
-}
-
-/**
- * @brief A range pipe that results in a string.
- */
-template<std::ranges::range R>
-	requires std::same_as<std::ranges::range_value_t<R>, std::string>
-CONSTEXPR_AUTO
-operator|(R&& r, [[maybe_unused]] const join_str_adapter& a) {
-	auto iter = r.begin();
-
-	if (iter == r.end()) {
-		return std::string{};
-	}
-
-	std::string str = *iter;
-	++iter;
-	for (; iter != r.end(); ++iter) {
-		str += a.separator;
-		str += *iter;
-	}
-
-	return str;
 }
 
 
@@ -301,9 +264,11 @@ print_test_info([[maybe_unused]]const OperationTest<N>& test) {
 template <size_t N>
 CONSTEXPR_AUTO
 build_test_str(const std::array<Value, N> operands) -> std::string {
-	return operands
-		   | std::views::transform([](const auto& v) { return v.val; })
-		   | join_str(" . ");
+	return bigint::utils::join_transformed_strings(
+		operands,
+		[](const auto& v) { return v.val; },
+		" . "
+	);
 }
 
 template <size_t N, class R, class... On>

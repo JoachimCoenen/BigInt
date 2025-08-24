@@ -4,6 +4,7 @@
 #include <array>
 #include <cassert>
 #include <charconv>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -97,6 +98,23 @@ remove_chars_from_string(std::string& str, std::string_view chars_to_remove) {
 	for (const auto char_to_remove : chars_to_remove) {
 		str.erase(std::ranges::remove(str, char_to_remove).begin(), str.end());
 	}
+}
+
+/**
+ * @brief A range pipe that results in a string.
+ */
+template<std::ranges::range R, class F>
+CONSTEXPR_AUTO
+join_transformed_strings(const R& r, F to_string, std::string_view separator) -> std::string {
+	std::stringstream ss;
+	auto iter = r.begin();
+	if (iter != r.end()) {
+		ss << to_string(*iter);
+		while (++iter != r.end()) {
+			ss << separator << to_string(*iter);
+		}
+	}
+	return ss.str();
 }
 
 }
@@ -304,196 +322,69 @@ check_bounds(std::integral auto index, decltype(index) size) {
 
 }
 
-namespace bigint::utils {
-/**
- *
- * very simple unique_ptr that supports constexpr.
- */
-template<typename T>
-struct UniquePtr {
-	explicit constexpr UniquePtr(T* ptr) noexcept : ptr(ptr) { }
-	explicit constexpr UniquePtr() noexcept : ptr(nullptr) { }
-	constexpr ~UniquePtr() { delete ptr; }
 
-	UniquePtr(const UniquePtr&) = delete;
-	UniquePtr& operator=(const UniquePtr&) = delete;
-	UniquePtr(UniquePtr&& other) noexcept : ptr(other.ptr) { other.ptr = nullptr; }
-	UniquePtr& operator=(UniquePtr&& other) noexcept {
-		std::swap(ptr, other.ptr);
-		return *this;
-	}
-
+// build_table
+namespace bigint::utils::_private {
 	CONSTEXPR_AUTO
-	operator *() const noexcept -> T& { return *ptr; }
+	_build_table_row(const uint64_t column_count, const std::vector<size_t>& colum_widths, const std::vector<std::string>& row) -> std::string {
+		constexpr std::string_view column_divider = " | ";
+		constexpr auto row_divider = '-';
+		constexpr std::string_view row_column_divider = "-+-";
 
-	CONSTEXPR_AUTO
-	operator ->() const noexcept -> T* { return ptr; }
+		std::string result_row;
 
-	[[nodiscard]] constexpr
-	explicit operator bool() const noexcept { return ptr != nullptr; }
-private:
-	T* ptr;
-};
-
-}
-
-namespace bigint::utils {
-
-template <typename T>
-class Span {
-public:
-	using size_type = std::size_t;
-
-	// constructors, copy and assignment
-
-	constexpr
-	Span() noexcept
-		: _data(nullptr), _size(0)
-	{ }
-
-	constexpr
-	Span(T* data, size_type size) noexcept
-		: _data(data), _size(size)
-	{ }
-
-	template <size_type N>
-	explicit constexpr
-	Span (std::type_identity_t<T>(&arr)[N])
-	noexcept
-	: Span (static_cast<T*>(arr), N)
-	{ }
-
-	template <size_type N>
-	requires std::is_const_v<T>
-	explicit constexpr
-	Span(const std::array<std::remove_const_t<T>, N>& arr) noexcept
-		: Span(arr.data(), N)
-	{ }
-
-	template <size_type N>
-	requires (!std::is_const_v<T>)
-	explicit constexpr
-	Span(std::array<T, N>& arr) noexcept
-		: Span(arr.data(), N)
-	{ }
-
-	template <class T2>
-	requires (std::is_const_v<T> && !std::is_const_v<T2> && std::is_same_v<std::remove_const_t<T>, T2>)
-	explicit constexpr
-	Span(const std::vector<T2>& vec) noexcept
-		: Span(vec.data(), vec.size())
-	{ }
-
-	explicit constexpr
-	Span(std::vector<T>& vec) noexcept
-		: Span(vec.data(), vec.size())
-	{ }
-
-	template <class T2>
-	requires (std::is_const_v<T> && !std::is_const_v<T2> && std::is_same_v<std::remove_const_t<T>, T2>)
-	constexpr
-	Span(const Span<T2>& other) noexcept
-		: _data(other.data()), _size(other.size())
-	{ }
-
-	constexpr
-	Span(const Span&) noexcept = default;
-
-	~Span() noexcept = default;
-
-	constexpr Span&
-	operator=(const Span&) noexcept = default;
-
-	// observers
-
-	CONSTEXPR_AUTO
-	size() const noexcept -> size_type { return _size; }
-
-	CONSTEXPR_AUTO
-	size_bytes() const noexcept -> size_type { return _size * sizeof(T); }
-
-	CONSTEXPR_AUTO
-	empty() const noexcept -> bool { return size() == 0; }
-
-	// element access
-
-	CONSTEXPR_AUTO
-	front() const noexcept -> T& {
-		assert(!empty());
-		return *_data;
-	}
-
-	CONSTEXPR_AUTO
-	back() const noexcept -> T& {
-		assert(!empty());
-		return *(_data + (_size - 1));
-	}
-
-	CONSTEXPR_AUTO
-	operator[](size_type idx) const noexcept -> T& {
-		assert(idx < _size);
-		return *(_data + idx);
-	}
-
-	CONSTEXPR_AUTO
-	data() const noexcept -> T* { return _data; }
-
-	// iterator support
-
-	CONSTEXPR_AUTO
-	begin() const noexcept -> T* { return _data; }
-
-	CONSTEXPR_AUTO
-	end() const noexcept -> T* { return _data + _size; }
-
-	// subviews
-
-	CONSTEXPR_AUTO
-	first(size_type count) const noexcept -> Span {
-		assert(count <= _size);
-		return {_data, count};
-	}
-
-	CONSTEXPR_AUTO
-	last(size_type count) const noexcept -> Span {
-		assert(count <= _size);
-		return {_data + (_size - count), count};
-	}
-
-private:
-	static constexpr size_type full_extent = static_cast<size_t>(-1);
-
-public:
-
-	CONSTEXPR_AUTO
-	subspan(size_type offset, size_type count = full_extent) const noexcept -> Span {
-		assert(offset <= _size);
-		if (count == full_extent)
-			count = _size - offset;
-		else {
-			assert(count <= _size);
-			assert(offset + count <= _size);
+		if (row.empty()) {
+			result_row.append(row_column_divider);
+			for (uint64_t i = 0; i < column_count; ++i) {
+				const auto width = colum_widths[i];
+				result_row.append(width, row_divider).append(row_column_divider);
+			}
+		} else {
+			result_row.append(column_divider);
+			uint64_t i = 0;
+			for (; i < row.size(); ++i) {
+				const auto& content = row[i];
+				const auto indent = colum_widths[i] - content.length();
+				result_row.append(indent, ' ').append(content).append(column_divider);
+			}
+			for (; i < column_count; ++i) {
+				const auto width = colum_widths[i];
+				result_row.append(width, ' ').append(column_divider);
+			}
 		}
-		return {_data + offset, count};
+
+		return result_row;
 	}
 
-	/**
-	 * like @link subspan, but `offset` and `count` are truncated automatically.
-	 * @param offset
-	 * @param count
-	 * @return
-	 */
+	/// builds an ascii table. The values are right-aligned.
+	/// @param table: A vector of rows. Column count can vary from row to row. Empty rows are interpreted as a horizontal delimiter (a horizontal line is drawn).
 	CONSTEXPR_AUTO
-	subspan_trunc(size_type offset, size_type count = full_extent) const noexcept -> Span {
-		offset = _size > offset ? offset : _size;
-		count = std::min<size_type>(_size - offset, count);
-		return subspan(offset, count);
-		// return {_data + offset, count};
+	build_table(const std::vector<std::vector<std::string> > &table) -> std::string {
+		if (table.empty()) {
+			return "";
+		}
+
+		const uint64_t column_count = std::ranges::max_element(table, [](const auto &a, const auto &b) { return a.size() < b.size(); })->size();
+
+		std::vector<size_t> colum_widths(column_count);
+		for (const auto &row : table) {
+			for (uint64_t i = 0; i < row.size(); ++i) {
+				colum_widths[i] = std::max(colum_widths[i], row[i].size());
+			}
+		}
+
+		// build the actual table string
+		auto iter = table.begin();
+		if (iter == table.end()) {
+			return std::string{};
+		}
+		std::string str = _build_table_row(column_count, colum_widths, *iter);
+		++iter;
+		for (; iter != table.end(); ++iter) {
+			str += "\n";
+			str += _build_table_row(column_count, colum_widths, *iter);
+		}
+
+		return str;
 	}
-
-private:
-	T* _data;
-	size_type _size;
-};
-
 }
