@@ -52,7 +52,7 @@ calculate_squares(const std::span<const uint64_t>& base, const std::span<const u
 		squares.emplace_back();
 		squares.back()->resize(last_square.size() * 2);
 		std::span square{*squares.back()};
-		mult_ignore_sign(square, last_square, last_square, nullptr);
+		mul_ignore_sign(square, last_square, last_square, nullptr);
 		cleanup(*squares.back());
 		if (square <=> y > 0) { // if (square > y)
 			squares.pop_back();
@@ -174,11 +174,11 @@ pow(const is_BigInt_like auto& base, uint64_t exp) -> BigInt {
 		const auto mask = 1ull << i;
 		if (exp & mask) {
 			//result *= temp;
-			mult(temp2, result, temp);
+			mul(temp2, result, temp);
 			std::swap(result, temp2);
 		}
 		if (i+1 < exp_bits) {
-			mult(temp2, temp, temp);
+			mul(temp2, temp, temp);
 			std::swap(temp, temp2);
 		}
 	}
@@ -232,12 +232,12 @@ pow_mod(const is_BigInt_like auto& base, const is_BigInt_like auto& exp, const i
 		const auto mask = 1ull << (i % 64);
 		if (exp[i / 64] & mask) {
 			// result = (result * temp) % mod;
-			mult(temp2, result, temp);
+			mul(temp2, result, temp);
 			_private::divmod<true, false>(temp3, result, temp2, mod, *temp_mod, *temp_af, *temp_bf); // temp3 is just a placeholder here and is never read from or written to.
 		}
 		if (i + 1 < exp_bits) { // don´t square at the end of the last loop, it just wasts CPU cycles.
 			// temp = (temp * temp) % mod;
-			mult(temp3, temp, temp);
+			mul(temp3, temp, temp);
 			_private::divmod<true, false>(temp2, temp, temp3, mod, *temp_mod, *temp_af, *temp_bf); // temp2 is just a placeholder here and is never read from or written to.
 		}
 	}
@@ -382,12 +382,12 @@ lehmer(BigInt& U, BigInt& V, BigInt& R, BigInt& temp) {
 	}
 
 	// We know q,,..., qi-l were correct, qi as incorrect.
-	mult(R, U, x_i);
-	mult(temp, V, y_i);
+	mul(R, U, x_i);
+	mul(temp, V, y_i);
 	R += temp;
 
 	U *= x_im1;
-	mult(temp, V, y_im1);
+	mul(temp, V, y_im1);
 	U += temp;
 
 	std::swap(V, R);

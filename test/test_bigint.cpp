@@ -277,29 +277,29 @@ TEST_ASSIGN_OPERATOR_BIGINT(Sub, int32_t, a -= b, get_all_sub_test_values())
 // Multiplication
 namespace {
 
-TEST_BINARY_OPERATOR_BIGINT_F(Mul, BigInt, uint64_t, mult(res, a, b), get_all_mul_test_values())
+TEST_BINARY_OPERATOR_BIGINT_F(Mul, BigInt, uint64_t, mul(res, a, b), get_all_mul_test_values())
 
-TEST_BINARY_OPERATOR_BIGINT_F(Mul, BigInt, int64_t, mult(res, a, b), get_all_mul_test_values())
+TEST_BINARY_OPERATOR_BIGINT_F(Mul, BigInt, int64_t, mul(res, a, b), get_all_mul_test_values())
 
-TEST_BINARY_OPERATOR_BIGINT_F(Mul, BigInt, uint32_t, mult(res, a, b), get_all_mul_test_values())
+TEST_BINARY_OPERATOR_BIGINT_F(Mul, BigInt, uint32_t, mul(res, a, b), get_all_mul_test_values())
 
-TEST_BINARY_OPERATOR_BIGINT_F(Mul, BigInt, int32_t, mult(res, a, b), get_all_mul_test_values())
+TEST_BINARY_OPERATOR_BIGINT_F(Mul, BigInt, int32_t, mul(res, a, b), get_all_mul_test_values())
 
-TEST_BINARY_OPERATOR_BIGINT_F(MulNaive, BigInt, BigInt, mult_naive(res, a, b), get_all_mul_test_values())
+TEST_BINARY_OPERATOR_BIGINT_F(MulNaive, BigInt, BigInt, mul_naive(res, a, b), get_all_mul_test_values())
 
-TEST_BINARY_OPERATOR_BIGINT_F(MulKaratsuba_f1, BigInt, BigInt, mult_karatsuba(res, a, b), get_all_mul_test_values())
-TEST_BINARY_OPERATOR_BIGINT_F(MulKaratsuba_f2, BigInt, BigInt, mult_karatsuba(res, a, b), get_all_mul_karatsuba_test_values())
+TEST_BINARY_OPERATOR_BIGINT_F(MulKaratsuba_f1, BigInt, BigInt, mul_karatsuba(res, a, b), get_all_mul_test_values())
+TEST_BINARY_OPERATOR_BIGINT_F(MulKaratsuba_f2, BigInt, BigInt, mul_karatsuba(res, a, b), get_all_mul_karatsuba_test_values())
 
-TEST_BINARY_OPERATOR_BIGINT_F(Mul_f1, BigInt, BigInt, mult(res, a, b), get_all_mul_test_values())
-TEST_BINARY_OPERATOR_BIGINT_F(Mul_f2, BigInt, BigInt, mult(res, a, b), get_all_mul_karatsuba_test_values())
+TEST_BINARY_OPERATOR_BIGINT_F(Mul_f1, BigInt, BigInt, mul(res, a, b), get_all_mul_test_values())
+TEST_BINARY_OPERATOR_BIGINT_F(Mul_f2, BigInt, BigInt, mul(res, a, b), get_all_mul_karatsuba_test_values())
 
-TEST_ASSIGN_OPERATOR_BIGINT_F(Mul, uint64_t, mult(a, a, b), get_all_mul_test_values())
+TEST_ASSIGN_OPERATOR_BIGINT_F(Mul, uint64_t, mul(a, a, b), get_all_mul_test_values())
 
-TEST_ASSIGN_OPERATOR_BIGINT_F(Mul, int64_t, mult(a, a, b), get_all_mul_test_values())
+TEST_ASSIGN_OPERATOR_BIGINT_F(Mul, int64_t, mul(a, a, b), get_all_mul_test_values())
 
-TEST_ASSIGN_OPERATOR_BIGINT_F(Mul, uint32_t, mult(a, a, b), get_all_mul_test_values())
+TEST_ASSIGN_OPERATOR_BIGINT_F(Mul, uint32_t, mul(a, a, b), get_all_mul_test_values())
 
-TEST_ASSIGN_OPERATOR_BIGINT_F(Mul, int32_t, mult(a, a, b), get_all_mul_test_values())
+TEST_ASSIGN_OPERATOR_BIGINT_F(Mul, int32_t, mul(a, a, b), get_all_mul_test_values())
 
 TEST_BINARY_OPERATOR_BIGINT(Mul, BigInt, BigInt, a * b, get_all_mul_test_values())
 
@@ -321,7 +321,7 @@ TEST_BINARY_OPERATOR_BIGINT(Mul, uint32_t, BigInt, a * b, get_all_mul_test_value
 
 TEST_BINARY_OPERATOR_BIGINT(Mul, int32_t, BigInt, a * b, get_all_mul_test_values())
 
-TEST_BINARY_OPERATOR_BIGINT(Mul, uint64_t, uint64_t, BigInt{mult(a, b)}, get_all_mul_test_values())
+TEST_BINARY_OPERATOR_BIGINT(Mul, uint64_t, uint64_t, BigInt{mul(a, b)}, get_all_mul_test_values())
 
 TEST_ASSIGN_OPERATOR_BIGINT(Mul, BigInt, a *= b, get_all_mul_test_values())
 

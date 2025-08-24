@@ -99,7 +99,7 @@ For simplicity reasons, this overview will use `using bigint;`. If you prefer no
   BigInt a = 1234567890 * 0x1234'5678'9abc'def0_big - factorial(100);
   
   BigInt b;
-  mult(b, 0x1234'5678'9abc'def0_big, 1234567890);
+  mul(b, 0x1234'5678'9abc'def0_big, 1234567890);
   sub(b, b factorial(100));
   
   assert(a == b)
@@ -155,7 +155,7 @@ std::cout << (a * 78) - 12 << std::endl;
 All arithmetic operators have a function representation.
 ```c++
 BigInt a = 1390824942691875931654_big;
-mult(a, a, 78);
+mul(a, a, 78);
 sub(a, a, 12);
 std::cout << a << std::endl;
 // Output: 108484345529966322669000
@@ -167,7 +167,7 @@ Sums two integers. The addition assignment operations are always performed in-pl
 #### Subtraction (-, -=, sub)
 Subtracts `b` from `a`. The subtraction assignment operations are always performed in-place.
 
-#### Multiplication (*, *=, mult)
+#### Multiplication (*, *=, mul)
 Multiplies two integers. The multiplication assignment operation is only performed in-place if the second multiplicand is an integral type (like `int` or `uint64_t`).
 
 #### Division (/, /=, div)
@@ -365,9 +365,9 @@ But luckily there are many ways to reduce such allocations:
       const is_BigInt_like auto& d
   ) -> BigInt {
       BigInt temp1, temp2;
-      mult(temp1, a, b);
-      mult(temp2, temp1, c);
-      mult(temp1, temp2, d);
+      mul(temp1, a, b);
+      mul(temp2, temp1, c);
+      mul(temp1, temp2, d);
       return temp1;
   }
   ```
