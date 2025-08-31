@@ -2639,7 +2639,7 @@ namespace _private {
 			std::string msg = "to_string only supports bases in the range 2 - 36 (inclusive).";
 			throw std::invalid_argument(utils::error_msg(std::move(msg)));
 		}
-		auto conv = base_conversion_32(base);
+		auto conv = base_conversion_64(base);
 
 		std::string result;
 		if (conv.division_base != 0) {
