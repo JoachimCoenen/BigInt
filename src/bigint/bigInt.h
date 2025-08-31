@@ -311,11 +311,11 @@ public:
 	{}
 
 	/**
-	 * @return a new copy of this IntegralAdapter.
+	 * @return a new BigInt with the value (and sign) of this IntegralAdapter.
 	 */
 	CONSTEXPR_AUTO
-	copy() const noexcept -> IntegralAdapter {
-		return *this;
+	copy() const noexcept -> BigInt {
+		return BigInt{_value, _sign};
 	}
 
 	CONSTEXPR_AUTO
@@ -515,11 +515,13 @@ public:
 		_raw(raw) {}
 
 	/**
-	 * @return a new copy of this BigIntAbs.
+	 * @return a new BigInt with the value (and sign) of this BigIntAbs.
 	 */
 	CONSTEXPR_AUTO
-	copy() const noexcept -> BigIntAbs {
-		return *this;
+	copy() const noexcept -> BigInt {
+		auto result = _raw.copy();
+		result.sign() = sign();
+		return result;
 	}
 
 	CONSTEXPR_AUTO
@@ -563,11 +565,13 @@ public:
 	_raw(lhs) {}
 
 	/**
-	 * @return a new copy of this BigIntNeg.
+	 * @return a new BigInt with the value (and sign) of this BigIntNeg.
 	 */
 	CONSTEXPR_AUTO
-	copy() const noexcept -> BigIntNeg {
-		return *this;
+	copy() const noexcept -> BigInt {
+		auto result = _raw.copy();
+		result.sign() = sign();
+		return result;
 	}
 
 	CONSTEXPR_AUTO
@@ -609,11 +613,13 @@ public:
 	_raw(lhs) {}
 
 	/**
-	 * @return a new copy of this BigIntAbsNeg.
+	 * @return a new BigInt with the value (and sign) of this BigIntAbsNeg.
 	 */
 	CONSTEXPR_AUTO
-	copy() const noexcept -> BigIntAbsNeg {
-		return *this;
+	copy() const noexcept -> BigInt {
+		auto result = _raw.copy();
+		result.sign() = sign();
+		return result;
 	}
 
 	CONSTEXPR_AUTO
