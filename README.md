@@ -32,7 +32,7 @@ std::cout << pow_mod(factorial(1'234), exponent, modulo) << std::endl;
   * [Maths Functions](#maths-functions)
   * [Additional Functions](#additional-functions)
   * [Exceptions](#exceptions)
-  * [Improving Performance](#improving-performance)
+  * [Implementing your own algorithms](#implementing-your-own-algorithms)
 * [Examples](#examples)
   * [Factorial](#factorial)
   * [Digit Sum](#digit-sum)
@@ -323,53 +323,22 @@ A few methods can throw exceptions:
 
 
 
-### Improving Performance
-A big performance hog can be the hidden allocations of temporary BigInts.
-But luckily there are many ways to reduce such allocations:
-* Use `is_BigInt_like auto&` instead of `BigInt&` for const parameters of functions.
-  ```c++
-  auto mult3_bad(
-      const BigInt& a, 
-      const BigInt& b
-  ) -> BigInt {
-      return a * b * c * d;
-  }
-  auto mult3_good(
-      const is_BigInt_like auto& a, 
-      const is_BigInt_like auto& b
-  ) -> BigInt {
-      return a * b * c * d;
-  }
-  
-  mult3_bad(-e, abs(f), -g, abs(h)); // 10 allocations total
-  mult3_bood(-e, abs(f), -g, abs(h)); // 6 allocations total
-  ```
+### Implementing your own algorithms
+When implementing your own algorithms or function, make sure to use the concept `is_BigInt_like` for const parameters 
+instead of he type `BigInt`. This helps reduce unnecessary copies:
+```c++
+auto sum_sqr_bad(
+    const BigInt& a,
+    const BigInt& b
+) -> BigInt { return a*a + b*b; }
 
-* Use functions instead of operators and provide the temporaries needed yourself:
-  ```c++
-  // 6 allocations, 5 deallocations total:
-  auto mult3_bad(
-      const is_BigInt_like auto& a, 
-      const is_BigInt_like auto& b, 
-      const is_BigInt_like auto& c, 
-      const is_BigInt_like auto& d
-  ) -> BigInt {
-      return a * b * c * d;
-  }
+auto sum_sqr_better(
+    const is_BigInt_like auto& a,
+    const is_BigInt_like auto& b
+) -> BigInt { return a*a + b*b; }
 
-  // 3 allocations, 2 deallocations total:
-  auto mult3_good(
-      const is_BigInt_like auto& a, 
-      const is_BigInt_like auto& b, 
-      const is_BigInt_like auto& c, 
-      const is_BigInt_like auto& d
-  ) -> BigInt {
-      BigInt temp1, temp2;
-      mul(temp1, a, b);
-      mul(temp2, temp1, c);
-      mul(temp1, temp2, d);
-      return temp1;
-  }
+  sum_sqr_bad(abs(c), -d); // the digits of c & d are copied
+  sum_sqr_better(abs(c), -d); // the digits of c & d are not copied.
   ```
 
 ## Examples
