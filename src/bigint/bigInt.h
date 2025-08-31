@@ -2244,7 +2244,7 @@ template <bool ignore_quotient, bool ignore_remainder>
 BIGINT_TRACY_CONSTEXPR_AUTO
 divmod(BigInt& quotient, const is_BigInt_like auto &a, one_of<int32_t, uint32_t, int64_t, uint64_t> auto b) -> decltype(b) {
 	if constexpr (!ignore_quotient) {
-		quotient.reserve(a.size() + 1);
+		quotient.reserve(a.size());
 		quotient.resize(a.size());
 	}
 	decltype(b) remainder = _private::divmod_ignore_sign_small<ignore_quotient>(quotient._span(), a._span(), utils::constexpr_abs(b));
