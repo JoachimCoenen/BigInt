@@ -105,6 +105,109 @@ TEST(HelloTest, TestCreateFromString) {
 
 }
 
+// Unary operators +, -, abs()
+namespace {
+
+#define UNARY_OPERATOR_ASSERTS(value, EXPECTED_TYPE, original_bigint, expected_value_as_bigint, original_sign, expected_sign) \
+	static_assert(std::is_same_v<decltype(value), const EXPECTED_TYPE&>, #value" must be a "#EXPECTED_TYPE" View."); \
+	EXPECT_EQ((original_bigint).sign(), original_sign) << "original sign did not change"; \
+	EXPECT_EQ((value).sign(), expected_sign); \
+	EXPECT_EQ(&(value)._bigint(), &(original_bigint)); \
+	EXPECT_TRUE((value) == (expected_value_as_bigint));
+
+#define TEST_UNARY_OPERATOR_BODY_1(OPERATOR, original_bigint, expected_value_as_bigint, ExpectedType) { \
+	static_assert(std::is_same_v<decltype(original_bigint), const BigInt>, "Test Setup!, `original_bigint` must be a const BigInt."); \
+	static_assert(std::is_same_v<decltype(expected_value_as_bigint), const BigInt>, "Test Setup!, `expected_value_as_bigint` must be a const BigInt."); \
+	\
+	const auto original_sign = (original_bigint).sign(); \
+	const auto expected_sign = (expected_value_as_bigint).sign(); \
+	\
+	const auto& value1 = OPERATOR(original_bigint); \
+	UNARY_OPERATOR_ASSERTS(value1, ExpectedType, original_bigint, expected_value_as_bigint, original_sign, expected_sign); \
+	\
+	const auto value2 = OPERATOR((original_bigint).copy()); \
+	static_assert(std::is_same_v<decltype(value2), const BigInt>, "must be a BigInt."); \
+	EXPECT_EQ(value2.sign(), expected_sign); \
+	EXPECT_TRUE(value2 == (expected_value_as_bigint)); \
+}
+
+#define TEST_UNARY_OPERATOR_BODY_2(OPERATOR, original_bigint, expected_value_as_bigint, ExpectedType, ArgumentType, argument) { \
+	static_assert(std::is_same_v<decltype(original_bigint), const BigInt>, "Test Setup!, `original_bigint` must be a const BigInt."); \
+	static_assert(std::is_same_v<decltype(argument), ArgumentType>, "Test Setup!, `argument` must be a "#ArgumentType" View."); \
+	static_assert(std::is_same_v<decltype(expected_value_as_bigint), const BigInt>, "Test Setup!, `expected_value_as_bigint` must be a const BigInt."); \
+	\
+	const auto original_sign = (original_bigint).sign(); \
+	const auto expected_sign = (expected_value_as_bigint).sign(); \
+	\
+	const auto& value1 = OPERATOR(argument); \
+	UNARY_OPERATOR_ASSERTS(value1, ExpectedType, original_bigint, expected_value_as_bigint, original_sign, expected_sign); \
+	\
+	const auto& value2 = OPERATOR(std::move(argument)); \
+	UNARY_OPERATOR_ASSERTS(value2, ExpectedType, original_bigint, expected_value_as_bigint, original_sign, expected_sign); \
+}
+
+using BigIntAbs = bigint::_private::BigIntAbs;
+using BigIntNeg = bigint::_private::BigIntNeg;
+using BigIntAbsNeg = bigint::_private::BigIntAbsNeg;
+
+TEST(HelloTest, TestAbs) {
+	const BigInt a_neg = -0x34d59868d6a265dbe51797263285b864eea849ad8a4c2dc9b29b16c7205fc5051_big;
+	const BigInt a_pos = 0x34d59868d6a265dbe51797263285b864eea849ad8a4c2dc9b29b16c7205fc5051_big;
+
+	TEST_UNARY_OPERATOR_BODY_1(abs, a_pos, a_pos, BigIntAbs);
+	TEST_UNARY_OPERATOR_BODY_2(abs, a_pos, a_pos, BigIntAbs, BigIntAbs, abs(a_pos));
+	TEST_UNARY_OPERATOR_BODY_2(abs, a_pos, a_pos, BigIntAbs, BigIntNeg, -a_pos);
+	TEST_UNARY_OPERATOR_BODY_2(abs, a_pos, a_pos, BigIntAbs, BigIntAbsNeg, -abs(a_pos));
+
+	TEST_UNARY_OPERATOR_BODY_1(abs, a_neg, a_pos, BigIntAbs);
+	TEST_UNARY_OPERATOR_BODY_2(abs, a_neg, a_pos, BigIntAbs, BigIntAbs, abs(a_neg));
+	TEST_UNARY_OPERATOR_BODY_2(abs, a_neg, a_pos, BigIntAbs, BigIntNeg, -a_neg);
+	TEST_UNARY_OPERATOR_BODY_2(abs, a_neg, a_pos, BigIntAbs, BigIntAbsNeg, -abs(a_neg));
+
+	const auto zero_pure = 0_big;
+	const auto zero = abs(zero_pure);
+	EXPECT_TRUE(zero == 0);
+}
+
+TEST(HelloTest, TestNeg) {
+	const BigInt a_neg = -0x34d59868d6a265dbe51797263285b864eea849ad8a4c2dc9b29b16c7205fc5051_big;
+	const BigInt a_pos = 0x34d59868d6a265dbe51797263285b864eea849ad8a4c2dc9b29b16c7205fc5051_big;
+
+	TEST_UNARY_OPERATOR_BODY_1(-, a_pos, a_neg, BigIntNeg);
+	TEST_UNARY_OPERATOR_BODY_2(-, a_pos, a_neg, BigIntAbsNeg, BigIntAbs, abs(a_pos));
+	TEST_UNARY_OPERATOR_BODY_2(-, a_pos, a_pos, BigInt, BigIntNeg, -a_pos);
+	TEST_UNARY_OPERATOR_BODY_2(-, a_pos, a_pos, BigIntAbs, BigIntAbsNeg, -abs(a_pos));
+
+	TEST_UNARY_OPERATOR_BODY_1(-, a_neg, a_pos, BigIntNeg);
+	TEST_UNARY_OPERATOR_BODY_2(-, a_neg, a_neg, BigIntAbsNeg, BigIntAbs, abs(a_neg));
+	TEST_UNARY_OPERATOR_BODY_2(-, a_neg, a_neg, BigInt, BigIntNeg, -a_neg);
+	TEST_UNARY_OPERATOR_BODY_2(-, a_neg, a_pos, BigIntAbs, BigIntAbsNeg, -abs(a_neg));
+
+	const auto zero_pure = 0_big;
+	const auto zero = -zero_pure;
+	EXPECT_TRUE(zero == 0);
+}
+
+TEST(HelloTest, TestPlus) {
+	const BigInt a_neg = -0x34d59868d6a265dbe51797263285b864eea849ad8a4c2dc9b29b16c7205fc5051_big;
+	const BigInt a_pos = 0x34d59868d6a265dbe51797263285b864eea849ad8a4c2dc9b29b16c7205fc5051_big;
+
+	TEST_UNARY_OPERATOR_BODY_1(+, a_pos, a_pos, BigInt);
+	TEST_UNARY_OPERATOR_BODY_2(+, a_pos, a_pos, BigIntAbs, BigIntAbs, abs(a_pos));
+	TEST_UNARY_OPERATOR_BODY_2(+, a_pos, a_neg, BigIntNeg, BigIntNeg, -a_pos);
+	TEST_UNARY_OPERATOR_BODY_2(+, a_pos, a_neg, BigIntAbsNeg, BigIntAbsNeg, -abs(a_pos));
+
+	TEST_UNARY_OPERATOR_BODY_1(+, a_neg, a_neg, BigInt);
+	TEST_UNARY_OPERATOR_BODY_2(+, a_neg, a_pos, BigIntAbs, BigIntAbs, abs(a_neg));
+	TEST_UNARY_OPERATOR_BODY_2(+, a_neg, a_pos, BigIntNeg, BigIntNeg, -a_neg);
+	TEST_UNARY_OPERATOR_BODY_2(+, a_neg, a_neg, BigIntAbsNeg, BigIntAbsNeg, -abs(a_neg));
+
+	const auto zero_pure = 0_big;
+	const auto& zero = +zero_pure;
+	EXPECT_TRUE(zero == 0);
+}
+
+}
 
 // Bitwise Shift
 namespace {
