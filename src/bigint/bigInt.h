@@ -2212,7 +2212,7 @@ _fix_divmod_signs(BigInt& quotient, BigInt& remainder, const Sign a_sign, const 
 
 template <bool ignore_quotient, bool ignore_remainder, one_of<int32_t, uint32_t, int64_t, uint64_t> TRHS>
 BIGINT_TRACY_CONSTEXPR_VOID
-_fix_divmod_signs(BigInt& quotient, TRHS& remainder, const Sign a_sign, const TRHS &b) {
+_fix_divmod_signs(BigInt& quotient, TRHS& remainder, const Sign a_sign, const TRHS b) {
 	if constexpr (!ignore_remainder) {
 		if (remainder != 0) {
 			if (a_sign == Sign::NEG) {
