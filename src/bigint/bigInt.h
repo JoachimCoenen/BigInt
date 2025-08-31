@@ -711,12 +711,12 @@ operator-(BigInt&& a) -> BigInt {
 }
 
 CONSTEXPR_AUTO
-operator+(is_BigInt_like auto&& a) -> decltype(a) {
-	return std::forward<decltype(a)>(a);
+operator+(is_BigInt_like auto&& a) -> std::remove_cvref_t<decltype(a)> {
+	return std::move(a);
 }
 
 CONSTEXPR_AUTO
-operator+(const is_BigInt_like auto& a) -> const decltype(a)& {
+operator+(const is_BigInt_like auto& a) -> const std::remove_cvref_t<decltype(a)>& {
 	return a;
 }
 
