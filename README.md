@@ -1,9 +1,11 @@
 # BigInt
 
 BigInt is a header only library for working with large integer values bigger than the hardware limit.  
-BigInt has no additional dependencies and is designed to be easy to use without unnecessary performance compromises.  
-The numbers a represented in base 18,446,744,073,709,551,616 (= 2<sup>64</sup>) to maximize memory efficiency and speed.  
-It is fully `constexpr'd` and therefore partial result and constants can be calculated at compile time.
+BigInt has no additional dependencies and is designed to be easy to use without unnecessary performance compromises:  
+- The numbers a represented in base 18,446,744,073,709,551,616 (= 2<sup>64</sup>) to maximize memory efficiency and speed.  
+- A pool is used to allocate (and reuse) the internal vectors holding the digits of a number.
+
+BigInt is fully `constexpr'd`.
 
 ```c++
 std::cout << pow(3_big, 300) << std::endl;
@@ -73,19 +75,15 @@ For simplicity reasons, this overview will use `using bigint;`. If you prefer no
   auto d = 0b10101010'11000011_big;  // binary literal
   auto e = 0777777777777777777_big;  // octal literal
   ```
-* Everything can be calculated at compile time, because BigInt is fully `constexpr'd`:
-  ```c++
-  constexpr auto a = -1 + pow(3_big, 3000) * 5;
-  constexpr auto b = gdc(12368464545159878212501232471351513542431_big, 0x1385a5347761f71414247342dda76655535_big);
-  constinit auto c = 12368464545159878212501232471351513542431_big / 0; // does not compile, because division by zero
-  ```
-* Supports all arithmetic and bitwise binary operators (`+`, `-`, `*`, `/`, `%`,  `&`, `|`, `^`, `<<`, `>>`) as well as many useful math functions:
+* Supports all arithmetic and bitwise binary operators (`+`, `-`, `*`, `/`, `%`,  `&`, `|`, `^`, `<<`, `>>`):
   ```c++
   auto a = 132456789_big - 987654321_big * 1235467890_big;
   auto b = (a % 999999_big) << 513
   auto c = b & a;
   c *= a;
-  
+  ```
+* Supports many useful math functions:
+  ```c++
   pow_mod(123456789_big, 987654321_big, 5555555555_big); // efficient modular exponentiation
   log(pow(3_big, 100), factorial(1000));
   log2(factorial(1000));              // log2() is computed in O(1)!
