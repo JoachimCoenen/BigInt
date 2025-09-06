@@ -13,17 +13,12 @@
 #include <vector>
 #include <cstdint>
 
-//      [[nodiscard]] conseval auto
 #define CONSTEVAL_AUTO [[nodiscard]] consteval auto
 
-//      [[nodiscard]] constexpr auto
 #define CONSTEXPR_AUTO [[nodiscard]] constexpr auto
-//      constexpr auto
 #define CONSTEXPR_AUTO_DISCARD constexpr auto
-//      constexpr void
 #define CONSTEXPR_VOID constexpr void
 
-//      [[nodiscard]] auto
 #define NODISCARD_AUTO [[nodiscard]] inline auto
 
 
@@ -123,7 +118,8 @@ join_transformed_strings(const R& r, F to_string, std::string_view separator) ->
 namespace bigint::utils {
 
 template <class T>
-void _from_chars_throws(const std::string_view input, T &result, int base) {
+CONSTEXPR_VOID
+_from_chars_throws(const std::string_view input, T &result, int base) {
 	const char* first = input.data();
 	const char* last = input.data() + input.size();
 
@@ -139,29 +135,29 @@ void _from_chars_throws(const std::string_view input, T &result, int base) {
 }
 
 
-[[nodiscard]] inline uint32_t
-stoul(const std::string_view input, int base = 10) {
+CONSTEXPR_AUTO
+stoul(const std::string_view input, int base = 10) -> uint32_t {
 	uint32_t result;
 	_from_chars_throws(input, result, base);
 	return result;
 }
 
-[[nodiscard]] inline int32_t
-stol(const std::string_view input, int base = 10) {
+CONSTEXPR_AUTO
+stol(const std::string_view input, int base = 10) -> int32_t {
 	int32_t result;
 	_from_chars_throws(input, result, base);
 	return result;
 }
 
-[[nodiscard]] inline uint64_t
-stoull(const std::string_view input, int base = 10) {
+CONSTEXPR_AUTO
+stoull(const std::string_view input, int base = 10) -> uint64_t {
 	uint64_t result;
 	_from_chars_throws(input, result, base);
 	return result;
 }
 
-[[nodiscard]] inline int64_t
-stoll(const std::string_view input, int base = 10) {
+CONSTEXPR_AUTO
+stoll(const std::string_view input, int base = 10) -> int64_t {
 	int64_t result;
 	_from_chars_throws(input, result, base);
 	return result;
@@ -193,14 +189,16 @@ ipow(uint32_t base, uint8_t exponent) -> uint64_t {
 
 
 /**
- * @brief like std::abs(), but constexpr. (std::abs() is only constexpr since c++23.)
+ * @brief like std::abs(), but returns the unsigned version of the argument. (std::abs() returns the same type as the argument).
+ * And handles unsigned types correctly (no casting to signed type):
+ * `std::numeric_limits<uint64_t>::max() == utils::constexpr_abs(std::numeric_limits<uint64_t>::max());`
  */
 CONSTEXPR_AUTO
 constexpr_abs(std::integral auto x) -> std::make_unsigned_t<decltype(x)> {
 	if constexpr (std::is_unsigned_v<decltype(x)>) {
 		return x;
 	} else {
-		return std::make_unsigned_t<decltype(x)>(x < 0 ? -x : x);
+		return static_cast<std::make_unsigned_t<decltype(x)>>(x < 0 ? -x : x);
 	}
 }
 
@@ -213,7 +211,8 @@ constexpr_abs(std::integral auto x) -> std::make_unsigned_t<decltype(x)> {
 #include <intrin.h>
 namespace bigint::utils {
 
-uint32_t __inline ctzll(uint64_t value) {
+CONSTEXPR_AUTO
+ctzll(uint64_t value) -> uint32_t {
 	// adapted from https://stackoverflow.com/a/20468180/8091657
 	unsigned long trailing_zero = 0;
 	if (_BitScanForward64(&trailing_zero, value)) {
@@ -224,7 +223,8 @@ uint32_t __inline ctzll(uint64_t value) {
 	}
 }
 
-uint32_t __inline clzll(uint64_t value) {
+CONSTEXPR_AUTO
+clzll(uint64_t value) -> uint32_t {
 	// adapted from https://stackoverflow.com/a/20468180/8091657
 	unsigned long leading_zero = 0;
 	if (_BitScanReverse64(&leading_zero, value)) {
@@ -240,7 +240,8 @@ uint32_t __inline clzll(uint64_t value) {
 #else
 namespace bigint::utils {
 
-uint32_t __inline ctzll(uint64_t value) {
+CONSTEXPR_AUTO
+ctzll(uint64_t value) -> uint32_t {
 	if (value != 0) {
 		return __builtin_ctzll(value);
 	} else {
@@ -248,7 +249,8 @@ uint32_t __inline ctzll(uint64_t value) {
 	}
 }
 
-uint32_t __inline clzll(uint64_t value) {
+CONSTEXPR_AUTO
+clzll(uint64_t value) -> uint32_t {
 	if (value != 0) {
 		return __builtin_clzll(value);
 	} else {
@@ -279,7 +281,8 @@ using uint128_t_ = unsigned __int128;
 
 namespace bigint::utils {
 
-uint64_t __inline div_u128_saturate(uint64_t high_dividend, uint64_t low_dividend, uint64_t divisor) {
+CONSTEXPR_AUTO
+div_u128_saturate(uint64_t high_dividend, uint64_t low_dividend, uint64_t divisor) -> uint64_t {
 	if (high_dividend == 0) {
 		return low_dividend / divisor;
 	}
@@ -289,14 +292,15 @@ uint64_t __inline div_u128_saturate(uint64_t high_dividend, uint64_t low_dividen
 		return static_cast<uint64_t>(q);
 	} else {
 		// overflow is clamped to 2^64 - 1
-		return static_cast<uint64_t>(0) - static_cast<uint64_t>(1);
+		return std::numeric_limits<uint64_t>::max();
 	}
 }
 
-void __inline mul_u128(uint64_t lhs, uint64_t rhs, uint64_t *hi, uint64_t *lo) {
+CONSTEXPR_VOID
+mul_u128(uint64_t lhs, uint64_t rhs, uint64_t *hi, uint64_t *lo) {
 	auto result = static_cast<_private::uint128_t_>(lhs) * rhs;
-	*lo = result;
-	*hi = result >> 64;
+	*lo = static_cast<uint64_t>(result);
+	*hi = static_cast<uint64_t>(result >> 64);
 }
 
 }
