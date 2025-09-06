@@ -29,15 +29,15 @@
 
 // assertions that are included in the release build:
 #define assert_release_msg(condition, msg) \
-if(!(condition)) { \
+do { if(!(condition)) { \
 std::fprintf(stderr, "%s in %s(...) at line %i in file %s", (msg), __func__, __LINE__, __FILE__); \
 abort(); \
-}
+} } while (false)
 #define assert_release(condition) \
-if(!(condition)) { \
+do { if(!(condition)) { \
 std::fprintf(stderr, "%s in %s(...) at line %i in file %s", #condition, __func__, __LINE__, __FILE__); \
 abort(); \
-}
+} } while (false)
 
 namespace bigint::utils {
 
