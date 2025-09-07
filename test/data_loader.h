@@ -103,7 +103,7 @@ to_val_type(const std::string& line) -> ValType {
 
 [[nodiscard]] inline auto
 to_value(const std::string& line) -> Value {
-	auto split = split_line<2>(line, ",");
+	auto split = split_line<2>(line, ":");
 	auto vt = to_val_type(split[0]);
 	auto& val = split[1];
 	return Value{vt, std::move(val)};
@@ -113,7 +113,7 @@ to_value(const std::string& line) -> Value {
 template <size_t N>
 [[nodiscard]] inline auto
 to_op_test(const std::string& line) -> OperationTest<N>{
-	auto split = split_line<N+1>(line, ";");
+	auto split = split_line<N+1>(line, ",");
 	std::array<Value, N> operands{};
 	for (size_t i = 0; i < N; ++i) {
 		operands[i] = to_value(split[i]);

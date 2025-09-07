@@ -191,21 +191,21 @@ def get_val_type(value: int | str) -> str:
 
 def make_param(arg: int | str) -> str:
 	type_ = get_val_type(arg)
-	return f'{type_},{arg}'
+	return f'{type_}:{arg}'
 
 
-def make_expected_result(operation: Operation, args: FilteredArgs) -> str:
-	return operation.op(*args)
+def make_test_csv_row(args: tuple[str, ...], expected: str) -> str:
+	return f'{','.join(args)},{expected}'
 
 
 def make_operation_test(operation: Operation, args: FilteredArgs) -> str:
 	assert len(args) == operation.param_count, f'param count does not match: expected {operation.param_count}, but got {len(args)}'
-	expected = make_expected_result(operation, args)
+	expected = str(operation.op(*args))
 	if (arg_for_param := operation.arg_for_param) is not None:
-		cpp_args = ';'.join(make_param(arg_for_param(arg)) for arg in args)
+		cpp_args = tuple(make_param(arg_for_param(arg)) for arg in args)
 	else:
-		cpp_args = ';'.join(make_param(arg) for arg in args)
-	return f'{cpp_args};{expected}'
+		cpp_args = tuple(make_param(arg) for arg in args)
+	return make_test_csv_row(cpp_args, expected)
 
 
 def make_all_operation_tests(filtered_args: Iterator[FilteredArgs], operation: Operation) -> list[str]:
