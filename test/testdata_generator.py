@@ -132,7 +132,7 @@ class Operation:
 	param_count: ClassVar[int] = 0
 	name: str
 	arg_for_param: Callable[[int], int | str] | None = field(default=None, kw_only=True)
-	op: Callable[[int, ...], int | str]
+	op: Callable[[int, ...], int | str | float]
 	valid_for_args: Callable[[int, ...], bool] | None = None
 	modify_args: Callable[[int, ...], tuple[int, ...]] | None = field(default=None, kw_only=True)
 	testdata: list[int] | tuple[list[int], ...] = field(default_factory=lambda: TestdataSet.NORMAL, kw_only=True)
@@ -142,7 +142,7 @@ class Operation:
 class UnaOperation(Operation):
 	type_name: ClassVar[str] = 'UnaOpTest'
 	param_count: ClassVar[int] = 1
-	op: Callable[[int], int | str]
+	op: Callable[[int], int | str | float]
 	valid_for_args: Callable[[int], bool] | None = None
 	modify_args: Callable[[int], tuple[int]] | None = field(default=None, kw_only=True)
 	testdata: list[int] | tuple[list[int]] = field(default_factory=lambda: TestdataSet.NORMAL, kw_only=True)
@@ -152,7 +152,7 @@ class UnaOperation(Operation):
 class BinOperation(Operation):
 	type_name: ClassVar[str] = 'BinOpTest'
 	param_count: ClassVar[int] = 2
-	op: Callable[[int, int], int | str]
+	op: Callable[[int, int], int | str | float]
 	valid_for_args: Callable[[int, int], bool] | None = None
 	modify_args: Callable[[int, int], tuple[int, int]] | None = field(default=None, kw_only=True)
 	testdata: list[int] | tuple[list[int], list[int]] = field(default_factory=lambda: TestdataSet.NORMAL, kw_only=True)
@@ -162,7 +162,7 @@ class BinOperation(Operation):
 class TriOperation(Operation):
 	type_name: ClassVar[str] = 'TriOpTest'
 	param_count: ClassVar[int] = 3
-	op: Callable[[int, int, int], int | str]
+	op: Callable[[int, int, int], int | str | float]
 	valid_for_args: Callable[[int, int, int], bool] | None = None
 	modify_args: Callable[[int, int, int], tuple[int, int, int]] | None = field(default=None, kw_only=True)
 	testdata: list[int] | tuple[list[int], list[int], list[int]] = field(default_factory=lambda: TestdataSet.NORMAL, kw_only=True)
@@ -224,11 +224,13 @@ def log10(y: int) -> int:
 	return len(f'{y}') - 1
 
 
+def logf(base: int, y: int) -> float:
+	return math.log(y, base)
+
+
 def logg(base: int, y: int) -> int:
-	exp = log2(y) // log2(base)
-	i = 0
-	while base ** exp > y:
-		i += 1
+	exp = math.trunc(math.log(y, base))
+	if base ** exp > y:
 		exp -= 1
 	return exp
 
@@ -292,9 +294,10 @@ BINARY_ARITHMETIC_OPERATIONS: list[Operation] = [
 																			(abs(a) >= 97 or (b < 3 and abs(c) < 5)) and (abs(c) <= 97 or (abs(a) >= UINT64_MAX_P2 or b < UINT32_MAX_00)) and  # reduces the amount af test cases
 																			(len(list(filter(lambda x: x % 2 == 0, [a, b, c]))) in {0, 1, 2, 3})  # reduces the amount af test cases even more
 	),
-	UnaOperation('log2',   lambda a:       log2(a),                  lambda a:       a > 0),
-	UnaOperation('log10',  lambda a:       log10(a),                 lambda a:       a > 0),
-	BinOperation('log',    lambda a, b:    log_checked(a, b),        lambda base, y: y > 0 and base > 1),
+	UnaOperation('log2',   lambda a:       log_checked(2, a),                  lambda a:       a > 0, testdata=(TestdataSet.MIX_UNSIGNED,)),
+	UnaOperation('log2d',  lambda a:       logf(2, a),                         lambda a:       a > 0, testdata=(TestdataSet.MIX_UNSIGNED,)),
+	UnaOperation('log10',  lambda a:       log_checked(10, a),                 lambda a:       a > 0, testdata=(TestdataSet.HUGE_UNSIGNED,)),
+	BinOperation('log',    lambda a, b:    log_checked(a, b),        lambda base, y: y > 0 and base > 1, testdata=(TestdataSet.NORMAL_UNSIGNED, TestdataSet.NORMAL_UNSIGNED + TestdataSet.HUGE_UNSIGNED)),
 
 	BinOperation('perm',   lambda a, b:    math.perm(a, b),         lambda a, b: 0 <= a < INT32_MAX_M1 and 0 <= b < INT32_MAX_M1),
 	BinOperation('comb',   lambda a, b:    math.comb(a, b),         lambda a, b: 0 <= a < INT32_MAX_M1 and 0 <= b < INT32_MAX_M1),

@@ -40,32 +40,50 @@ sqrt(const is_BigInt_like auto& y) -> BigInt {
 	}
 }
 
-namespace _private {
+
+/**
+ * @brief calculates the integer logarithm of `y` for base 2. E.g.: `log2(7) == 3`. Runs in O(1) time.
+ * @param y the value to get the logarithm of.
+ * @return the integer logarithm base 2 of y.
+ * @throws std::domain_error if y <= 0
+ */
 BIGINT_TRACY_CONSTEXPR_AUTO
-calculate_squares(const std::span<const uint64_t>& base, const std::span<const uint64_t>& y) -> std::vector<DigitsVecPtr> {
-	constexpr uint8_t exp_bits_max = 64;
-	std::vector<DigitsVecPtr> squares;
-
-	for (uint8_t i = 1; i < exp_bits_max; ++i) {
-		std::span last_square = i == 1 ? base : std::span{*squares.back()};
-
-		squares.emplace_back();
-		squares.back()->resize(last_square.size() * 2);
-		std::span square{*squares.back()};
-		mul_ignore_sign(square, last_square, last_square, nullptr);
-		cleanup(*squares.back());
-		if (square <=> y > 0) { // if (square > y)
-			squares.pop_back();
-			break;
-		}
+log2(const is_BigInt_like auto& y) -> BigInt::size_type {
+	BIGINT_TRACY_ZONE_SCOPED;
+	if (!is_pos(y)) {
+		throw std::domain_error{utils::error_msg("integer log of a non-positive number is undefined.")};
 	}
-	return squares;
-}
+
+	return 64 * y.size() - utils::clzll(y[y.size() - 1]) - 1;
 }
 
 
 /**
- * @brief calculates the integer logarithm of `y` for the given `base`. E.g.: `log(10, 1000)` == 3.
+ * @brief calculates the integer logarithm of `y` for base 2. E.g.: `log2(7) == 2.807354922057604`. Runs in O(1) time.
+ * @param y the value to get the logarithm of.
+ * @return the logarithm base 2 of y.
+ * @throws std::domain_error if y <= 0
+ */
+BIGINT_TRACY_CONSTEXPR_AUTO
+log2d(const is_BigInt_like auto& y) -> double {
+	BIGINT_TRACY_ZONE_SCOPED;
+	if (!is_pos(y)) {
+		throw std::domain_error{utils::error_msg("integer log of a non-positive number is undefined.")};
+	}
+
+	const auto last_digit = y[y.size() - 1];
+	if (y.size() >= 2) {
+		const auto shift = utils::clzll(last_digit);
+		const auto a = (last_digit << shift) + (y[y.size() - 2] >> (64 - shift));
+		return std::log2(a) + static_cast<double>(64 * (y.size() - 1) - shift);
+	}
+	else {
+		return std::log2(last_digit);
+	}
+}
+
+/**
+ * @brief approximates the logarithm of `y` for the given `base`. E.g.: `log(10, 1000)` == 3.
  * @param base the base of the logarithm
  * @param y the value to get the logarithm of.
  * @return the integer logarithm of y.
@@ -84,30 +102,15 @@ log(const is_BigInt_like auto& base, const is_BigInt_like auto& y) -> uint64_t {
 		return 0;
 	}
 
-	const auto squares = _private::calculate_squares(base._span(), y._span());
+	// log(base, y) == log2(y) / log2(base)
+	auto exp = static_cast<uint64_t>(std::trunc(log2d(y) / log2d(base)));
 
-	uint64_t result = 0;
-	BigInt temp = y.copy();
-	BigInt temp2;
-	BigInt reminder; // not used
-	DigitsVecPtr temp_d, temp_af, temp_bf;
-
-	for (auto i = static_cast<uint8_t>(squares.size()); i --> 0;) {
-		const std::span square (*squares[i]);
-		if (square <=> temp._span() <= 0) {  // (square <= temp)
-			// temp2 = temp / square:
-			_private::divmod_ignore_sign<false, true>(temp2, reminder, temp._span(), square, *temp_d, *temp_af, *temp_bf);
-			std::swap(temp, temp2);
-
-			uint64_t mask = 1ull << (i + 1);
-			result |= mask;
-		}
+	// corrects possible over estimation
+	const auto y_est = pow(base, exp);
+	if (y_est > y) {
+		exp -= 1;
 	}
-	if (base <= temp) {
-		uint64_t mask = 1ull << 0;
-		result |= mask;
-	}
-	return result;
+	return exp;
 }
 
 
@@ -126,24 +129,6 @@ log10(const is_BigInt_like auto& y) -> uint64_t {
 
 	return log(_private::IntegralAdapter{10}, y);
 }
-
-
-/**
- * @brief calculates the integer logarithm of `y` for base 2. E.g.: `log2(7) == 3`. Runs in O(1) time.
- * @param y the value to get the logarithm of.
- * @return the integer logarithm base 2 of y.
- * @throws std::domain_error if y <= 0
- */
-BIGINT_TRACY_CONSTEXPR_AUTO
-log2(const is_BigInt_like auto& y) -> BigInt::size_type {
-	BIGINT_TRACY_ZONE_SCOPED;
-	if (!is_pos(y)) {
-		throw std::domain_error{utils::error_msg("integer log of a non-positive number is undefined.")};
-	}
-
-	return 64 * y.size() - utils::clzll(y[y.size() - 1]) - 1;
-}
-
 
 /**
  * @brief raises `base` to the power of `exp`. E.g.: `pow(10, 3) == 1000`. if you need to calculate `pow(a, b) % m` use `pow_mod()` instead.

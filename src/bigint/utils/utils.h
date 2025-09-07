@@ -117,13 +117,13 @@ join_transformed_strings(const R& r, F to_string, std::string_view separator) ->
 // string_view to int
 namespace bigint::utils {
 
-template <class T>
+template <class T, class BaseOrFmt>
 CONSTEXPR_VOID
-_from_chars_throws(const std::string_view input, T &result, int base) {
+_from_chars_throws(const std::string_view input, T &result, BaseOrFmt baseOrFmt) {
 	const char* first = input.data();
 	const char* last = input.data() + input.size();
 
-	auto res = std::from_chars(first, last, result, base);
+	auto res = std::from_chars(first, last, result, baseOrFmt);
 
 	// These two exceptions reflect the behavior of std::stoi.
 	if (res.ec == std::errc::invalid_argument || res.ptr != last) {
@@ -160,6 +160,13 @@ CONSTEXPR_AUTO
 stoll(const std::string_view input, int base = 10) -> int64_t {
 	int64_t result;
 	_from_chars_throws(input, result, base);
+	return result;
+}
+
+CONSTEXPR_AUTO
+stod(const std::string_view input) -> double {
+	double result;
+	_from_chars_throws(input, result, std::chars_format::general);
 	return result;
 }
 

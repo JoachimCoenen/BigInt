@@ -17,9 +17,24 @@ using namespace test_data;
 // sqrt, log2, pow, pow_mod, etc.
 namespace {
 
+auto double_to_str(double x) -> std::string {
+	// allows or tiny variations in the last two decimal digits.
+	auto x_str = std::to_string(x);
+	auto dot_pos = x_str.find('.');
+	if (dot_pos == std::string::npos) {
+		return x_str;
+	}
+	if (dot_pos >= x_str.size() - 3) {
+		return x_str;
+	}
+	return x_str.substr(0, x_str.size() - 2);
+}
+
 TEST_UNARY_OPERATOR_BIGINT(Sqrt, BigInt, sqrt(a), get_all_sqrt_test_values())
 
 TEST_UNARY_OPERATOR(Log2, BigInt, uint64_t, log2(a), get_all_log2_test_values(), uint64_t, res)
+
+TEST_UNARY_OPERATOR(Log2d, BigInt, double, log2d(a), get_all_log2d_test_values(), std::string, double_to_str(res))
 
 TEST_UNARY_OPERATOR(Log10, BigInt, uint64_t, log10(a), get_all_log10_test_values(), uint64_t, res)
 
