@@ -74,7 +74,7 @@ log2d(const is_BigInt_like auto& y) -> double {
 	const auto last_digit = y[y.size() - 1];
 	if (y.size() >= 2) {
 		const auto shift = utils::clzll(last_digit);
-		const auto a = (last_digit << shift) + (y[y.size() - 2] >> (64 - shift));
+		const auto a = (last_digit << shift) + _private::rshift_safe(y[y.size() - 2], 64 - shift);
 		return std::log2(a) + static_cast<double>(64 * (y.size() - 1) - shift);
 	}
 	else {
